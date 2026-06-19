@@ -21,10 +21,7 @@
 		"build": "tsc -p tsconfig.json",
 		"test": "vitest --run"
 	},
-	"dependencies": {
-		"@earendil-works/pi-ai": "0.79.4",
-		"@earendil-works/pi-agent-core": "0.79.4"
-	},
+	"dependencies": {},
 	"devDependencies": {
 		"typescript": "5.9.3",
 		"vitest": "2.1.9"

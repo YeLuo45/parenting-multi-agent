@@ -22,8 +22,6 @@
 		"test": "vitest --run"
 	},
 	"dependencies": {
-		"@earendil-works/pi-ai": "0.79.4",
-		"@earendil-works/pi-agent-core": "0.79.4",
 		"@parenting/memory": "0.1.0"
 	},
 	"devDependencies": {

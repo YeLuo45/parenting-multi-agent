@@ -1,7 +1,7 @@
 {
 	"name": "@parenting/agent-nutritionist",
 	"version": "0.1.0",
-	"description": "NutritionistAgent — feeding, solid food introduction, allergies, recipes",
+	"description": "NutritionistAgent \u2014 feeding, solid food introduction, allergies, recipes",
 	"type": "module",
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -12,15 +12,16 @@
 		},
 		"./package.json": "./package.json"
 	},
-	"files": ["src", "README.md"],
+	"files": [
+		"src",
+		"README.md"
+	],
 	"scripts": {
 		"clean": "rm -rf dist",
 		"build": "tsc -p tsconfig.json",
 		"test": "vitest --run"
 	},
 	"dependencies": {
-		"@earendil-works/pi-ai": "0.79.4",
-		"@earendil-works/pi-agent-core": "0.79.4",
 		"@parenting/memory": "0.1.0"
 	},
 	"devDependencies": {
