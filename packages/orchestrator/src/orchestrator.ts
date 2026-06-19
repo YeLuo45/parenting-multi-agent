@@ -24,6 +24,44 @@ import {
 	detectTopics,
 } from "./types.js";
 
+// ─── Helper functions (exposed for direct testing) ─────────────────
+
+export function applyTopicMatch(
+	agents: Map<string, Agent>,
+	scores: Map<string, number>,
+	topics: AgentTopic[],
+): Set<string> {
+	const topicMatched = new Set<string>();
+	for (const agent of agents.values()) {
+		let score = 0;
+		for (const topic of topics) {
+			if (agent.topics.includes(topic)) score += 10;
+		}
+		if (score > 0) {
+			const existing = scores.get(agent.id);
+			scores.set(agent.id, (existing ?? 0) + score);
+			topicMatched.add(agent.id);
+		}
+	}
+	return topicMatched;
+}
+
+export function applyStageBonus(
+	agents: Map<string, Agent>,
+	scores: Map<string, number>,
+	topicMatched: Set<string>,
+	alwaysInvoke: string[],
+	child: ChildProfile,
+): void {
+	for (const agent of agents.values()) {
+		const eligible = topicMatched.has(agent.id) || alwaysInvoke.includes(agent.id);
+		if (eligible && agent.stages.includes(child.stage)) {
+			const existing = scores.get(agent.id);
+			scores.set(agent.id, (existing ?? 0) + 5);
+		}
+	}
+}
+
 export class OrchestratorCore {
 	private agents = new Map<string, Agent>();
 	private bus: MessageBus;
@@ -185,28 +223,14 @@ export class OrchestratorCore {
 
 		// Always-invoke agents (bypass topic filter)
 		for (const agentId of this.config.alwaysInvoke) {
-			if (this.agents.has(agentId)) scores.set(agentId, (scores.get(agentId) ?? 0) + 1000);
-		}
-
-		// Topic match (REQUIRED for non-always-invoke agents)
-		const topicMatched = new Set<string>();
-		for (const agent of this.agents.values()) {
-			let score = 0;
-			for (const topic of topics) {
-				if (agent.topics.includes(topic)) score += 10;
-			}
-			if (score > 0) {
-				scores.set(agent.id, (scores.get(agent.id) ?? 0) + score);
-				topicMatched.add(agent.id);
+			if (this.agents.has(agentId)) {
+				scores.set(agentId, 1000);
 			}
 		}
 
-		// Stage match bonus: only for topic-matched or always-invoke agents
-		for (const agent of this.agents.values()) {
-			if ((topicMatched.has(agent.id) || this.config.alwaysInvoke.includes(agent.id)) && agent.stages.includes(child.stage)) {
-				scores.set(agent.id, (scores.get(agent.id) ?? 0) + 5);
-			}
-		}
+		// Topic match + stage bonus
+		const topicMatched = applyTopicMatch(this.agents, scores, topics);
+		applyStageBonus(this.agents, scores, topicMatched, this.config.alwaysInvoke, child);
 
 		// Sort by score desc, take top N
 		const sorted = Array.from(scores.entries())
@@ -216,7 +240,7 @@ export class OrchestratorCore {
 		return sorted.slice(0, this.config.maxAgentsPerAsk).map(([id]) => id);
 	}
 
-	// ─── Helpers ──────────────────────────────────────────────────────────
+	// ─── Helper functions (exposed for direct testing) ─────────────────
 
 	private logEpisode(childId: string, type: Episode["type"], content: Record<string, unknown>): void {
 		try {

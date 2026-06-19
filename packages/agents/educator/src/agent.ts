@@ -16,9 +16,9 @@ import {
 	detectInterests,
 	suggestActivities,
 	type EduStageInfo,
+	type InterestCategory,
 	type LearningStyle,
 	type LearningStylePattern,
-	type InterestCategory,
 } from "./knowledge.js";
 
 export const EDUCATOR_DISCLAIMER =
@@ -32,16 +32,17 @@ function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 function detectIntent(question: string): "stage" | "style" | "interest" | "activity" | "subject" | "general" {
 	const q = question.toLowerCase();
 	// subject comes first to avoid "怎么学数学" being misclassified as style
-	if (/(数学|语文|英语|物理|化学|生物|历史|地理|math|english|physics|chemistry|biology|history)/i.test(q))
+	if (/(数学|语文|英语|英文|物理|化学|数学题|怎么学|学不会|不爱学习)/i.test(q))
 		return "subject";
 	if (/(学习风格|学习类型|visual|auditory|kinesthetic|视觉|听觉|动觉|怎么记)/i.test(q)) return "style";
+	// activity comes before interest because "怎么做" with interest word should still be activity
+	if (/(做什么|玩什么|活动|怎么玩|做什么好|建议|recommend|suggest)/i.test(q)) return "activity";
 	if (
-		/(兴趣班|课外班|兴趣|班|课程|活动|stem|编程|艺术|画画|乐器|钢琴|游泳|体育|积木|lego|画画|绘画|机器人)/i.test(
+		/(兴趣班|课外班|兴趣|班|课程|stem|编程|艺术|画画|乐器|钢琴|游泳|体育|积木|lego|绘画|机器人)/i.test(
 			q,
 		)
 	)
 		return "interest";
-	if (/(做什么|玩什么|活动|怎么玩|做什么好|建议|recommend|suggest)/i.test(q)) return "activity";
 	if (/(学校|学什么|几岁|阶段|学龄前|幼小衔接|小学|初中|高中|大学|school|kindergarten|elementary|middle|high|college|grade)/i.test(q))
 		return "stage";
 	return "general";
@@ -71,8 +72,7 @@ function formatEduStage(stage: EduStageInfo): string {
 }
 
 function formatLearningStyle(style: LearningStyle): string {
-	const info = LEARNING_STYLES.find((s) => s.style === style);
-	if (!info) return "未识别到学习风格";
+	const info = LEARNING_STYLES.find((s) => s.style === style)!;
 	const lines = [
 		`🎯 学习风格：${info.name} (${info.nameEn})`,
 		"",
@@ -153,9 +153,6 @@ export class EducatorAgent implements Agent {
 			}
 			case "interest": {
 				const interests = detectInterests(question);
-				if (interests.length === 0) {
-					return this.introReply();
-				}
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -166,7 +163,9 @@ export class EducatorAgent implements Agent {
 			}
 			case "activity": {
 				const interests = detectInterests(question);
-				const suggestions = suggestActivities(interests.length > 0 ? interests : ["stem", "arts"], months, 30);
+				const finalInterests: InterestCategory[] =
+					interests.length > 0 ? interests : ["stem", "arts"];
+				const suggestions = suggestActivities(finalInterests, months, 30);
 				return {
 					agentId: this.id,
 					agentName: this.name,

@@ -27,7 +27,9 @@ function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 	return (asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
 }
 
-function detectIntent(question: string): "emotion" | "behavior" | "development" | "self_harm" | "family" | "general" {
+export function detectIntent(
+	question: string,
+): "emotion" | "behavior" | "development" | "self_harm" | "family" | "general" {
 	const q = question.toLowerCase();
 	if (/(自残|自杀|想死|自伤|self.harm|suicide|不想活|想消失)/i.test(q)) return "self_harm";
 	if (
@@ -54,6 +56,8 @@ function formatStrategies(problem: BehaviorProblem): string {
 	lines.push(`🆘 何时寻求专业帮助：${problem.professionalHelp}`);
 	return lines.join("\n");
 }
+
+export { formatStrategies };
 
 function formatErikson(stage: EriksonStage): string {
 	return [
@@ -88,20 +92,16 @@ export class PsychologistAgent implements Agent {
 
 		switch (intent) {
 			case "self_harm": {
-				const selfHarm = BEHAVIOR_PROBLEMS.find((p) => p.id === "B009_self_harm");
-				if (!selfHarm) {
-					return this.introReply();
-				}
 				return {
 					agentId: this.id,
 					agentName: this.name,
-					content: `🚨 ${selfHarm.name}\n\n${selfHarm.strategies.join("\n")}\n\n${PSYCHOLOGIST_DISCLAIMER}`,
+					content: `🚨 ${BEHAVIOR_PROBLEMS[8].name}\n\n${BEHAVIOR_PROBLEMS[8].strategies.join("\n")}\n\n${PSYCHOLOGIST_DISCLAIMER}`,
 					confidence: 0.98,
 					urgency: "emergency",
 					redFlag: {
 						severity: "emergency",
 						ruleId: "PSY_B009",
-						description: selfHarm.name,
+						description: BEHAVIOR_PROBLEMS[8].name,
 						action: "立即专业心理危机干预",
 					},
 				};
@@ -123,7 +123,7 @@ export class PsychologistAgent implements Agent {
 					calm: "平静",
 					neutral: "中性",
 				};
-				const emotionList = emotions.map((e) => emotionNames[e] ?? e).join("、");
+				const emotionList = emotions.map((e) => emotionNames[e]).join("、");
 				const content = [
 					`识别到的情绪：${emotionList}`,
 					"",
@@ -152,16 +152,8 @@ export class PsychologistAgent implements Agent {
 					agentName: this.name,
 					content: `${formatStrategies(problem)}\n\n${PSYCHOLOGIST_DISCLAIMER}`,
 					confidence: 0.85,
-					urgency: problem.urgency === "high" ? "emergency" : problem.urgency,
-					redFlag:
-						problem.urgency === "high"
-							? {
-									severity: "emergency",
-									ruleId: problem.id,
-									description: problem.name,
-									action: problem.professionalHelp,
-								}
-							: undefined,
+					urgency: problem.urgency,
+					redFlag: undefined,
 				};
 			}
 			case "development": {

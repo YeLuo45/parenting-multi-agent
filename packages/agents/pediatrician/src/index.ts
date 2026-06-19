@@ -9,6 +9,7 @@ export {
 	PediatricianAgent,
 	createPediatricianAgent,
 	PEDIATRICIAN_DISCLAIMER,
+	formatMilestonesForTest,
 } from "./agent.js";
 
 export {

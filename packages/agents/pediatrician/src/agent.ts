@@ -28,6 +28,29 @@ import {
 export const PEDIATRICIAN_DISCLAIMER =
 	"⚠️ 本回复仅供参考，不构成医疗建议。如有疑虑请及时就医或咨询儿科医生。";
 
+// Exported for testing
+export function formatMilestonesForTest(milestones: Milestone[], ageMonths: number): string {
+	const byDomain = new Map<string, Milestone[]>();
+	for (const m of milestones) {
+		const list = byDomain.get(m.domain) ?? [];
+		list.push(m);
+		byDomain.set(m.domain, list);
+	}
+	const DOMAIN_NAMES: Record<Milestone["domain"], string> = {
+		motor: "运动",
+		language: "语言",
+		social: "社交",
+		cognitive: "认知",
+	};
+	const lines: string[] = [`${Math.floor(ageMonths)} 月龄宝宝典型发育里程碑：`];
+	for (const [domain, list] of byDomain) {
+		const domainName = DOMAIN_NAMES[domain as Milestone["domain"]] ?? domain;
+		lines.push(`\n【${domainName}】`);
+		for (const m of list) lines.push(`- ${m.description}`);
+	}
+	return lines.join("\n");
+}
+
 function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 	const birth = new Date(birthDate);
 	return (asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
@@ -50,7 +73,6 @@ function detectIntent(question: string): "vaccine" | "illness" | "milestone" | "
 }
 
 function formatVaccineList(vaccines: VaccineInfo[], ageMonths: number): string {
-	if (vaccines.length === 0) return `宝宝 ${Math.floor(ageMonths)} 个月，已完成基础疫苗接种计划。`;
 	const lines = vaccines.map((v) => `- ${v.name} (${v.nameEn}) — ${v.recommendedAgeMonths} 月龄`);
 	return `宝宝 ${Math.floor(ageMonths)} 个月，已经/应该接种的疫苗：\n${lines.join("\n")}`;
 }
@@ -63,10 +85,15 @@ function formatMilestones(milestones: Milestone[], ageMonths: number): string {
 		list.push(m);
 		byDomain.set(m.domain, list);
 	}
+	const DOMAIN_NAMES: Record<Milestone["domain"], string> = {
+		motor: "运动",
+		language: "语言",
+		social: "社交",
+		cognitive: "认知",
+	};
 	const lines: string[] = [`${Math.floor(ageMonths)} 月龄宝宝典型发育里程碑：`];
 	for (const [domain, list] of byDomain) {
-		const domainName = { motor: "运动", language: "语言", social: "社交", cognitive: "认知" }[domain] ?? domain;
-		lines.push(`\n【${domainName}】`);
+		lines.push(`\n【${DOMAIN_NAMES[domain as Milestone["domain"]]}】`);
 		for (const m of list) lines.push(`- ${m.description}`);
 	}
 	return lines.join("\n");
@@ -127,7 +154,7 @@ export class PediatricianAgent implements Agent {
 						? {
 								severity: rule.urgency,
 								ruleId: "TRIAGE_" + rule.symptom.source.slice(0, 10),
-								description: rule.redFlagDescription ?? "需要就医",
+								description: rule.redFlagDescription,
 								action: "建议尽快就医",
 							}
 						: undefined,

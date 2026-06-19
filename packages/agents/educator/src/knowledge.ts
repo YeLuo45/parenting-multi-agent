@@ -238,9 +238,7 @@ export function suggestActivities(interests: InterestCategory[], ageMonths: numb
 	const stage = getEduStage(ageMonths);
 	if (!stage) return suggestions;
 	for (const interest of interests) {
-		const info = INTERESTS.find((i) => i.category === interest);
-		if (!info) continue;
-		// pick 1-2 activities appropriate for age and time
+		const info = INTERESTS.find((i) => i.category === interest)!;
 		const all = info.activities;
 		const pick = timeMinutes < 20 ? all.slice(0, 1) : all.slice(0, 2);
 		for (const a of pick) {

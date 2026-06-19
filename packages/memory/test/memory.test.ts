@@ -71,6 +71,36 @@ describe("MemoryLayer", () => {
 			const fetched = memory.getChild("c1");
 			expect(fetched?.metadata).toEqual({ allergies: ["peanut"], bloodType: "O+" });
 		});
+
+		it("upsertChild with no metadata works", () => {
+			const child = memory.upsertChild({
+				id: "c1",
+				name: "NoMeta",
+				birthDate: daysAgo(30),
+			});
+			expect(child.metadata).toBeUndefined();
+			const fetched = memory.getChild("c1");
+			expect(fetched?.metadata).toBeUndefined();
+		});
+
+		it("uses :memory: when no options provided", () => {
+			const m = new MemoryLayer();
+			m.upsertChild({ id: "c1", name: "Default", birthDate: daysAgo(30) });
+			const fetched = m.getChild("c1");
+			expect(fetched?.name).toBe("Default");
+			m.close();
+		});
+
+		it("listChildren handles null metadata correctly", () => {
+			memory.upsertChild({ id: "c1", name: "NoMeta", birthDate: daysAgo(30) });
+			memory.upsertChild({ id: "c2", name: "WithMeta", birthDate: daysAgo(60), metadata: { k: "v" } });
+			const list = memory.listChildren();
+			expect(list.length).toBe(2);
+			const noMeta = list.find((c) => c.id === "c1");
+			const withMeta = list.find((c) => c.id === "c2");
+			expect(noMeta?.metadata).toBeUndefined();
+			expect(withMeta?.metadata).toEqual({ k: "v" });
+		});
 	});
 
 	describe("L2: Facts (Global)", () => {
@@ -146,6 +176,35 @@ describe("MemoryLayer", () => {
 			const eps = memory.getEpisodes("c1", "qa", 3);
 			expect(eps.length).toBe(3);
 		});
+
+		it("getEpisodes without type returns all types", () => {
+			memory.addEpisode("c1", "qa", { q: 1 });
+			memory.addEpisode("c1", "visit", { doctor: "Dr. Lee" });
+			const all = memory.getEpisodes("c1");
+			expect(all.length).toBe(2);
+		});
+
+		it("getEpisodes with type and limit combines both filters", () => {
+			for (let i = 0; i < 5; i++) memory.addEpisode("c1", "qa", { i });
+			memory.addEpisode("c1", "visit", { doctor: "x" });
+			const eps = memory.getEpisodes("c1", "qa", 2);
+			expect(eps.length).toBe(2);
+			expect(eps.every((e) => e.type === "qa")).toBe(true);
+		});
+
+		it("getEpisodes with type but no limit returns all matching", () => {
+			for (let i = 0; i < 5; i++) memory.addEpisode("c1", "qa", { i });
+			memory.addEpisode("c1", "visit", { doctor: "x" });
+			const eps = memory.getEpisodes("c1", "qa");
+			expect(eps.length).toBe(5);
+		});
+
+		it("getEpisodes with no type but with limit applies limit only", () => {
+			for (let i = 0; i < 5; i++) memory.addEpisode("c1", "qa", { i });
+			memory.addEpisode("c1", "visit", { doctor: "x" });
+			const eps = memory.getEpisodes("c1", undefined, 2);
+			expect(eps.length).toBe(2);
+		});
 	});
 
 	describe("L4: Sessions (Working Memory)", () => {
@@ -194,6 +253,21 @@ describe("MemoryLayer", () => {
 				.prepare(`UPDATE sessions SET last_active = ?`)
 				.run(new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
 			expect(memory.getActiveSession("c1")).toBeNull();
+		});
+
+		it("getSession handles null context", () => {
+			const sess = memory.startSession("c1", { x: 1 });
+			// null out the context
+			memory.db.prepare(`UPDATE sessions SET context = NULL WHERE id = ?`).run(sess.id);
+			const fetched = memory.getSession(sess.id);
+			expect(fetched?.context).toEqual({});
+		});
+
+		it("getActiveSession handles null context", () => {
+			const sess = memory.startSession("c1", { x: 1 });
+			memory.db.prepare(`UPDATE sessions SET context = NULL WHERE id = ?`).run(sess.id);
+			const active = memory.getActiveSession("c1");
+			expect(active?.context).toEqual({});
 		});
 	});
 
@@ -297,6 +371,39 @@ describe("MemoryLayer", () => {
 				expect(rule.pattern).toBeInstanceOf(RegExp);
 				expect(rule.severity).toMatch(/^(info|warn|emergency)$/);
 			}
+		});
+
+		it("matchL0Rule returns first-match as best when only one matches", () => {
+			// Cover !best branch (line 97): first match wins as best
+			const rule = matchL0Rule("宝宝呼吸困难");
+			expect(rule?.id).toBe("R003_breathing_difficulty");
+		});
+
+		it("matchL0Rule upgrades to higher-severity when both match", () => {
+			// Cover best-replacement branch (line 97 second part)
+			// infant fever (emergency) + head injury (warn) — emergency wins
+			const rule = matchL0Rule("3个月宝宝发烧40度摔到头");
+			expect(rule?.severity).toBe("emergency");
+		});
+	});
+
+	describe("Lifecycle", () => {
+		it("isClosed returns false before close", () => {
+			const m = new MemoryLayer({ dbPath: ":memory:" });
+			expect(m.isClosed).toBe(false);
+			m.close();
+		});
+
+		it("isClosed returns true after close", () => {
+			const m = new MemoryLayer({ dbPath: ":memory:" });
+			m.close();
+			expect(m.isClosed).toBe(true);
+		});
+
+		it("calling close twice is safe", () => {
+			const m = new MemoryLayer({ dbPath: ":memory:" });
+			m.close();
+			expect(() => m.close()).not.toThrow();
 		});
 	});
 

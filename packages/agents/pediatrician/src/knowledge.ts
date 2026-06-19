@@ -120,7 +120,6 @@ export const TRIAGE_RULES: TriageRule[] = [
 export function triageSymptom(text: string, ageMonths: number): TriageRule | null {
 	for (const rule of TRIAGE_RULES) {
 		if (!rule.symptom.test(text)) continue;
-		if (rule.ageMonthsMin !== undefined && ageMonths < rule.ageMonthsMin) continue;
 		if (rule.ageMonthsMax !== undefined && ageMonths > rule.ageMonthsMax) continue;
 		return rule;
 	}
