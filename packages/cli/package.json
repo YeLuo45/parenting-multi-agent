@@ -16,7 +16,15 @@
 	},
 	"dependencies": {
 		"@parenting/orchestrator": "0.1.0",
-		"@parenting/memory": "0.1.0"
+		"@parenting/memory": "0.1.0",
+		"@parenting/agent-pediatrician": "0.1.0",
+		"@parenting/agent-psychologist": "0.1.0",
+		"@parenting/agent-educator": "0.1.0",
+		"@parenting/agent-nutritionist": "0.1.0",
+		"@parenting/agent-sleep-coach": "0.1.0",
+		"@parenting/agent-family-mediator": "0.1.0",
+		"@parenting/agent-finance": "0.1.0",
+		"@parenting/agent-parent-support": "0.1.0"
 	},
 	"devDependencies": {
 		"@types/node": "22.19.19",

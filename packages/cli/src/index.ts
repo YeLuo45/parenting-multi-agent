@@ -11,6 +11,11 @@ import { MemoryLayer, computeStage, type ChildProfile } from "@parenting/memory"
 import { createPediatricianAgent } from "@parenting/agent-pediatrician";
 import { createPsychologistAgent } from "@parenting/agent-psychologist";
 import { createEducatorAgent } from "@parenting/agent-educator";
+import { createNutritionistAgent } from "@parenting/agent-nutritionist";
+import { createSleepCoachAgent } from "@parenting/agent-sleep-coach";
+import { createFamilyMediatorAgent } from "@parenting/agent-family-mediator";
+import { createFinanceAgent } from "@parenting/agent-finance";
+import { createParentSupportAgent } from "@parenting/agent-parent-support";
 
 const DATA_DIR = join(homedir(), ".parenting-multi-agent");
 const DB_PATH = join(DATA_DIR, "memory.sqlite");
@@ -40,6 +45,11 @@ function createOrchestrator(memory: MemoryLayer): OrchestratorCore {
 	orch.registerAgent(createPediatricianAgent());
 	orch.registerAgent(createPsychologistAgent());
 	orch.registerAgent(createEducatorAgent());
+	orch.registerAgent(createNutritionistAgent());
+	orch.registerAgent(createSleepCoachAgent());
+	orch.registerAgent(createFamilyMediatorAgent());
+	orch.registerAgent(createFinanceAgent());
+	orch.registerAgent(createParentSupportAgent());
 	return orch;
 }
 
