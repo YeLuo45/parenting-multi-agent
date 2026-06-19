@@ -1,7 +1,7 @@
 {
 	"name": "@parenting/agent-educator",
 	"version": "0.1.0",
-	"description": "EducatorAgent — schooling, interests, ability tracking, learning style",
+	"description": "EducatorAgent \u2014 schooling, interests, ability tracking, learning style",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -12,7 +12,10 @@
 		},
 		"./package.json": "./package.json"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"clean": "rm -rf dist",
 		"build": "tsc -p tsconfig.json",
@@ -27,8 +30,5 @@
 		"typescript": "5.9.3",
 		"vitest": "2.1.9"
 	},
-	"license": "MIT",
-	"engines": {
-		"node": ">=22.19.0"
-	}
+	"license": "MIT"
 }

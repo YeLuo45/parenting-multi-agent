@@ -12,7 +12,10 @@
 		},
 		"./package.json": "./package.json"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"clean": "rm -rf dist",
 		"build": "tsc -p tsconfig.json",
@@ -27,8 +30,5 @@
 		"typescript": "5.9.3",
 		"vitest": "2.1.9"
 	},
-	"license": "MIT",
-	"engines": {
-		"node": ">=22.19.0"
-	}
+	"license": "MIT"
 }

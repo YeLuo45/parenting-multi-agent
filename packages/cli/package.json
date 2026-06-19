@@ -1,7 +1,7 @@
 {
 	"name": "@parenting/cli",
 	"version": "0.1.0",
-	"description": "Parenting CLI — `parenting ask \"...\"`, `parenting add-child`, `parenting history`",
+	"description": "Parenting CLI \u2014 `parenting ask \"...\"`, `parenting add-child`, `parenting history`",
 	"type": "module",
 	"main": "./dist/index.js",
 	"bin": {
@@ -22,8 +22,5 @@
 		"typescript": "5.9.3",
 		"vitest": "2.1.9"
 	},
-	"license": "MIT",
-	"engines": {
-		"node": ">=22.19.0"
-	}
+	"license": "MIT"
 }
