@@ -1,0 +1,29 @@
+{
+	"name": "@parenting/web",
+	"version": "0.1.0",
+	"description": "Vite + React Dashboard for parenting-multi-agent — chat UI, child profile, agent activity",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"clean": "rm -rf dist",
+		"dev": "vite",
+		"build": "tsc -p tsconfig.json && vite build",
+		"preview": "vite preview",
+		"test": "vitest --run"
+	},
+	"dependencies": {
+		"react": "19.0.0",
+		"react-dom": "19.0.0",
+		"@parenting/orchestrator": "0.1.0",
+		"@parenting/memory": "0.1.0"
+	},
+	"devDependencies": {
+		"@types/react": "19.0.0",
+		"@types/react-dom": "19.0.0",
+		"@vitejs/plugin-react": "4.3.4",
+		"typescript": "5.9.3",
+		"vite": "6.0.5",
+		"vitest": "2.1.9"
+	},
+	"license": "MIT"
+}

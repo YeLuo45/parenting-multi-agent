@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+coverage/
+.env
+.env.local
+*.tsbuildinfo
+
+# local data
+*.sqlite
+*.sqlite-journal
+*.db
+
+# editor
+.vscode/
+.idea/
+
+# legacy pi-mono (deprecated, retained for reference)
+packages/coding-agent/node_modules
+packages/tui/node_modules

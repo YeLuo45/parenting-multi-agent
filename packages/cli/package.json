@@ -1,0 +1,29 @@
+{
+	"name": "@parenting/cli",
+	"version": "0.1.0",
+	"description": "Parenting CLI — `parenting ask \"...\"`, `parenting add-child`, `parenting history`",
+	"type": "module",
+	"main": "./dist/index.js",
+	"bin": {
+		"parenting": "./dist/index.js"
+	},
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "tsc -p tsconfig.json",
+		"start": "node --experimental-strip-types src/index.ts",
+		"test": "vitest --run"
+	},
+	"dependencies": {
+		"@parenting/orchestrator": "0.1.0",
+		"@parenting/memory": "0.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "22.19.19",
+		"typescript": "5.9.3",
+		"vitest": "2.1.9"
+	},
+	"license": "MIT",
+	"engines": {
+		"node": ">=22.19.0"
+	}
+}

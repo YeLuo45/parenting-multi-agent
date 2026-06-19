@@ -1,0 +1,48 @@
+{
+	"name": "parenting-multi-agent",
+	"private": true,
+	"type": "module",
+	"description": "AI-powered parenting assistant from birth to college — multi-agent system (pediatrician/psychologist/educator + 6 more) built on pi-mono agent framework",
+	"workspaces": [
+		"packages/agent",
+		"packages/ai",
+		"packages/orchestrator",
+		"packages/agents/pediatrician",
+		"packages/agents/psychologist",
+		"packages/agents/educator",
+		"packages/memory",
+		"packages/cli",
+		"apps/web"
+	],
+	"scripts": {
+		"clean": "npm run clean --workspaces --if-present",
+		"build": "npm run build --workspaces --if-present",
+		"build:core": "npm run build -w @earendil-works/pi-ai -w @earendil-works/pi-agent-core",
+		"build:agents": "npm run build -w @parenting/orchestrator -w @parenting/memory",
+		"build:web": "npm run build -w @parenting/web",
+		"check": "biome check --write --error-on-warnings . && tsgo --noEmit",
+		"test": "npm run test --workspaces --if-present",
+		"test:vitest": "./test.sh",
+		"dev:web": "npm run dev -w @parenting/web",
+		"start:cli": "npm run start -w @parenting/cli",
+		"version:patch": "npm version patch -ws --no-git-tag-version",
+		"version:minor": "npm version minor -ws --no-git-tag-version"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.5",
+		"@types/node": "22.19.19",
+		"@typescript/native-preview": "7.0.0-dev.20260120.1",
+		"esbuild": "0.28.0",
+		"tsx": "4.22.1",
+		"typescript": "5.9.3",
+		"vitest": "2.1.9",
+		"better-sqlite3": "11.3.0"
+	},
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"version": "0.1.0",
+	"overrides": {
+		"rimraf": "6.1.2"
+	}
+}
