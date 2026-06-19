@@ -49,7 +49,7 @@ export interface Session {
 	context: Record<string, unknown>;
 }
 
-export type DeltaOp = "insert" | "update" | "delete";
+export type DeltaOp = "insert" | "update" | "upsert" | "delete";
 
 export interface DeltaEntry {
 	id: number;

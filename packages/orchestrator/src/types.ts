@@ -99,11 +99,11 @@ export function detectTopics(question: string): AgentTopic[] {
 		["behavior", /(行为|behavior|发脾气|tantrum|打|咬|hit|咬人|不听话|disobey)/i],
 		["emotion", /(情绪|害怕|怕|哭|伤心|生气|emotion|afraid|scared|cry|sad|angry|焦虑|anxiety|抑郁|depress)/i],
 		["development", /(发育|发展|里程碑|成长|milestone|development|长牙|teeth|走路|walk|说话|speak|talk)/i],
-		["education", /(教育|学习|读书|看书|绘本|education|learn|read|book)/i],
-		["school", /(学校|幼儿园|小学|中学|大学|school|kindergarten|college|university|升学|入学)/i],
-		["family", /(家庭|夫妻|婆媳|祖辈|离婚|family|grandparent|divorce)/i],
-		["finance", /(钱|教育金|保险|学费|finance|money|tuition|insurance)/i],
-		["legal", /(法律|监护|权益|legal|right|custody)/i],
+		["education", /(教育|学习|读书|看书|绘本|education|learn|read|book|学什么|学龄|课程|学科|成绩|考试|作业|编程|stem|机器人|乐高|积木|画画|钢琴|乐器|舞蹈|游泳|课外|兴趣班|数学|语文|英语|英文|物理|化学|数学题|怎么学|学不会|不爱学习)/i],
+		["school", /(学校|幼儿园|小学|中学|大学|school|kindergarten|college|university|升学|入学|上学|不肯上学|不想上学|逃学|休学|转学)/i],
+		["family", /(家庭|夫妻|婆媳|祖辈|离婚|family|grandparent|divorce|吵架|闹矛盾|分居|单亲)/i],
+		["emotion", /(情绪|害怕|怕|哭|伤心|生气|emotion|afraid|scared|cry|sad|angry|焦虑|抑郁|depress|紧张|panick)/i],
+		["behavior", /(行为|behavior|发脾气|tantrum|打|咬|hit|咬人|不听话|disobey|不肯|拒绝|叛逆|闹|打人|欺负)/i],
 		["parent_support", /(累|疲惫|压力|抑郁|无助|exhausted|stress|overwhelm|burnout|burned.out)/i],
 	];
 	const found: AgentTopic[] = [];
