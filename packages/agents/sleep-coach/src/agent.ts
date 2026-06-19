@@ -75,8 +75,7 @@ function formatSchedule(schedule: NapSchedule, ageMonths: number): string {
 		schedule.napDurations.forEach((d, i) => lines.push(`小睡 ${i + 1}：${d}`));
 	}
 	lines.push("", `夜间睡眠：${schedule.nightSleep}`);
-	const notes = schedule.notes ?? "";
-	if (notes) lines.push(`💡 ${notes}`);
+	if (schedule.notes) lines.push(`💡 ${schedule.notes}`);
 	return lines.join("\n");
 }
 
