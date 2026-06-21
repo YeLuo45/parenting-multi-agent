@@ -302,6 +302,11 @@ describe("REPL parser", () => {
 		expect(parseReplLine("list", 10).kind).toBe("list");
 	});
 
+	it("returns clear for /clear / clear", () => {
+		expect(parseReplLine("/clear", 10).kind).toBe("clear");
+		expect(parseReplLine("clear", 10).kind).toBe("clear");
+	});
+
 	it("returns history with default limit", () => {
 		const a = parseReplLine("/history", 10);
 		expect(a.kind).toBe("history");

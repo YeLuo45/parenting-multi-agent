@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplReader } from "@parenting/cli";
-import { createTuiDeps, main, renderTuiBanner, renderTuiHelp, runTui } from "../src/index.js";
+import { createTuiDeps, main, renderChildTabs, renderTuiBanner, renderTuiHelp, runTui } from "../src/index.js";
 import { MemoryLayer } from "@parenting/memory";
 
 let logs: string[];
@@ -34,11 +34,12 @@ describe("TUI rendering", () => {
 		expect(renderTuiBanner(3)).toContain(" 3 specialist agents");
 	});
 
-	it("renders command help", () => {
+	it("renders command help including /clear", () => {
 		const help = renderTuiHelp();
 		expect(help).toContain("/list");
 		expect(help).toContain("/use <child-id>");
 		expect(help).toContain("/quit");
+		expect(help).toContain("/clear");
 	});
 });
 
@@ -50,6 +51,7 @@ describe("TUI deps", () => {
 			expect(deps.currentChild.id).toBe("default");
 			expect(memory.listChildren()).toHaveLength(1);
 			expect(deps.defaultLimit).toBe(10);
+			expect(typeof deps.clear).toBe("function");
 		} finally {
 			memory.close();
 		}
@@ -96,6 +98,40 @@ describe("TUI deps", () => {
 			memory.close();
 		}
 	});
+
+	it("invokes clear() and writes the ANSI clear sequence", () => {
+		const memory = new MemoryLayer({ dbPath: ":memory:" });
+		try {
+			const deps = createTuiDeps(memory, 10, true);
+			const writes: string[] = [];
+			const originalWrite = process.stdout.write.bind(process.stdout);
+			vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+				writes.push(String(chunk));
+				return originalWrite(chunk as never);
+			});
+			deps.clear?.();
+			expect(writes.join("")).toContain("\x1b[2J");
+		} finally {
+			memory.close();
+		}
+	});
+
+	it("clear() with color=false writes an empty string", () => {
+		const memory = new MemoryLayer({ dbPath: ":memory:" });
+		try {
+			const deps = createTuiDeps(memory, 10, false);
+			const writes: string[] = [];
+			const originalWrite = process.stdout.write.bind(process.stdout);
+			vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+				writes.push(String(chunk));
+				return originalWrite(chunk as never);
+			});
+			deps.clear?.();
+			expect(writes.join("")).toBe("");
+		} finally {
+			memory.close();
+		}
+	});
 });
 
 describe("runTui", () => {
@@ -109,11 +145,51 @@ describe("runTui", () => {
 		expect(closed()).toBe(true);
 	});
 
+	it("renders a tab strip with the active child highlighted in cyan", async () => {
+		const { reader } = makeReader(["/quit"]);
+		await runTui({ reader });
+		const output = logs.join("\n");
+		// 0x1b[36m = cyan; default child is "default"
+		expect(output).toContain("\x1b[36m");
+		expect(output).toContain("▸");
+	});
+
+	it("prints the goodbye banner after the REPL exits", async () => {
+		const { reader } = makeReader(["/quit"]);
+		const writes: string[] = [];
+		const originalWrite = process.stdout.write.bind(process.stdout);
+		vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+			writes.push(String(chunk));
+			return originalWrite(chunk as never);
+		});
+		await runTui({ reader });
+		expect(writes.join("")).toContain("👋 再见");
+	});
+
+	it("invokes the clear handler when /clear is typed", async () => {
+		const writes: string[] = [];
+		const originalWrite = process.stdout.write.bind(process.stdout);
+		vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+			writes.push(String(chunk));
+			return originalWrite(chunk as never);
+		});
+		const { reader } = makeReader(["/clear", "/quit"]);
+		await runTui({ reader });
+		expect(writes.join("")).toContain("\x1b[2J");
+	});
+
+	it("respects color=false to disable ANSI escape sequences", async () => {
+		const { reader } = makeReader(["/quit"]);
+		await runTui({ reader, color: false });
+		const output = logs.join("\n");
+		expect(output).not.toContain("\x1b[36m");
+	});
+
 	it("main prints help and exits without starting readline", async () => {
 		await expect(main(["--help"])).resolves.toBe(0);
 		const output = logs.join("\n");
 		expect(output).toContain("parenting-multi-agent TUI");
-		expect(output).toContain("/history [n]");
+		expect(output).toContain("/history [n] [p]");
 	});
 
 	it("main starts the injected runner when no help flag is passed", async () => {

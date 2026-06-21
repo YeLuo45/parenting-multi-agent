@@ -201,6 +201,7 @@ export type ReplAction =
 	| { kind: "use"; childId: string }
 	| { kind: "history"; limit: number }
 	| { kind: "list" }
+	| { kind: "clear" }
 	| { kind: "help" }
 	| { kind: "quit" }
 	| { kind: "noop" };
@@ -212,6 +213,7 @@ export function parseReplLine(line: string, defaultLimit: number): ReplAction {
 	}
 	if (trimmed === "/help" || trimmed === "help" || trimmed === "?") return { kind: "help" };
 	if (trimmed === "/list" || trimmed === "list") return { kind: "list" };
+	if (trimmed === "/clear" || trimmed === "clear") return { kind: "clear" };
 	if (trimmed === "/history" || trimmed === "history") return { kind: "history", limit: defaultLimit };
 	const historyMatch = /^\/(?:history|hist)\s+(\d+)$/.exec(trimmed);
 	if (historyMatch) return { kind: "history", limit: Number(historyMatch[1]) };
@@ -225,6 +227,7 @@ export interface ReplDeps {
 	currentChild: ChildProfile;
 	ask: (child: ChildProfile, question: string) => Promise<void>;
 	list: () => void;
+	clear?: () => void;
 	history: (child: ChildProfile, limit: number) => void;
 	use: (childId: string) => ChildProfile | null;
 	defaultLimit: number;
@@ -244,6 +247,9 @@ export function handleReplLine(deps: ReplDeps, line: string): boolean {
 		case "list":
 			deps.list();
 			return true;
+		case "clear":
+			deps.clear?.();
+			return true;
 		case "history":
 			deps.history(deps.currentChild, action.limit);
 			return true;
@@ -256,6 +262,12 @@ export function handleReplLine(deps: ReplDeps, line: string): boolean {
 			// Fire-and-forget; errors surface through ask() console.error already.
 			void deps.ask(deps.currentChild, action.question);
 			return true;
+		default: {
+			// Exhaustiveness guard — unreachable if ReplAction union is complete.
+			const _exhaustive: never = action;
+			void _exhaustive;
+			return true;
+		}
 	}
 }
 
