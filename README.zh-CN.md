@@ -122,6 +122,16 @@ NODE_ENV=development npm test -w @parenting/web -- --coverage
 # 只运行某个专家 Agent 覆盖率
 NODE_ENV=development npm test -w @parenting/agent-legal -- --coverage
 
+# 启动 Web 开发服务器
+npm run dev:web
+# 然后访问 http://localhost:5173/parenting-multi-agent/
+
+# 启动 TUI 模式
+npm run dev:tui
+
+# 启动 CLI 模式
+npm run dev:cli
+
 # CLI 紧急分诊烟测
 PARENTING_DATA_DIR="$(mktemp -d)" npx tsx packages/cli/src/index.ts ask "我家宝宝3个月发烧38.5度怎么办"
 
@@ -134,7 +144,7 @@ PARENTING_DATA_DIR="$TMP" npx tsx packages/cli/src/index.ts list
 注意事项：
 
 - `npm run dev:web` 会启动长期运行的 Vite server。自动化验收时不要前台直接跑，应使用后台进程并单独检查 readiness。
-- `npm run build:web` 可能输出 Vite 关于 `better-sqlite3` 的浏览器兼容 warning。只要 exit code 为 0 即视为构建通过；浏览器端实际使用的是 `WebMemoryLayer`，不是 SQLite。
+- `npm run build:web` 不应再输出 `better-sqlite3` / `browser-external:fs` / `browser-external:util` warning。浏览器端通过 Vite alias 使用 web-safe memory shim + `WebMemoryLayer`，不会加载 native SQLite 代码。
 - WSL 环境下安装和测试建议显式使用 `NODE_ENV=development`，避免 devDependencies 被跳过。
 
 ## Web 控制台
@@ -150,6 +160,21 @@ Web 应用包含：
 
 ```bash
 npm run build:web
+```
+
+开发服务器：
+
+```bash
+npm run dev:web
+# 打开 http://localhost:5173/parenting-multi-agent/
+```
+
+## TUI 模式
+
+TUI 模式是终端优先的交互 shell，复用 CLI 的 Agent 注册和记忆栈。
+
+```bash
+npm run dev:tui
 ```
 
 ## CLI 示例
@@ -181,8 +206,8 @@ npx playwright test --project=chromium
 
 注意事项：
 
-- CI 的 e2e 步骤设置了 `continue-on-error: true`，因为 production bundle 当前存在 React 19 production mount 已知问题（`r is not a function`）。组件行为已由 `apps/web/test/*.test.tsx` 的 jsdom + RTL 单测完整覆盖，`test-coverage` job 强制执行。
-- 修复 React 19 mount 问题并把 e2e 升级为硬门槛，作为独立的后续工作。
+- web-safe memory shim 修复后，Playwright 本地 Chromium 预期应通过。
+- 如果 app root 缺失，先检查浏览器 console 是否有 `browser-external:fs`、`browser-external:util` 或 `better-sqlite3` 错误；这些说明 native 依赖泄漏进浏览器 bundle。
 
 ## 开发约定
 

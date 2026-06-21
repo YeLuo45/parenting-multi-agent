@@ -6,7 +6,8 @@
  * returns an `<App />` React element bound to a fresh in-memory stack.
  */
 import { useEffect, useReducer, type ReactElement } from "react";
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import type { ChildProfile } from "@parenting/memory";
+import { computeWebStage } from "./memory-helpers.js";
 import { createWebOrchestrator, listWebAgentIds, type WebOrchestrator } from "./orchestrator.js";
 import { AppBody, ChatPanel, ChildrenPanel, Composer, Header, MessageBubble, Messages } from "./components.js";
 import { ThemeProvider } from "./theme.js";
@@ -281,7 +282,7 @@ export async function runAsk(
 	const child = stack.listChildren().find((c) => c.id === childId);
 	if (!child) return { ok: false, error: `Child ${childId} not found` };
 	if (!question.trim()) return { ok: false, error: "Question is empty" };
-	const stage = child.stage ?? computeStage(child.birthDate);
+	const stage = child.stage ?? computeWebStage(child.birthDate);
 	const target = { ...child, stage };
 	const result = await stack.ask(target, question);
 	const userMsg: ChatMessage = {

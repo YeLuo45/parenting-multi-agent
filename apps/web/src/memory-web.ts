@@ -7,19 +7,18 @@
  *
  * Uses Map() + Array() for storage. All IDs are generated with genId().
  */
-import {
-	computeStage,
-	genId,
-	type ChildProfile,
-	type ChildStage,
-	type Episode,
-	type EpisodeType,
-	type Fact,
-	type FactCategory,
-	type Session,
-	type DeltaEntry,
-	type DeltaOp,
+import type {
+	ChildProfile,
+	ChildStage,
+	Episode,
+	EpisodeType,
+	Fact,
+	FactCategory,
+	Session,
+	DeltaEntry,
+	DeltaOp,
 } from "@parenting/memory";
+import { computeWebStage, genWebId } from "./memory-helpers.js";
 
 /**
  * Interface extracted from MemoryLayer's public methods that the
@@ -69,7 +68,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 	// ─── L1: Children ────────────────────────────────────────────────────
 
 	upsertChild(profile: ChildProfile): ChildProfile {
-		const stage = profile.stage ?? computeStage(profile.birthDate);
+		const stage = profile.stage ?? computeWebStage(profile.birthDate);
 		const child: ChildProfile = { ...profile, stage };
 		this.children.set(child.id, child);
 		this.recordDelta("children", child.id, "upsert", { ...child });
@@ -94,7 +93,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 
 	addFact(childId: string, category: FactCategory, key: string, value: string | Record<string, unknown>): Fact {
 		const fact: Fact = {
-			id: genId("fact"),
+			id: genWebId("fact"),
 			childId,
 			category,
 			key,
@@ -122,7 +121,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 
 	addEpisode(childId: string, type: EpisodeType, content: Record<string, unknown>): Episode {
 		const episode: Episode = {
-			id: genId("ep"),
+			id: genWebId("ep"),
 			childId,
 			type,
 			content,
@@ -146,7 +145,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 	startSession(childId: string, context: Record<string, unknown> = {}): Session {
 		const now = new Date().toISOString();
 		const session: Session = {
-			id: genId("sess"),
+			id: genWebId("sess"),
 			childId,
 			startedAt: now,
 			lastActive: now,

@@ -6,6 +6,7 @@ build/
 coverage/
 test-results/
 apps/*/test-results/
+apps/*/playwright-report/
 .env
 .env.local
 *.tsbuildinfo

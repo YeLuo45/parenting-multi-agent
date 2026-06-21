@@ -1,0 +1,27 @@
+{
+	"name": "@parenting/tui",
+	"version": "0.1.0",
+	"description": "Terminal UI mode for parenting-multi-agent",
+	"type": "module",
+	"main": "./dist/index.js",
+	"bin": {
+		"parenting-tui": "./dist/bin.js"
+	},
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "tsc -p tsconfig.json",
+		"start": "tsx src/bin.ts",
+		"test": "../../node_modules/.bin/vitest --run"
+	},
+	"dependencies": {
+		"@parenting/cli": "0.1.0",
+		"@parenting/memory": "0.1.0",
+		"@parenting/orchestrator": "0.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "22.19.19",
+		"typescript": "5.9.3",
+		"vitest": "3.2.4"
+	},
+	"license": "MIT"
+}
