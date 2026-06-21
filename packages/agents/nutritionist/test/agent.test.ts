@@ -220,6 +220,13 @@ describe("NutritionistAgent", () => {
 			expect(reply.content).toMatch(/\d+\s*kcal|\d+\s*oz/);
 		});
 
+		it("includes nutrition notes for newborn needs", async () => {
+			const reply = await agent.respond("宝宝每天需要多少奶量", makeChild(15, "c", "Kid", "newborn"), {
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			});
+			expect(reply.content).toContain("纯母乳/配方奶");
+		});
+
 		it("returns nutrition info for older child", async () => {
 			const reply = await agent.respond("宝宝需要多少蛋白质", makeChild(365 * 4, "c", "Kid", "preschool"), {
 				memory: null as unknown as import("@parenting/memory").MemoryLayer,

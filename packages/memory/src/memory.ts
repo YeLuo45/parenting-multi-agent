@@ -376,6 +376,46 @@ export class MemoryLayer {
 		return result.changes;
 	}
 
+	/** Get only unsynced deltas (synced_at IS NULL), optionally capped. */
+	getUnsyncedDeltas(limit?: number): DeltaEntry[] {
+		const sql = limit
+			? `SELECT * FROM delta_log WHERE synced_at IS NULL ORDER BY id ASC LIMIT ?`
+			: `SELECT * FROM delta_log WHERE synced_at IS NULL ORDER BY id ASC`;
+		const rows = (limit ? this.db.prepare(sql).all(limit) : this.db.prepare(sql).all()) as Array<{
+			id: number;
+			table_name: string;
+			row_id: string;
+			op: string;
+			payload: string;
+			synced_at: string | null;
+			created_at: string;
+		}>;
+		return rows.map((row) => ({
+			id: row.id,
+			tableName: row.table_name,
+			rowId: row.row_id,
+			op: row.op as DeltaOp,
+			payload: JSON.parse(row.payload),
+			syncedAt: row.synced_at,
+			createdAt: row.created_at,
+		}));
+	}
+
+	/** Summary stats for the delta log. */
+	getDeltaStats(): { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> } {
+		const total = (this.db.prepare(`SELECT COUNT(*) AS cnt FROM delta_log`).get() as { cnt: number }).cnt;
+		const unsynced = (this.db.prepare(`SELECT COUNT(*) AS cnt FROM delta_log WHERE synced_at IS NULL`).get() as { cnt: number }).cnt;
+		const byTable: Record<string, number> = {};
+		for (const row of this.db.prepare(`SELECT table_name, COUNT(*) AS cnt FROM delta_log GROUP BY table_name`).all() as Array<{ table_name: string; cnt: number }>) {
+			byTable[row.table_name] = row.cnt;
+		}
+		const byOp: Record<string, number> = {};
+		for (const row of this.db.prepare(`SELECT op, COUNT(*) AS cnt FROM delta_log GROUP BY op`).all() as Array<{ op: string; cnt: number }>) {
+			byOp[row.op] = row.cnt;
+		}
+		return { total, unsynced, byTable, byOp };
+	}
+
 	// ─── Lifecycle ────────────────────────────────────────────────────────
 
 	close(): void {

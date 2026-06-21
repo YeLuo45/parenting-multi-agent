@@ -166,6 +166,14 @@ describe("SleepCoachAgent", () => {
 	});
 
 	describe("schedule queries", () => {
+		it("returns newborn schedule notes", async () => {
+			const reply = await agent.respond("宝宝作息", makeChild(15, "c", "Kid", "newborn"), {
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			});
+			expect(reply.content).toContain("新生儿期");
+			expect(reply.content).toContain("💡");
+		});
+
 		it("returns schedule for 9-month-old", async () => {
 			const reply = await agent.respond("宝宝作息", makeChild(270, "c", "Kid", "infant"), {
 				memory: null as unknown as import("@parenting/memory").MemoryLayer,

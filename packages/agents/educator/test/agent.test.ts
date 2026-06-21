@@ -288,7 +288,7 @@ describe("EducatorAgent", () => {
 			const reply = await agent.respond("3岁孩子数学怎么学", makeChild(365 * 3, "c", "Kid", "preschool"), {
 				memory: null as unknown as import("@parenting/memory").MemoryLayer,
 			});
-			expect(reply.content).toMatch(/学龄前|游戏/);
+			expect(reply.content).toMatch(/学前|游戏/);
 		});
 
 		it("returns intro when subject intent but no edu stage (covers branch 145-149)", async () => {

@@ -8,22 +8,25 @@
 		"clean": "rm -rf dist",
 		"dev": "vite",
 		"build": "tsc -p tsconfig.json && vite build",
+		"build:e2e": "tsc -p tsconfig.json && vite build --base ./",
 		"preview": "vite preview",
-		"test": "vitest --run"
+		"preview:e2e": "vite preview --base ./",
+		"test": "../../node_modules/.bin/vitest --run"
 	},
 	"dependencies": {
-		"react": "19.0.0",
-		"react-dom": "19.0.0",
+		"@parenting/memory": "0.1.0",
 		"@parenting/orchestrator": "0.1.0",
-		"@parenting/memory": "0.1.0"
+		"react": "19.2.7",
+		"react-dom": "19.2.7"
 	},
 	"devDependencies": {
-		"@types/react": "19.0.0",
-		"@types/react-dom": "19.0.0",
+		"@playwright/test": "1.49.1",
+		"@types/react": "19.2.0",
+		"@types/react-dom": "19.2.2",
 		"@vitejs/plugin-react": "4.3.4",
 		"typescript": "5.9.3",
 		"vite": "6.0.5",
-		"vitest": "2.1.9"
+		"vitest": "3.2.4"
 	},
 	"license": "MIT"
 }

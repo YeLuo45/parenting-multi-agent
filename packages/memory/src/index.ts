@@ -32,4 +32,20 @@ export {
 	type DeltaOp,
 } from "./types.js";
 
+export {
+	SyncEngine,
+	buildPushResult,
+	fullSync,
+	findRowDelta,
+	highestId,
+	lwwResolve,
+	mergeDeltas,
+	selectDeltasSince,
+	selectUnsyncedDeltas,
+	type DeviceSyncState,
+	type FullSyncResult,
+	type PullResult,
+	type PushResult,
+} from "./sync.js";
+
 export const MEMORY_VERSION = "0.1.0";

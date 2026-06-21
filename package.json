@@ -13,6 +13,16 @@
 		"packages/agents/family-mediator",
 		"packages/agents/finance",
 		"packages/agents/parent-support",
+		"packages/agents/growth-tracker",
+		"packages/agents/habit-builder",
+		"packages/agents/knowledge-rag",
+		"packages/agents/safety-guard",
+		"packages/agents/social",
+		"packages/agents/school-readiness",
+		"packages/agents/college-prep",
+		"packages/agents/career",
+		"packages/agents/legal",
+		"packages/agents/sibling",
 		"packages/memory",
 		"packages/cli",
 		"apps/web"
@@ -24,6 +34,7 @@
 		"build:web": "npm run build -w @parenting/web",
 		"check": "biome check --write --error-on-warnings . && tsgo --noEmit",
 		"test": "npm run test --workspaces --if-present",
+		"test:coverage": "npm run test --workspaces --if-present -- --coverage",
 		"test:vitest": "./test.sh",
 		"dev:web": "npm run dev -w @parenting/web",
 		"start:cli": "npm run start -w @parenting/cli",
@@ -49,6 +60,10 @@
 		"rimraf": "6.1.2"
 	},
 	"dependencies": {
-		"@types/better-sqlite3": "7.6.13"
+		"@testing-library/jest-dom": "6.9.1",
+		"@testing-library/react": "16.3.2",
+		"@testing-library/user-event": "14.6.1",
+		"@types/better-sqlite3": "7.6.13",
+		"jsdom": "29.1.1"
 	}
 }

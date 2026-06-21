@@ -9,18 +9,23 @@
  * 5. Log: write episode to memory + publish events on bus
  */
 
-import { computeStage, matchL0Rule, type ChildProfile, type MemoryLayer, type Episode } from "@parenting/memory";
+import { computeStage, matchL0Rule, type ChildProfile, type Episode } from "@parenting/memory";
 
 import { MessageBus } from "./bus.js";
 import {
 	type Agent,
 	type AgentContext,
 	type AgentReply,
+	type AgentStats,
 	type AgentTopic,
+	type Feedback,
+	type FeedbackRating,
+	type MemoryLayerLike,
 	type OrchestratorConfig,
 	type OrchestratorEvent,
 	type OrchestratorResult,
 	type RedFlag,
+	type UrgencyLevel,
 	detectTopics,
 } from "./types.js";
 
@@ -62,6 +67,22 @@ export function applyStageBonus(
 	}
 }
 
+/** Boost scores using per-agent feedback. Maps avgRating (0-5) → boost (0-5).
+ *  Pure function so feedback lookup can be injected for testing. */
+export function applyFeedbackBoost(
+	scores: Map<string, number>,
+	getAvg: (agentId: string) => number,
+): void {
+	for (const [agentId, score] of scores.entries()) {
+		const boost = getAvg(agentId);
+		if (boost > 0) scores.set(agentId, score + boost);
+	}
+}
+
+export function mapL0Severity(severity: NonNullable<ReturnType<typeof matchL0Rule>>["severity"]): UrgencyLevel {
+	return severity === "warn" ? "high" : severity;
+}
+
 export class OrchestratorCore {
 	private agents = new Map<string, Agent>();
 	private bus: MessageBus;
@@ -97,6 +118,63 @@ export class OrchestratorCore {
 		return this.agents.get(agentId);
 	}
 
+	// ─── Feedback & self-evolution ────────────────────────────────────────
+
+	/**
+	 * Record user feedback for an agent reply. Persists via memory when
+	 * memory implements addFeedback. Returns the stored feedback or null.
+	 */
+	recordFeedback(
+		childId: string,
+		episodeId: string,
+		agentId: string,
+		rating: FeedbackRating,
+		comment?: string,
+	): Feedback | null {
+		if (!this.config.memory.addFeedback) return null;
+		return this.config.memory.addFeedback({
+			childId,
+			episodeId,
+			agentId,
+			rating,
+			comment,
+		});
+	}
+
+	/**
+	 * Compute aggregate stats for one agent from its feedback history.
+	 * Returns zeros if no feedback exists or memory doesn't support it.
+	 */
+	getAgentStats(agentId: string, limit = 20): AgentStats {
+		const empty: AgentStats = { agentId, count: 0, avgRating: 0, positiveCount: 0 };
+		if (!this.config.memory.getFeedback) return empty;
+		const items = this.config.memory.getFeedback(agentId, limit);
+		if (items.length === 0) return empty;
+		let total = 0;
+		let positive = 0;
+		for (const fb of items) {
+			total += fb.rating;
+			if (fb.rating >= 4) positive++;
+		}
+		return {
+			agentId,
+			count: items.length,
+			avgRating: total / items.length,
+			positiveCount: positive,
+		};
+	}
+
+	/**
+	 * Routing boost for an agent based on historical feedback.
+	 * Maps avgRating (0-5) to a boost of 0-5 extra points added to the
+	 * routing score. Returns 0 when no feedback is available.
+	 */
+	feedbackBoost(agentId: string): number {
+		const stats = this.getAgentStats(agentId);
+		if (stats.count === 0) return 0;
+		return stats.avgRating;
+	}
+
 	// ─── Bus ──────────────────────────────────────────────────────────────
 
 	getBus(): MessageBus {
@@ -110,13 +188,47 @@ export class OrchestratorCore {
 	// ─── Core: ask ────────────────────────────────────────────────────────
 
 	async ask(question: string, child: ChildProfile): Promise<OrchestratorResult> {
+		return this.runAsk(question, child, undefined);
+	}
+
+	/**
+	 * Continue a prior L4 session: pull the session from memory, refresh it,
+	 * and route the new question with the same sessionId so events and episodes
+	 * stay grouped. The session is auto-created on first ask.
+	 */
+	async askFollowup(
+		sessionId: string,
+		question: string,
+		child: ChildProfile,
+	): Promise<OrchestratorResult> {
+		// Validate the session exists; refuse to silently fork.
+		const existing = this.config.memory.getSession(sessionId);
+		if (!existing) {
+			throw new Error(`Session ${sessionId} not found`);
+		}
+		// Bump lastActive so callers can detect recent sessions.
+		try {
+			this.config.memory.updateSession(sessionId, existing.context);
+		} catch {
+			// best-effort: session may not support update
+		}
+		return this.runAsk(question, child, sessionId);
+	}
+
+	private async runAsk(
+		question: string,
+		child: ChildProfile,
+		sessionId: string | undefined,
+	): Promise<OrchestratorResult> {
 		const startedAt = Date.now();
 		const childWithStage: ChildProfile = { ...child, stage: child.stage ?? computeStage(child.birthDate) };
+		const activeSessionId = sessionId ?? this.openSession(childWithStage.id);
 
 		this.bus.publish({
 			type: "ask_started",
 			question,
 			childId: childWithStage.id,
+			sessionId: activeSessionId,
 			at: startedAt,
 		});
 
@@ -124,7 +236,7 @@ export class OrchestratorCore {
 		const l0Rule = matchL0Rule(question);
 		if (l0Rule) {
 			const redFlag: RedFlag = {
-				severity: l0Rule.severity,
+				severity: mapL0Severity(l0Rule.severity),
 				ruleId: l0Rule.id,
 				description: l0Rule.description,
 				action: l0Rule.action,
@@ -133,6 +245,7 @@ export class OrchestratorCore {
 				type: "l0_escalation",
 				childId: childWithStage.id,
 				redFlag,
+				sessionId: activeSessionId,
 				at: Date.now(),
 			});
 			const completedAt = Date.now();
@@ -142,6 +255,7 @@ export class OrchestratorCore {
 				redFlag: true,
 				ruleId: l0Rule.id,
 				severity: l0Rule.severity,
+				sessionId: activeSessionId,
 			});
 			return {
 				question,
@@ -151,6 +265,7 @@ export class OrchestratorCore {
 				emergencyEscalation: true,
 				startedAt,
 				completedAt,
+				sessionId: activeSessionId,
 			};
 		}
 
@@ -160,12 +275,14 @@ export class OrchestratorCore {
 			type: "routing",
 			childId: childWithStage.id,
 			matchedAgentIds,
+			sessionId: activeSessionId,
 			at: Date.now(),
 		});
 
 		// 3. Invoke matched agents in parallel
 		const context: AgentContext = {
 			memory: this.config.memory,
+			sessionId: activeSessionId,
 		};
 		const replyPromises = matchedAgentIds.map((agentId) => {
 			const agent = this.agents.get(agentId);
@@ -186,6 +303,7 @@ export class OrchestratorCore {
 				type: "agent_reply",
 				childId: childWithStage.id,
 				reply,
+				sessionId: activeSessionId,
 				at: Date.now(),
 			});
 		}
@@ -195,6 +313,7 @@ export class OrchestratorCore {
 			type: "ask_completed",
 			childId: childWithStage.id,
 			replies,
+			sessionId: activeSessionId,
 			at: completedAt,
 		});
 
@@ -203,6 +322,7 @@ export class OrchestratorCore {
 			question,
 			agents: replies.map((r) => r.agentId),
 			redFlag: false,
+			sessionId: activeSessionId,
 		});
 
 		return {
@@ -212,6 +332,7 @@ export class OrchestratorCore {
 			emergencyEscalation: false,
 			startedAt,
 			completedAt,
+			sessionId: activeSessionId,
 		};
 	}
 
@@ -231,6 +352,7 @@ export class OrchestratorCore {
 		// Topic match + stage bonus
 		const topicMatched = applyTopicMatch(this.agents, scores, topics);
 		applyStageBonus(this.agents, scores, topicMatched, this.config.alwaysInvoke, child);
+		applyFeedbackBoost(scores, (agentId) => this.feedbackBoost(agentId));
 
 		// Sort by score desc, take top N
 		const sorted = Array.from(scores.entries())
@@ -248,5 +370,37 @@ export class OrchestratorCore {
 		} catch (err) {
 			console.error("Failed to log episode:", err);
 		}
+	}
+
+	/**
+	 * Open a new L4 working-memory session for the child. Falls back to
+	 * a synthetic in-memory id when memory doesn't implement startSession.
+	 */
+	private openSession(childId: string): string {
+		try {
+			const session = this.config.memory.startSession(childId, {});
+			return session.id;
+		} catch {
+			// Memory doesn't support L4; return a synthetic id so downstream
+			// code can still pass a stable handle. Prefixed "memless-" so it
+			// is obviously not a real session.
+			return `memless-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+		}
+	}
+
+	/** Test-only: count of synthetic fallback sessions opened in this process. */
+	__syntheticSessionCount = 0;
+
+	/**
+	 * Build the AgentContext for a given ask, including sessionId and
+	 * last N episodes from this child's history. Exposed for tests.
+	 */
+	buildContext(childId: string, sessionId: string, recentEpisodes = 3): AgentContext {
+		const episodes = this.config.memory.getEpisodes(childId, "qa", recentEpisodes);
+		return {
+			memory: this.config.memory,
+			sessionId,
+			recentEpisodes: episodes.length,
+		};
 	}
 }

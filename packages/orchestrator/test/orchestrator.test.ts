@@ -5,10 +5,10 @@ import {
 	detectTopics,
 	applyTopicMatch,
 	applyStageBonus,
+	applyFeedbackBoost,
 } from "../src/index.js";
 import { MemoryLayer, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply, ChildProfile, ChildStage } from "../src/index.js";
-
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string => {
 	const d = new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000);
@@ -219,6 +219,13 @@ describe("OrchestratorCore", () => {
 			orch.subscribe((e) => events.push(e.type));
 			await orch.ask("宝宝3个月发烧40度", makeChild(90));
 			expect(events).toContain("l0_escalation");
+		});
+
+		it("maps warning L0 rules to high urgency red flags", async () => {
+			orch.registerAgent(makeAgent());
+			const result = await orch.ask("孩子摔到头了", makeChild(365 * 3));
+			expect(result.emergencyEscalation).toBe(true);
+			expect(result.redFlag?.severity).toBe("high");
 		});
 	});
 
@@ -694,5 +701,285 @@ describe("Direct: applyStageBonus", () => {
 		const scores = new Map<string, number>();
 		applyStageBonus(agents, scores, new Set(["a1"]), [], { stage: "infant" } as ChildProfile);
 		expect(scores.has("a1")).toBe(false);
+	});
+});
+
+describe("L4 working-memory sessions", () => {
+	let memory: MemoryLayer;
+	let orch: OrchestratorCore;
+	let child: ChildProfile;
+
+	beforeEach(() => {
+		memory = new MemoryLayer({ dbPath: ":memory:" });
+		orch = new OrchestratorCore({ memory });
+		child = makeChild(365, "c-l4", "L4Child");
+		memory.upsertChild(child);
+	});
+
+	afterEach(() => {
+		memory.close();
+	});
+
+	it("ask() auto-opens a session and returns its id", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const result = await orch.ask("宝宝发烧", child);
+		expect(result.sessionId).toBeDefined();
+		expect(result.sessionId).toMatch(/^sess/);
+		// Session exists in memory
+		const sess = memory.getSession(result.sessionId!);
+		expect(sess).not.toBeNull();
+		expect(sess?.childId).toBe(child.id);
+	});
+
+	it("ask_completed event carries the sessionId", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const events: any[] = [];
+		orch.subscribe((e) => events.push(e));
+		const result = await orch.ask("宝宝发烧", child);
+		const askCompleted = events.find((e) => e.type === "ask_completed");
+		expect(askCompleted?.sessionId).toBe(result.sessionId);
+	});
+
+	it("logEpisode records the sessionId", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const result = await orch.ask("宝宝发烧", child);
+		const eps = memory.getEpisodes(child.id, "qa");
+		expect(eps.length).toBe(1);
+		expect((eps[0].content as any).sessionId).toBe(result.sessionId);
+	});
+
+	it("L0 escalation also opens a session and logs sessionId", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const result = await orch.ask("3 month old baby has fever 39", child);
+		expect(result.emergencyEscalation).toBe(true);
+		expect(result.sessionId).toMatch(/^sess/);
+		const eps = memory.getEpisodes(child.id, "qa");
+		expect((eps[0].content as any).sessionId).toBe(result.sessionId);
+	});
+
+	it("askFollowup reuses the existing session id", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const first = await orch.ask("宝宝发烧", child);
+		const second = await orch.askFollowup(first.sessionId!, "还需要注意什么", child);
+		expect(second.sessionId).toBe(first.sessionId);
+		const eps = memory.getEpisodes(child.id, "qa");
+		expect(eps.length).toBe(2);
+		expect((eps[0].content as any).sessionId).toBe(first.sessionId);
+		expect((eps[1].content as any).sessionId).toBe(first.sessionId);
+	});
+
+	it("askFollowup throws on unknown session", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		await expect(orch.askFollowup("sess-nope", "宝宝发烧", child)).rejects.toThrow(
+			/Session sess-nope not found/,
+		);
+	});
+
+	it("buildContext includes sessionId and recentEpisodes count", () => {
+		memory.addEpisode(child.id, "qa", { question: "Q1" });
+		memory.addEpisode(child.id, "qa", { question: "Q2" });
+		const ctx = orch.buildContext(child.id, "sess-test", 5);
+		expect(ctx.sessionId).toBe("sess-test");
+		expect(ctx.recentEpisodes).toBe(2);
+		expect(ctx.memory).toBe(memory);
+	});
+
+	it("buildContext with fewer episodes than recentEpisodes returns actual count", () => {
+		const ctx = orch.buildContext(child.id, "sess-test", 10);
+		expect(ctx.recentEpisodes).toBe(0);
+	});
+
+	it("openSession falls back to synthetic id when memory lacks startSession", async () => {
+		// Build an orchestrator whose memory throws on startSession to force fallback.
+		const fakeMemory = {
+			...memory,
+			startSession: () => {
+				throw new Error("not supported");
+			},
+		} as unknown as MemoryLayer;
+		const fallbackOrch = new OrchestratorCore({ memory: fakeMemory });
+		fallbackOrch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const result = await fallbackOrch.ask("宝宝发烧", child);
+		expect(result.sessionId).toMatch(/^memless-/);
+	});
+
+	it("askFollowup does not silently fork on missing session", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		await expect(orch.askFollowup("", "Q", child)).rejects.toThrow();
+	});
+
+	it("askFollowup tolerates memory.updateSession throwing", async () => {
+		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
+		const first = await orch.ask("宝宝发烧", child);
+		// Now make updateSession throw on the next call.
+		const original = memory.updateSession.bind(memory);
+		(memory as any).updateSession = () => {
+			throw new Error("db locked");
+		};
+		try {
+			const second = await orch.askFollowup(first.sessionId!, "继续", child);
+			expect(second.sessionId).toBe(first.sessionId);
+		} finally {
+			(memory as any).updateSession = original;
+		}
+	});
+});
+
+describe("feedback & self-evolution", () => {
+	function makeMockMemory() {
+		const feedback: any[] = [];
+		return {
+			memory: {
+				startSession: vi.fn().mockReturnValue({ id: "sess_1", childId: "c1" }),
+				getSession: vi.fn().mockReturnValue(null),
+				updateSession: vi.fn().mockReturnValue({ id: "sess_1", childId: "c1" }),
+				addEpisode: vi.fn(),
+				getEpisodes: vi.fn().mockReturnValue([]),
+				addFeedback: vi.fn((fb: any) => {
+					const stored = { ...fb, id: `fb_${feedback.length + 1}`, createdAt: new Date().toISOString() };
+					feedback.push(stored);
+					return stored;
+				}),
+				getFeedback: vi.fn((agentId: string) =>
+					feedback.filter((f) => f.agentId === agentId),
+				),
+				_feedback: feedback,
+			} as any,
+		};
+	}
+
+	function makeNoFeedbackMemory() {
+		return {
+			memory: {
+				startSession: vi.fn().mockReturnValue({ id: "sess_1", childId: "c1" }),
+				getSession: vi.fn().mockReturnValue(null),
+				updateSession: vi.fn(),
+				addEpisode: vi.fn(),
+				getEpisodes: vi.fn().mockReturnValue([]),
+			} as any,
+		};
+	}
+
+	it("recordFeedback returns null when memory lacks addFeedback", () => {
+		const { memory } = makeNoFeedbackMemory();
+		const orch = new OrchestratorCore({ memory });
+		const result = orch.recordFeedback("c1", "ep_1", "a1", 5);
+		expect(result).toBeNull();
+	});
+
+	it("recordFeedback calls memory.addFeedback and returns stored entry", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		const result = orch.recordFeedback("c1", "ep_1", "a1", 5, "great answer");
+		expect(result).toEqual(
+			expect.objectContaining({
+				childId: "c1",
+				episodeId: "ep_1",
+				agentId: "a1",
+				rating: 5,
+				comment: "great answer",
+			}),
+		);
+		expect(memory.addFeedback).toHaveBeenCalledTimes(1);
+	});
+
+	it("getAgentStats returns zeros when memory lacks getFeedback", () => {
+		const { memory } = makeNoFeedbackMemory();
+		const orch = new OrchestratorCore({ memory });
+		const stats = orch.getAgentStats("a1");
+		expect(stats).toEqual({ agentId: "a1", count: 0, avgRating: 0, positiveCount: 0 });
+	});
+
+	it("getAgentStats returns zeros when no feedback exists", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		const stats = orch.getAgentStats("nonexistent");
+		expect(stats.count).toBe(0);
+		expect(stats.avgRating).toBe(0);
+	});
+
+	it("getAgentStats computes avgRating and positiveCount", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		orch.recordFeedback("c1", "ep_1", "a1", 5);
+		orch.recordFeedback("c1", "ep_2", "a1", 4);
+		orch.recordFeedback("c1", "ep_3", "a1", 2);
+		const stats = orch.getAgentStats("a1");
+		expect(stats.count).toBe(3);
+		expect(stats.avgRating).toBeCloseTo(11 / 3, 5);
+		expect(stats.positiveCount).toBe(2);
+	});
+
+	it("feedbackBoost returns 0 when no feedback", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		expect(orch.feedbackBoost("nonexistent")).toBe(0);
+	});
+
+	it("feedbackBoost returns avgRating when feedback exists", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		orch.recordFeedback("c1", "ep_1", "a1", 5);
+		orch.recordFeedback("c1", "ep_2", "a1", 3);
+		expect(orch.feedbackBoost("a1")).toBe(4);
+	});
+
+	it("feedbackBoost returns 0 when memory lacks getFeedback", () => {
+		const { memory } = makeNoFeedbackMemory();
+		const orch = new OrchestratorCore({ memory });
+		expect(orch.feedbackBoost("a1")).toBe(0);
+	});
+
+	it("recordFeedback with rating 1 returns feedback with rating 1", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		const result = orch.recordFeedback("c1", "ep_1", "a1", 1);
+		expect(result?.rating).toBe(1);
+	});
+
+	it("recordFeedback without comment returns feedback with undefined comment", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		const result = orch.recordFeedback("c1", "ep_1", "a1", 5);
+		expect(result?.comment).toBeUndefined();
+	});
+});
+
+describe("applyFeedbackBoost", () => {
+	it("boosts scores by avg rating", () => {
+		const scores = new Map<string, number>([["a1", 10], ["a2", 5]]);
+		const getAvg = (id: string): number => (id === "a1" ? 4 : 0);
+		applyFeedbackBoost(scores, getAvg);
+		expect(scores.get("a1")).toBe(14);
+		expect(scores.get("a2")).toBe(5);
+	});
+
+	it("does not boost when avg is 0", () => {
+		const scores = new Map<string, number>([["a1", 10]]);
+		const getAvg = (): number => 0;
+		applyFeedbackBoost(scores, getAvg);
+		expect(scores.get("a1")).toBe(10);
+	});
+
+	it("does not boost when avg is negative", () => {
+		const scores = new Map<string, number>([["a1", 10]]);
+		const getAvg = (): number => -1;
+		applyFeedbackBoost(scores, getAvg);
+		expect(scores.get("a1")).toBe(10);
+	});
+
+	it("boosts all agents with positive ratings", () => {
+		const scores = new Map<string, number>([["a1", 5], ["a2", 5]]);
+		const getAvg = (): number => 5;
+		applyFeedbackBoost(scores, getAvg);
+		expect(scores.get("a1")).toBe(10);
+		expect(scores.get("a2")).toBe(10);
+	});
+
+	it("does not modify empty scores map", () => {
+		const scores = new Map<string, number>();
+		const getAvg = (): number => 4;
+		applyFeedbackBoost(scores, getAvg);
+		expect(scores.size).toBe(0);
 	});
 });

@@ -154,7 +154,7 @@ export class PediatricianAgent implements Agent {
 						? {
 								severity: rule.urgency,
 								ruleId: "TRIAGE_" + rule.symptom.source.slice(0, 10),
-								description: rule.redFlagDescription,
+								description: rule.redFlagDescription ?? "需要就医",
 								action: "建议尽快就医",
 							}
 						: undefined,

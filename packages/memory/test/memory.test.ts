@@ -325,14 +325,83 @@ describe("MemoryLayer", () => {
 			const allDone = allSynced.every((d) => d.syncedAt !== null);
 			expect(allDone).toBe(true);
 		});
-
 		it("getDeltaLog with includeUnsynced=false only returns synced", () => {
+			// 3 children = 3 unsynced deltas
 			memory.upsertChild({ id: "c2", name: "B", birthDate: daysAgo(60) });
 			memory.upsertChild({ id: "c3", name: "C", birthDate: daysAgo(30) });
 			const all = memory.getDeltaLog();
 			memory.markDeltaSynced(all[0].id);
 			const syncedOnly = memory.getDeltaLog(0, false);
 			expect(syncedOnly.length).toBe(1);
+		});
+
+		it("getUnsyncedDeltas returns only unsynced entries", () => {
+			memory.upsertChild({ id: "c2", name: "B", birthDate: daysAgo(60) });
+			const all = memory.getDeltaLog();
+			memory.markDeltaSynced(all[0].id);
+			const unsynced = memory.getUnsyncedDeltas();
+			// Only c2 delta is unsynced (c1 already synced)
+			expect(unsynced.length).toBe(1);
+			expect(unsynced[0].rowId).toBe("c2");
+			expect(unsynced[0].syncedAt).toBeNull();
+		});
+
+		it("getUnsyncedDeltas with limit caps results", () => {
+			for (let i = 0; i < 5; i++) {
+				memory.upsertChild({ id: `bulk-${i}`, name: `Bulk ${i}`, birthDate: daysAgo(100) });
+			}
+			const capped = memory.getUnsyncedDeltas(3);
+			expect(capped.length).toBe(3);
+		});
+
+		it("records delete delta when child is removed", () => {
+			memory.upsertChild({ id: "c-del", name: "Del", birthDate: daysAgo(100) });
+			const before = memory.getDeltaLog().length;
+			memory.deleteChild("c-del");
+			const after = memory.getDeltaLog().length;
+			expect(after).toBe(before + 1);
+			const last = memory.getDeltaLog()[after - 1];
+			expect(last.op).toBe("delete");
+			expect(last.tableName).toBe("children");
+		});
+
+		it("getDeltaStats returns correct summary", () => {
+			memory.upsertChild({ id: "s1", name: "S1", birthDate: daysAgo(100) });
+			memory.addFact("s1", "vaccine", "bcg", "done");
+			memory.addEpisode("s1", "qa", { question: "Q1" });
+			const stats = memory.getDeltaStats();
+			expect(stats.total).toBeGreaterThan(0);
+			expect(stats.unsynced).toBeGreaterThan(0);
+			// All deltas should be unsynced (we haven't called markDeltaSynced)
+			expect(stats.unsynced).toBe(stats.total);
+			expect(stats.byTable).toHaveProperty("children");
+			expect(stats.byTable).toHaveProperty("facts");
+			expect(stats.byTable).toHaveProperty("episodes");
+			expect(stats.byOp).toHaveProperty("upsert");
+			expect(stats.byOp).toHaveProperty("insert");
+		});
+
+		it("markDeltaSynced marks only up to given id", () => {
+			memory.upsertChild({ id: "m1", name: "M1", birthDate: daysAgo(100) });
+			memory.upsertChild({ id: "m2", name: "M2", birthDate: daysAgo(80) });
+			memory.upsertChild({ id: "m3", name: "M3", birthDate: daysAgo(60) });
+			const all = memory.getDeltaLog();
+			// Mark only first entry
+			const count = memory.markDeltaSynced(all[0].id);
+			expect(count).toBe(1);
+			// Remaining should be unsynced
+			const unsynced = memory.getUnsyncedDeltas();
+			expect(unsynced.length).toBe(all.length - 1);
+			// Mark the rest
+			memory.markDeltaSynced(all[all.length - 1].id);
+			const after = memory.getUnsyncedDeltas();
+			expect(after.length).toBe(0);
+		});
+
+		it("getDeltaLog default returns all (since=0, includeUnsynced=true)", () => {
+			const allDefault = memory.getDeltaLog();
+			const allExplicit = memory.getDeltaLog(0, true);
+			expect(allDefault.length).toBe(allExplicit.length);
 		});
 	});
 

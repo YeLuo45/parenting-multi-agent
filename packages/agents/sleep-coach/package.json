@@ -19,7 +19,7 @@
 	"scripts": {
 		"clean": "rm -rf dist",
 		"build": "tsc -p tsconfig.json",
-		"test": "vitest --run"
+		"test": "../../../node_modules/.bin/vitest --run"
 	},
 	"dependencies": {
 		"@parenting/memory": "0.1.0"

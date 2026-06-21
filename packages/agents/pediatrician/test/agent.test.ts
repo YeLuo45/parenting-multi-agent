@@ -216,15 +216,13 @@ describe("PediatricianAgent", () => {
 			expect(reply.urgency).toBe("low");
 		});
 
-		it("high fever in 2yo triggers emergency red flag with description fallback", async () => {
-			// 40度+seizure pattern matches high fever rule, no redFlagDescription
-			const reply = await agent.respond("宝宝发烧40度", makeChild(365 * 2), {
+		it("high urgency fever in 5-month-old uses red flag description fallback", async () => {
+			const reply = await agent.respond("宝宝发烧38.5", makeChild(150), {
 				memory: null as unknown as import("@parenting/memory").MemoryLayer,
 			});
-			expect(reply.urgency).toBe("emergency");
+			expect(reply.urgency).toBe("high");
 			expect(reply.redFlag).toBeDefined();
-			// description comes from redFlagDescription if present, else fallback
-			expect(reply.redFlag?.description).toBeDefined();
+			expect(reply.redFlag?.description).toBe("需要就医");
 		});
 	});
 

@@ -7,18 +7,22 @@
  * - generic-agent L0 rules (from @parenting/memory)
  */
 
-export { OrchestratorCore, applyTopicMatch, applyStageBonus } from "./orchestrator.js";
+export { OrchestratorCore, applyTopicMatch, applyStageBonus, applyFeedbackBoost } from "./orchestrator.js";
 export { MessageBus, type EventHandler, type Unsubscribe } from "./bus.js";
 export {
 	type Agent,
 	type AgentContext,
 	type AgentReply,
+	type AgentStats,
 	type AgentTopic,
+	type Feedback,
+	type FeedbackRating,
 	type OrchestratorConfig,
 	type OrchestratorEvent,
 	type OrchestratorResult,
 	type RedFlag,
 	type UrgencyLevel,
+	type MemoryLayerLike,
 	detectTopics,
 } from "./types.js";
 

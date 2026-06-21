@@ -4,6 +4,8 @@ build/
 *.log
 .DS_Store
 coverage/
+test-results/
+apps/*/test-results/
 .env
 .env.local
 *.tsbuildinfo
