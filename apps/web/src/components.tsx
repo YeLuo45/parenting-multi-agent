@@ -248,7 +248,37 @@ export function ChatPanel({
 	);
 }
 
-/** AppBody: side-by-side children + chat. Wraps content in centered container. */
+/** MemoryPanel: visible browser persistence and sync health snapshot. */
+export function MemoryPanel({ state }: { state: AppState }): ReactElement {
+	const stats = state.memoryStats;
+	const items: Array<[string, string, number]> = [
+		["children", "Children", stats.children],
+		["facts", "Facts", stats.facts],
+		["episodes", "Episodes", stats.episodes],
+		["sessions", "Sessions", stats.sessions],
+		["feedback", "Feedback", stats.feedback],
+		["unsynced", "Unsynced", stats.unsyncedDeltas],
+	];
+	return (
+		<aside
+			className="memory-panel"
+			data-testid="memory-panel"
+			aria-label="Memory snapshot"
+		>
+			<h2>Memory</h2>
+			<dl>
+				{items.map(([key, label, value]) => (
+					<div className="memory-stat" key={key}>
+						<dt>{label}</dt>
+						<dd data-testid={`memory-stat-${key}`}>{value}</dd>
+					</div>
+				))}
+			</dl>
+		</aside>
+	);
+}
+
+/** AppBody: side-by-side children + chat + memory snapshot. Wraps content in centered container. */
 export function AppBody({
 	state,
 	dispatch,
@@ -273,6 +303,7 @@ export function AppBody({
 				onAsk={onAsk}
 				onFeedback={onFeedback}
 			/>
+			<MemoryPanel state={state} />
 		</main>
 	);
 }

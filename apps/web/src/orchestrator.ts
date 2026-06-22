@@ -29,7 +29,11 @@ import type { ChildProfile } from "@parenting/memory";
 import type { AgentStats, Feedback } from "@parenting/orchestrator";
 import { OrchestratorCore } from "@parenting/orchestrator";
 import { IndexedDbMemoryLayer } from "./memory-indexeddb.js";
-import { type MemoryLayerLike, WebMemoryLayer } from "./memory-web.js";
+import {
+	type MemoryLayerLike,
+	type MemoryStats,
+	WebMemoryLayer,
+} from "./memory-web.js";
 
 export interface WebOrchestrator {
 	orchestrator: OrchestratorCore;
@@ -45,6 +49,7 @@ export interface WebOrchestrator {
 		sessionId?: string,
 	) => Feedback | null;
 	getAgentFeedbackStats: (agentId: string) => AgentStats;
+	getMemoryStats: () => MemoryStats;
 	listChildren: () => ChildProfile[];
 	upsertChild: (profile: ChildProfile) => ChildProfile;
 	close: () => void;
@@ -60,40 +65,8 @@ export function createWebOrchestrator(): WebOrchestrator {
 		maxAgentsPerAsk: 3,
 		minConfidence: 0.3,
 	});
-	orchestrator.registerAgent(createPediatricianAgent());
-	orchestrator.registerAgent(createPsychologistAgent());
-	orchestrator.registerAgent(createEducatorAgent());
-	orchestrator.registerAgent(createNutritionistAgent());
-	orchestrator.registerAgent(createSleepCoachAgent());
-	orchestrator.registerAgent(createFamilyMediatorAgent());
-	orchestrator.registerAgent(createFinanceAgent());
-	orchestrator.registerAgent(createParentSupportAgent());
-	orchestrator.registerAgent(createGrowthTrackerAgent());
-	orchestrator.registerAgent(createHabitBuilderAgent());
-	orchestrator.registerAgent(createKnowledgeRAGAgent());
-	orchestrator.registerAgent(createSafetyGuardAgent());
-	orchestrator.registerAgent(createSocialAgent());
-	orchestrator.registerAgent(createSchoolReadinessAgent());
-	orchestrator.registerAgent(createCollegePrepAgent());
-	orchestrator.registerAgent(createCareerAgent());
-	orchestrator.registerAgent(createLegalAgent());
-	orchestrator.registerAgent(createSiblingAgent());
-	return {
-		orchestrator,
-		memory,
-		ask: (child, question) => orchestrator.ask(question, child),
-		recordAgentFeedback: (childId, agentId, feedback, sessionId) =>
-			orchestrator.recordFeedback(
-				childId,
-				sessionId ?? "web-session",
-				agentId,
-				feedback === "up" ? 5 : 1,
-			),
-		getAgentFeedbackStats: (agentId) => orchestrator.getAgentStats(agentId),
-		listChildren: () => memory.listChildren(),
-		upsertChild: (profile) => memory.upsertChild(profile),
-		close: () => memory.close(),
-	};
+	registerWebAgents(orchestrator);
+	return wireStack(orchestrator, memory);
 }
 
 /** Get the list of registered agent ids for the UI to show. */
@@ -139,6 +112,11 @@ function wireOrchestrator(memory: MemoryLayerLike): WebOrchestrator {
 		maxAgentsPerAsk: 3,
 		minConfidence: 0.3,
 	});
+	registerWebAgents(orchestrator);
+	return wireStack(orchestrator, memory);
+}
+
+function registerWebAgents(orchestrator: OrchestratorCore): void {
 	orchestrator.registerAgent(createPediatricianAgent());
 	orchestrator.registerAgent(createPsychologistAgent());
 	orchestrator.registerAgent(createEducatorAgent());
@@ -157,6 +135,12 @@ function wireOrchestrator(memory: MemoryLayerLike): WebOrchestrator {
 	orchestrator.registerAgent(createCareerAgent());
 	orchestrator.registerAgent(createLegalAgent());
 	orchestrator.registerAgent(createSiblingAgent());
+}
+
+function wireStack(
+	orchestrator: OrchestratorCore,
+	memory: MemoryLayerLike,
+): WebOrchestrator {
 	return {
 		orchestrator,
 		memory,
@@ -169,8 +153,22 @@ function wireOrchestrator(memory: MemoryLayerLike): WebOrchestrator {
 				feedback === "up" ? 5 : 1,
 			),
 		getAgentFeedbackStats: (agentId) => orchestrator.getAgentStats(agentId),
+		getMemoryStats: () => getMemoryStats(memory),
 		listChildren: () => memory.listChildren(),
 		upsertChild: (profile) => memory.upsertChild(profile),
 		close: () => memory.close(),
 	};
+}
+
+function getMemoryStats(memory: MemoryLayerLike): MemoryStats {
+	return (
+		memory.getMemoryStats?.() ?? {
+			children: memory.listChildren().length,
+			facts: 0,
+			episodes: 0,
+			sessions: 0,
+			feedback: 0,
+			unsyncedDeltas: memory.getDeltaStats().unsynced,
+		}
+	);
 }

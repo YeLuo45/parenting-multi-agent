@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeStage, genId, matchL0Rule } from "../src/memory-helpers.js";
+import {
+	buildFeedbackAnalytics,
+	buildSyncSnapshot,
+	computeStage,
+	genId,
+	matchL0Rule,
+	validateChildProfileDraft,
+} from "../src/memory-helpers.js";
 
 describe("computeStage", () => {
 	const ref = new Date("2026-06-21T00:00:00Z");
@@ -66,5 +73,239 @@ describe("matchL0Rule", () => {
 	it("picks the highest-severity rule when multiple match", () => {
 		const rule = matchL0Rule("婴儿 40度 发烧");
 		expect(rule?.severity).toBe("emergency");
+	});
+
+	it("matches warn rules and keeps the first highest severity rule", () => {
+		expect(matchL0Rule("孩子摔到头 head injury")?.severity).toBe("warn");
+		expect(matchL0Rule("孩子摔到头后呼吸困难")?.id).toBe(
+			"R003_breathing_difficulty",
+		);
+	});
+});
+
+describe("validateChildProfileDraft", () => {
+	it("accepts a valid child draft and computes stage", () => {
+		const result = validateChildProfileDraft({
+			id: "alice",
+			name: "爱丽丝",
+			birthDate: "2024-06-19",
+		});
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected valid draft");
+		expect(result.profile.stage).toBeDefined();
+	});
+
+	it("accepts an explicit stage without recomputing it", () => {
+		const result = validateChildProfileDraft(
+			{
+				id: "bob",
+				name: "Bob",
+				birthDate: "2020-01-01",
+				stage: "teen",
+			},
+			new Date("2026-01-01T00:00:00Z"),
+		);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected valid draft");
+		expect(result.profile.stage).toBe("teen");
+	});
+
+	it("rejects blank names, invalid dates, and future birth dates", () => {
+		const invalid = validateChildProfileDraft({
+			id: "alice",
+			name: "爱丽丝",
+			birthDate: "not-a-date",
+		});
+		expect(invalid.ok).toBe(false);
+		if (invalid.ok) throw new Error("expected invalid date failure");
+		expect(invalid.errors).toContain("birthDate is invalid");
+
+		const future = validateChildProfileDraft({
+			id: " ",
+			name: " ",
+			birthDate: "2999-01-01",
+		});
+		expect(future.ok).toBe(false);
+		if (future.ok) throw new Error("expected validation failure");
+		expect(future.errors).toContain("id is required");
+		expect(future.errors).toContain("name is required");
+		expect(future.errors).toContain("birthDate cannot be in the future");
+	});
+});
+
+describe("buildSyncSnapshot", () => {
+	it("summarizes delta health and latest unsynced rows", () => {
+		const snapshot = buildSyncSnapshot([
+			{
+				id: 1,
+				tableName: "children",
+				rowId: "c1",
+				op: "upsert",
+				payload: {},
+				syncedAt: "2026-01-01",
+				createdAt: "2026-01-01",
+			},
+			{
+				id: 2,
+				tableName: "facts",
+				rowId: "f1",
+				op: "insert",
+				payload: {},
+				syncedAt: null,
+				createdAt: "2026-01-02",
+			},
+			{
+				id: 3,
+				tableName: "feedback",
+				rowId: "fb1",
+				op: "insert",
+				payload: {},
+				syncedAt: null,
+				createdAt: "2026-01-03",
+			},
+		]);
+		expect(snapshot.total).toBe(3);
+		expect(snapshot.unsynced).toBe(2);
+		expect(snapshot.status).toBe("pending");
+		expect(snapshot.latestUnsynced.map((d) => d.rowId)).toEqual([
+			"fb1",
+			"f1",
+		]);
+	});
+
+	it("returns a synced snapshot and respects latest unsynced limit", () => {
+		const synced = buildSyncSnapshot([
+			{
+				id: 1,
+				tableName: "children",
+				rowId: "c1",
+				op: "upsert",
+				payload: {},
+				syncedAt: "2026-01-01",
+				createdAt: "2026-01-01",
+			},
+		]);
+		expect(synced.status).toBe("synced");
+		expect(synced.unsynced).toBe(0);
+
+		const limited = buildSyncSnapshot(
+			[
+				{
+					id: 1,
+					tableName: "facts",
+					rowId: "f1",
+					op: "insert",
+					payload: {},
+					syncedAt: null,
+					createdAt: "2026-01-01",
+				},
+				{
+					id: 2,
+					tableName: "facts",
+					rowId: "f2",
+					op: "insert",
+					payload: {},
+					syncedAt: null,
+					createdAt: "2026-01-02",
+				},
+			],
+			1,
+		);
+		expect(limited.latestUnsynced.map((d) => d.rowId)).toEqual(["f2"]);
+	});
+});
+
+describe("buildFeedbackAnalytics", () => {
+	it("groups feedback by agent and ranks liked agents first", () => {
+		const analytics = buildFeedbackAnalytics([
+			{
+				id: "a",
+				childId: "c1",
+				episodeId: "s1",
+				agentId: "educator",
+				rating: 5,
+				createdAt: "2026-01-01",
+			},
+			{
+				id: "b",
+				childId: "c1",
+				episodeId: "s2",
+				agentId: "educator",
+				rating: 1,
+				createdAt: "2026-01-02",
+			},
+			{
+				id: "c",
+				childId: "c1",
+				episodeId: "s3",
+				agentId: "pediatrician",
+				rating: 5,
+				createdAt: "2026-01-03",
+			},
+		]);
+		expect(analytics[0]).toMatchObject({
+			agentId: "pediatrician",
+			likes: 1,
+			dislikes: 0,
+			avgRating: 5,
+		});
+		expect(analytics[1]).toMatchObject({
+			agentId: "educator",
+			likes: 1,
+			dislikes: 1,
+			avgRating: 3,
+		});
+	});
+
+	it("uses total count then agent id as deterministic tie breakers", () => {
+		const byTotal = buildFeedbackAnalytics([
+			{
+				id: "a",
+				childId: "c1",
+				episodeId: "s1",
+				agentId: "zed",
+				rating: 4,
+				createdAt: "2026-01-01",
+			},
+			{
+				id: "b",
+				childId: "c1",
+				episodeId: "s2",
+				agentId: "alpha",
+				rating: 4,
+				createdAt: "2026-01-02",
+			},
+			{
+				id: "c",
+				childId: "c1",
+				episodeId: "s3",
+				agentId: "alpha",
+				rating: 4,
+				createdAt: "2026-01-03",
+			},
+		]);
+		expect(byTotal.map((row) => row.agentId)).toEqual(["alpha", "zed"]);
+		expect(byTotal[0].total).toBe(2);
+		expect(byTotal[0].lastFeedbackAt).toBe("2026-01-03");
+
+		const byAgentId = buildFeedbackAnalytics([
+			{
+				id: "d",
+				childId: "c1",
+				episodeId: "s4",
+				agentId: "beta",
+				rating: 4,
+				createdAt: "2026-01-04",
+			},
+			{
+				id: "e",
+				childId: "c1",
+				episodeId: "s5",
+				agentId: "alpha",
+				rating: 4,
+				createdAt: "2026-01-05",
+			},
+		]);
+		expect(byAgentId.map((row) => row.agentId)).toEqual(["alpha", "beta"]);
 	});
 });

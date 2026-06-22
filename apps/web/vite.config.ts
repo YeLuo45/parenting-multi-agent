@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { parentingManualChunks } from "./src/vite-chunks.js";
 
 export default defineConfig({
 	base: "/parenting-multi-agent/",
@@ -15,5 +16,10 @@ export default defineConfig({
 	build: {
 		outDir: "dist",
 		sourcemap: true,
+		rollupOptions: {
+			output: {
+				manualChunks: parentingManualChunks,
+			},
+		},
 	},
 });

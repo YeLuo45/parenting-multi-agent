@@ -95,9 +95,9 @@ NODE_ENV=development npm run test:coverage
 
 本地实际验收结果：
 
-- 总测试数：1261 passed
+- 总测试数：1274 passed
 - 全 workspace 通过率：100%
-- 最低整体 workspace 覆盖率：`@parenting/web` 分支覆盖率 95.96%，行覆盖率 100%，语句覆盖率 100%，函数覆盖率 98.68%
+- 最低整体 workspace 覆盖率：`@parenting/web` 分支覆盖率 95.19%，行覆盖率 98.79%，语句覆盖率 98.79%，函数覆盖率 97.94%
 
 ## 已验证命令清单
 
@@ -155,6 +155,8 @@ Web 应用包含：
 - 四套主题：light、dark、sepia、nord
 - 两种语言：`zh-CN`、`en`
 - `WebMemoryLayer`：浏览器安全的纯内存记忆实现，兼容 orchestrator 的记忆接口
+- 记忆面板辅助能力：孩子档案校验、同步健康、CRUD 管理、反馈分析
+- Vite 手动分包：React vendor 与 parenting runtime 分离，避免循环 chunk
 
 构建命令：
 

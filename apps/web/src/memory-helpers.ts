@@ -60,6 +60,15 @@ export interface DeltaEntry {
 	createdAt: string;
 }
 
+export interface FeedbackEntry {
+	id: string;
+	childId: string;
+	episodeId: string;
+	agentId: string;
+	rating: number;
+	createdAt: string;
+}
+
 export type L0RuleSeverity = "info" | "warn" | "emergency";
 export interface L0Rule {
 	id: string;
@@ -170,6 +179,111 @@ export function genId(prefix: string = "id"): string {
 }
 
 export const genWebId = genId;
+
+export type ChildProfileDraft = Partial<
+	Pick<ChildProfile, "id" | "name" | "birthDate" | "stage" | "metadata">
+>;
+
+export type ChildProfileValidationResult =
+	| { ok: true; profile: ChildProfile }
+	| { ok: false; errors: string[] };
+
+export function validateChildProfileDraft(
+	draft: ChildProfileDraft,
+	asOf: Date = new Date(),
+): ChildProfileValidationResult {
+	const errors: string[] = [];
+	const id = draft.id?.trim() ?? "";
+	const name = draft.name?.trim() ?? "";
+	const birthDate = draft.birthDate?.trim() ?? "";
+	const parsedBirth = new Date(birthDate);
+	if (!id) errors.push("id is required");
+	if (!name) errors.push("name is required");
+	if (!birthDate || Number.isNaN(parsedBirth.getTime())) {
+		errors.push("birthDate is invalid");
+	} else if (parsedBirth.getTime() > asOf.getTime()) {
+		errors.push("birthDate cannot be in the future");
+	}
+	if (errors.length > 0) return { ok: false, errors };
+	return {
+		ok: true,
+		profile: {
+			id,
+			name,
+			birthDate,
+			stage: draft.stage ?? computeStage(birthDate, asOf),
+			metadata: draft.metadata,
+		},
+	};
+}
+
+export interface SyncSnapshot {
+	total: number;
+	unsynced: number;
+	status: "synced" | "pending";
+	latestUnsynced: DeltaEntry[];
+	byTable: Record<string, number>;
+}
+
+export function buildSyncSnapshot(
+	deltas: DeltaEntry[],
+	limit = 5,
+): SyncSnapshot {
+	const unsyncedDeltas = deltas.filter((delta) => delta.syncedAt === null);
+	const latestUnsynced = unsyncedDeltas
+		.toSorted((a, b) => b.id - a.id)
+		.slice(0, limit);
+	const byTable: Record<string, number> = {};
+	for (const delta of deltas) {
+		byTable[delta.tableName] = (byTable[delta.tableName] ?? 0) + 1;
+	}
+	return {
+		total: deltas.length,
+		unsynced: unsyncedDeltas.length,
+		status: unsyncedDeltas.length === 0 ? "synced" : "pending",
+		latestUnsynced,
+		byTable,
+	};
+}
+
+export interface FeedbackAnalyticsRow {
+	agentId: string;
+	likes: number;
+	dislikes: number;
+	total: number;
+	avgRating: number;
+	lastFeedbackAt: string;
+}
+
+export function buildFeedbackAnalytics(
+	feedback: FeedbackEntry[],
+): FeedbackAnalyticsRow[] {
+	const byAgent = new Map<string, FeedbackAnalyticsRow>();
+	for (const entry of feedback) {
+		const row = byAgent.get(entry.agentId) ?? {
+			agentId: entry.agentId,
+			likes: 0,
+			dislikes: 0,
+			total: 0,
+			avgRating: 0,
+			lastFeedbackAt: entry.createdAt,
+		};
+		row.likes += entry.rating >= 4 ? 1 : 0;
+		row.dislikes += entry.rating <= 2 ? 1 : 0;
+		row.avgRating =
+			(row.avgRating * row.total + entry.rating) / (row.total + 1);
+		row.total += 1;
+		if (entry.createdAt > row.lastFeedbackAt)
+			row.lastFeedbackAt = entry.createdAt;
+		byAgent.set(entry.agentId, row);
+	}
+	return Array.from(byAgent.values()).sort(
+		(a, b) =>
+			b.avgRating - a.avgRating ||
+			b.total - a.total ||
+			a.agentId.localeCompare(b.agentId),
+	);
+}
 
 export function matchL0Rule(text: string): L0Rule | null {
 	let best: L0Rule | null = null;

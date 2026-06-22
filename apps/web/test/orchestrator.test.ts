@@ -123,6 +123,23 @@ describe("createWebOrchestrator", () => {
 		expect(stored?.rating).toBe(1);
 	});
 
+	it("exposes memory stats through the web orchestrator facade", () => {
+		const child = stack.upsertChild(
+			makeChild({ id: "memory-stats-child" }),
+		);
+		stack.memory.addFact(child.id, "milestone", "walk", "12m");
+		stack.memory.startSession(child.id);
+		stack.recordAgentFeedback(child.id, "educator", "up");
+
+		expect(stack.getMemoryStats()).toMatchObject({
+			children: 1,
+			facts: 1,
+			sessions: 1,
+			feedback: 1,
+		});
+		expect(stack.getMemoryStats().unsyncedDeltas).toBeGreaterThanOrEqual(4);
+	});
+
 	it("multiple stacks are independent", () => {
 		const a = createWebOrchestrator();
 		const b = createWebOrchestrator();

@@ -18,7 +18,22 @@ import type {
 	Session,
 } from "@parenting/memory";
 import type { Feedback } from "@parenting/orchestrator";
-import { computeWebStage, genWebId } from "./memory-helpers.js";
+import type { FeedbackAnalyticsRow, SyncSnapshot } from "./memory-helpers.js";
+import {
+	buildFeedbackAnalytics,
+	buildSyncSnapshot,
+	computeWebStage,
+	genWebId,
+} from "./memory-helpers.js";
+
+export interface MemoryStats {
+	children: number;
+	facts: number;
+	episodes: number;
+	sessions: number;
+	feedback: number;
+	unsyncedDeltas: number;
+}
 
 /**
  * Interface extracted from MemoryLayer's public methods that the
@@ -48,6 +63,8 @@ export interface MemoryLayerLike {
 		content: Record<string, unknown>,
 	): Episode;
 	getEpisodes(childId: string, type?: EpisodeType, limit?: number): Episode[];
+	listEpisodes(): Episode[];
+	deleteEpisode(id: string): boolean;
 
 	// L4: Sessions
 	startSession(childId: string, context?: Record<string, unknown>): Session;
@@ -67,10 +84,16 @@ export interface MemoryLayerLike {
 		byTable: Record<string, number>;
 		byOp: Record<string, number>;
 	};
+	getMemoryStats?(): MemoryStats;
+	getSyncSnapshot?(): SyncSnapshot;
 
 	// Agent feedback
 	addFeedback?(feedback: Omit<Feedback, "id" | "createdAt">): Feedback;
 	getFeedback?(agentId: string, limit?: number): Feedback[];
+	listFacts?(): Fact[];
+	listFeedback?(): Feedback[];
+	deleteFeedback?(id: string): boolean;
+	getFeedbackAnalytics?(): FeedbackAnalyticsRow[];
 
 	// Lifecycle
 	close(): void;
@@ -140,6 +163,10 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		);
 	}
 
+	listFacts(): Fact[] {
+		return Array.from(this.facts.values());
+	}
+
 	deleteFact(id: string): boolean {
 		const existed = this.facts.delete(id);
 		if (existed) this.recordDelta("facts", id, "delete", { id });
@@ -179,6 +206,18 @@ export class WebMemoryLayer implements MemoryLayerLike {
 			.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 		if (limit !== undefined) results = results.slice(0, limit);
 		return results;
+	}
+
+	listEpisodes(): Episode[] {
+		return Array.from(this.episodes.values()).sort((a, b) =>
+			b.createdAt.localeCompare(a.createdAt),
+		);
+	}
+
+	deleteEpisode(id: string): boolean {
+		const existed = this.episodes.delete(id);
+		if (existed) this.recordDelta("episodes", id, "delete", { id });
+		return existed;
 	}
 
 	// ─── L4: Sessions ────────────────────────────────────────────────────
@@ -238,6 +277,22 @@ export class WebMemoryLayer implements MemoryLayerLike {
 			.filter((entry) => entry.agentId === agentId)
 			.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 		return limit ? results.slice(0, limit) : results;
+	}
+
+	listFeedback(): Feedback[] {
+		return Array.from(this.feedback.values()).sort((a, b) =>
+			b.createdAt.localeCompare(a.createdAt),
+		);
+	}
+
+	deleteFeedback(id: string): boolean {
+		const existed = this.feedback.delete(id);
+		if (existed) this.recordDelta("feedback", id, "delete", { id });
+		return existed;
+	}
+
+	getFeedbackAnalytics(): FeedbackAnalyticsRow[] {
+		return buildFeedbackAnalytics(this.listFeedback());
 	}
 
 	// ─── Delta Log ───────────────────────────────────────────────────────
@@ -300,6 +355,21 @@ export class WebMemoryLayer implements MemoryLayerLike {
 			byOp[d.op] = (byOp[d.op] ?? 0) + 1;
 		}
 		return { total, unsynced, byTable, byOp };
+	}
+
+	getMemoryStats(): MemoryStats {
+		return {
+			children: this.children.size,
+			facts: this.facts.size,
+			episodes: this.episodes.size,
+			sessions: this.sessions.size,
+			feedback: this.feedback.size,
+			unsyncedDeltas: this.getDeltaStats().unsynced,
+		};
+	}
+
+	getSyncSnapshot(): SyncSnapshot {
+		return buildSyncSnapshot(this.deltas);
 	}
 
 	// ─── Lifecycle ───────────────────────────────────────────────────────

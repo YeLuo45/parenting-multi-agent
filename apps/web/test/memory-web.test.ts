@@ -198,6 +198,77 @@ describe("WebMemoryLayer — Agent Feedback", () => {
 	});
 });
 
+describe("WebMemoryLayer — Memory Stats", () => {
+	it("returns visible counts for the web memory panel", () => {
+		memory.upsertChild({
+			id: "c1",
+			name: "A",
+			birthDate: "2024-01-01",
+			stage: "toddler",
+		});
+		memory.addFact("c1", "vaccine", "bcg", "done");
+		memory.addEpisode("c1", "qa", { question: "Q" });
+		memory.startSession("c1");
+		memory.addFeedback({
+			childId: "c1",
+			episodeId: "s1",
+			agentId: "educator",
+			rating: 5,
+		});
+
+		expect(memory.getMemoryStats()).toEqual({
+			children: 1,
+			facts: 1,
+			episodes: 1,
+			sessions: 1,
+			feedback: 1,
+			unsyncedDeltas: 5,
+		});
+	});
+});
+
+describe("WebMemoryLayer — Memory Management APIs", () => {
+	it("lists and deletes facts, episodes, and feedback for dashboard CRUD", () => {
+		const fact = memory.addFact("c1", "preference", "food", "apple");
+		const episode = memory.addEpisode("c1", "qa", { question: "Q" });
+		const feedback = memory.addFeedback({
+			childId: "c1",
+			episodeId: "s1",
+			agentId: "educator",
+			rating: 5,
+		});
+
+		expect(memory.listFacts()).toContainEqual(fact);
+		expect(memory.listEpisodes()).toContainEqual(episode);
+		expect(memory.listFeedback()).toContainEqual(feedback);
+		expect(memory.deleteEpisode(episode.id)).toBe(true);
+		expect(memory.deleteFeedback(feedback.id)).toBe(true);
+		expect(memory.deleteEpisode(episode.id)).toBe(false);
+		expect(memory.deleteFeedback(feedback.id)).toBe(false);
+		expect(memory.deleteFact(fact.id)).toBe(true);
+	});
+
+	it("builds sync and feedback snapshots from current memory", () => {
+		memory.upsertChild({
+			id: "c1",
+			name: "A",
+			birthDate: "2024-01-01",
+			stage: "toddler",
+		});
+		memory.addFeedback({
+			childId: "c1",
+			episodeId: "s1",
+			agentId: "educator",
+			rating: 5,
+		});
+		expect(memory.getSyncSnapshot().unsynced).toBeGreaterThan(0);
+		expect(memory.getFeedbackAnalytics()[0]).toMatchObject({
+			agentId: "educator",
+			likes: 1,
+		});
+	});
+});
+
 describe("WebMemoryLayer — Delta Log", () => {
 	it("records deltas for every write", () => {
 		memory.upsertChild({

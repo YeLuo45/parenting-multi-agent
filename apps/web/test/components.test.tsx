@@ -36,6 +36,7 @@ import {
 	ChildrenPanel,
 	Composer,
 	Header,
+	MemoryPanel,
 	MessageBubble,
 	Messages,
 } from "../src/components.js";
@@ -504,6 +505,52 @@ describe("ChatPanel", () => {
 			<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
 		);
 		expect(screen.getByLabelText("Chat")).toBeInTheDocument();
+	});
+});
+
+describe("MemoryPanel", () => {
+	it("renders child, fact, episode, session, feedback, and unsynced delta counts", () => {
+		render(
+			<MemoryPanel
+				state={makeState({
+					memoryStats: {
+						children: 2,
+						facts: 3,
+						episodes: 4,
+						sessions: 5,
+						feedback: 6,
+						unsyncedDeltas: 7,
+					},
+				})}
+			/>,
+		);
+		expect(screen.getByTestId("memory-panel")).toBeInTheDocument();
+		expect(screen.getByTestId("memory-stat-children")).toHaveTextContent(
+			"2",
+		);
+		expect(screen.getByTestId("memory-stat-facts")).toHaveTextContent("3");
+		expect(screen.getByTestId("memory-stat-episodes")).toHaveTextContent(
+			"4",
+		);
+		expect(screen.getByTestId("memory-stat-sessions")).toHaveTextContent(
+			"5",
+		);
+		expect(screen.getByTestId("memory-stat-feedback")).toHaveTextContent(
+			"6",
+		);
+		expect(screen.getByTestId("memory-stat-unsynced")).toHaveTextContent(
+			"7",
+		);
+	});
+
+	it("renders zero counts by default", () => {
+		render(<MemoryPanel state={makeState()} />);
+		expect(screen.getByTestId("memory-stat-children")).toHaveTextContent(
+			"0",
+		);
+		expect(screen.getByTestId("memory-stat-unsynced")).toHaveTextContent(
+			"0",
+		);
 	});
 });
 

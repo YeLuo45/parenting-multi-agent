@@ -11,6 +11,7 @@ import { type ReactElement, useEffect, useReducer } from "react";
 import { AppBody, Header } from "./components.js";
 import { I18nProvider } from "./i18n.js";
 import { computeWebStage } from "./memory-helpers.js";
+import type { MemoryStats } from "./memory-web.js";
 import {
 	createWebOrchestrator,
 	createWebOrchestratorWithPersistence,
@@ -44,6 +45,7 @@ export interface AppState {
 	messages: ChatMessage[];
 	pending: boolean;
 	agents: string[];
+	memoryStats: MemoryStats;
 	busy: boolean;
 	error: string | null;
 }
@@ -56,6 +58,7 @@ export type Action =
 	| { type: "askDone"; messages: ChatMessage[] }
 	| { type: "askError"; error: string }
 	| { type: "feedbackDone"; messageId: string; feedback: "up" | "down" }
+	| { type: "setMemoryStats"; memoryStats: MemoryStats }
 	| { type: "reset" };
 
 export const initialState: AppState = {
@@ -65,6 +68,14 @@ export const initialState: AppState = {
 	messages: [],
 	pending: false,
 	agents: listWebAgentIds(),
+	memoryStats: {
+		children: 0,
+		facts: 0,
+		episodes: 0,
+		sessions: 0,
+		feedback: 0,
+		unsyncedDeltas: 0,
+	},
 	busy: false,
 	error: null,
 };
@@ -97,12 +108,15 @@ export function reducer(state: AppState, action: Action): AppState {
 						: message,
 				),
 			};
+		case "setMemoryStats":
+			return { ...state, memoryStats: action.memoryStats };
 		case "reset":
 			return {
 				...initialState,
 				children: state.children,
 				selectedChildId: state.selectedChildId,
 				agents: state.agents,
+				memoryStats: state.memoryStats,
 			};
 		default:
 			return state;
@@ -159,6 +173,7 @@ export function renderView(
 				children: [
 					renderChildrenPanel(state, dispatch),
 					renderChatPanel(state, dispatch),
+					renderMemoryPanel(state),
 				],
 			},
 		],
@@ -288,6 +303,31 @@ function renderChatPanel(
 	};
 }
 
+function renderMemoryPanel(state: AppState): ReturnType<typeof renderView> {
+	return {
+		tag: "aside",
+		props: { className: "memory-panel", "data-testid": "memory-panel" },
+		children: [
+			{ tag: "h2", children: ["Memory"] },
+			{
+				tag: "dl",
+				children: [
+					{
+						tag: "div",
+						props: { "data-testid": "memory-stat-children" },
+						children: [String(state.memoryStats.children)],
+					},
+					{
+						tag: "div",
+						props: { "data-testid": "memory-stat-unsynced" },
+						children: [String(state.memoryStats.unsyncedDeltas)],
+					},
+				],
+			},
+		],
+	};
+}
+
 function renderMessage(m: ChatMessage): ReturnType<typeof renderView> {
 	const tag = m.role === "user" ? "user-msg" : "agent-msg";
 	return {
@@ -335,6 +375,10 @@ function createAppFromStack(stack: WebOrchestrator): {
 		/* v8 ignore next 6 */
 		const onAsk = async (): Promise<void> => {
 			await dispatchAsk(stack, state, dispatch);
+			dispatch({
+				type: "setMemoryStats",
+				memoryStats: stack.getMemoryStats(),
+			});
 		};
 		/* v8 ignore next 4 */
 		const onFeedback = (
@@ -342,6 +386,10 @@ function createAppFromStack(stack: WebOrchestrator): {
 			feedback: "up" | "down",
 		): void => {
 			recordMessageFeedback(stack, state, messageId, feedback, dispatch);
+			dispatch({
+				type: "setMemoryStats",
+				memoryStats: stack.getMemoryStats(),
+			});
 		};
 		/* v8 ignore next 4 */
 		useEffect(() => {
@@ -354,7 +402,16 @@ function createAppFromStack(stack: WebOrchestrator): {
 			if (!state.selectedChildId && children.length > 0) {
 				dispatch({ type: "selectChild", childId: children[0].id });
 			}
-		}, [stack.listChildren, stack.upsertChild, state.selectedChildId]);
+			dispatch({
+				type: "setMemoryStats",
+				memoryStats: stack.getMemoryStats(),
+			});
+		}, [
+			stack.getMemoryStats,
+			stack.listChildren,
+			stack.upsertChild,
+			state.selectedChildId,
+		]);
 
 		return (
 			<ThemeProvider>
