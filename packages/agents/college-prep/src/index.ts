@@ -1,10 +1,14 @@
-export { CollegePrepAgent, createCollegePrepAgent, COLLEGE_PREP_DISCLAIMER } from "./agent.js";
+export {
+	COLLEGE_PREP_DISCLAIMER,
+	CollegePrepAgent,
+	createCollegePrepAgent,
+} from "./agent.js";
 export {
 	COLLEGE_PREP_TIPS,
+	type CollegePrepTip,
+	type CollegePrepTopic,
 	getTipsForStage,
 	matchTopic,
-	type CollegePrepTopic,
-	type CollegePrepTip,
 } from "./knowledge.js";
 
 export const COLLEGE_PREP_VERSION = "0.1.0";

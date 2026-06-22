@@ -35,7 +35,8 @@ export const HAZARDS: Hazard[] = [
 		id: "haz-choking-food",
 		category: "choking",
 		title: "食物窒息",
-		description: "圆粒/硬块食物（整颗坚果、葡萄、爆米花、果冻等）是幼儿窒息高危因素",
+		description:
+			"圆粒/硬块食物（整颗坚果、葡萄、爆米花、果冻等）是幼儿窒息高危因素",
 		prevention: [
 			"4 岁前不喂整颗坚果、爆米花",
 			"葡萄/樱桃/番茄切对半或四分之一",
@@ -206,7 +207,7 @@ export const HAZARDS: Hazard[] = [
 		title: "楼梯跌落",
 		prevention: [
 			"楼梯口加防护门",
-				"楼梯上下铺防滑垫",
+			"楼梯上下铺防滑垫",
 			"教孩子正确上下楼梯",
 		],
 		description: "刚学会爬/走的幼儿易从楼梯跌落",
@@ -218,11 +219,7 @@ export const HAZARDS: Hazard[] = [
 		id: "haz-fall-bunk-bed",
 		category: "fall",
 		title: "高低床跌落",
-		prevention: [
-			"6 岁前不睡上铺",
-			"床栏高 ≥ 16cm",
-			"床边铺地毯",
-		],
+		prevention: ["6 岁前不睡上铺", "床栏高 ≥ 16cm", "床边铺地毯"],
 		description: "上铺跌落可致严重骨折",
 		ageMonthsMin: 72,
 		ageMonthsMax: 216,
@@ -248,10 +245,7 @@ export const HAZARDS: Hazard[] = [
 		id: "haz-electrical-outlet",
 		category: "electrical",
 		title: "触电（插座）",
-		prevention: [
-			"所有低位插座安装保护盖",
-			"电线藏于家具后",
-		],
+		prevention: ["所有低位插座安装保护盖", "电线藏于家具后"],
 		description: "幼儿好奇会用手指/金属戳插座",
 		ageMonthsMin: 6,
 		ageMonthsMax: 48,
@@ -305,9 +299,15 @@ export const HAZARDS: Hazard[] = [
 ];
 
 /** Get hazards for a specific age. */
-export function getHazardsForAge(ageMonths: number, category?: HazardCategory): Hazard[] {
+export function getHazardsForAge(
+	ageMonths: number,
+	category?: HazardCategory,
+): Hazard[] {
 	return HAZARDS.filter(
-		(h) => ageMonths >= h.ageMonthsMin && ageMonths <= h.ageMonthsMax && (!category || h.category === category),
+		(h) =>
+			ageMonths >= h.ageMonthsMin &&
+			ageMonths <= h.ageMonthsMax &&
+			(!category || h.category === category),
 	);
 }
 
@@ -363,13 +363,33 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forInfant: true,
 		forChild: true,
 		steps: [
-			{ order: 1, action: "判断：能咳嗽/发声 → 鼓励咳嗽，不要拍背", warning: "咳嗽有效时不干预" },
-			{ order: 2, action: "无法咳嗽/无声：婴儿 (<1岁) 用 5 次背部拍击 + 5 次胸部冲击", durationSeconds: 60 },
-			{ order: 3, action: "儿童 (≥1岁) 用 Heimlich 海姆立克法（5 次腹部冲击）", durationSeconds: 30 },
-			{ order: 4, action: "反复交替直到异物排出或失去意识", durationSeconds: 120 },
+			{
+				order: 1,
+				action: "判断：能咳嗽/发声 → 鼓励咳嗽，不要拍背",
+				warning: "咳嗽有效时不干预",
+			},
+			{
+				order: 2,
+				action: "无法咳嗽/无声：婴儿 (<1岁) 用 5 次背部拍击 + 5 次胸部冲击",
+				durationSeconds: 60,
+			},
+			{
+				order: 3,
+				action: "儿童 (≥1岁) 用 Heimlich 海姆立克法（5 次腹部冲击）",
+				durationSeconds: 30,
+			},
+			{
+				order: 4,
+				action: "反复交替直到异物排出或失去意识",
+				durationSeconds: 120,
+			},
 			{ order: 5, action: "若失去意识：开始 CPR 并立即拨打 120" },
 		],
-		whenToCall911: ["任何无法自主咳嗽/呼吸的情况", "意识丧失", "皮肤发绀（青紫）"],
+		whenToCall911: [
+			"任何无法自主咳嗽/呼吸的情况",
+			"意识丧失",
+			"皮肤发绀（青紫）",
+		],
 		commonMistakes: [
 			"盲目用手指掏（可能将异物推入更深）",
 			"对还能咳嗽的孩子拍背",
@@ -385,10 +405,20 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		steps: [
 			{ order: 1, action: "确认环境安全，检查反应：拍肩呼喊" },
 			{ order: 2, action: "无反应：呼喊求助，拨打 120" },
-			{ order: 3, action: "检查呼吸：5-10 秒看胸廓起伏", durationSeconds: 10 },
-			{ order: 4, action: "无呼吸：开始 30 次胸外按压（深度 1/3 胸廓，频率 100-120/分钟）" },
+			{
+				order: 3,
+				action: "检查呼吸：5-10 秒看胸廓起伏",
+				durationSeconds: 10,
+			},
+			{
+				order: 4,
+				action: "无呼吸：开始 30 次胸外按压（深度 1/3 胸廓，频率 100-120/分钟）",
+			},
 			{ order: 5, action: "婴儿用 2 指；儿童用单手或双手" },
-			{ order: 6, action: "30 次按压后 2 次人工呼吸，重复 30:2 直到救援到达" },
+			{
+				order: 6,
+				action: "30 次按压后 2 次人工呼吸，重复 30:2 直到救援到达",
+			},
 		],
 		whenToCall911: ["任何意识丧失", "无呼吸或仅喘息", "严重外伤后无反应"],
 		commonMistakes: [
@@ -405,9 +435,16 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forChild: true,
 		steps: [
 			{ order: 1, action: "戴手套或用塑料袋套手（避免接触血液）" },
-			{ order: 2, action: "用干净纱布/布直接按压伤口", durationSeconds: 60 },
+			{
+				order: 2,
+				action: "用干净纱布/布直接按压伤口",
+				durationSeconds: 60,
+			},
 			{ order: 3, action: "持续按压 ≥ 10 分钟不间断" },
-			{ order: 4, action: "若血液浸透，加层纱布继续按压（不要移除原层）" },
+			{
+				order: 4,
+				action: "若血液浸透，加层纱布继续按压（不要移除原层）",
+			},
 			{ order: 5, action: "抬高受伤部位（怀疑骨折除外）" },
 			{ order: 6, action: "止血后用绷带包扎" },
 		],
@@ -426,9 +463,18 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forInfant: true,
 		forChild: true,
 		steps: [
-			{ order: 1, action: "冲：流动凉水 (15-25°C) 冲洗 20 分钟", durationSeconds: 1200, warning: "不要冰水" },
+			{
+				order: 1,
+				action: "冲：流动凉水 (15-25°C) 冲洗 20 分钟",
+				durationSeconds: 1200,
+				warning: "不要冰水",
+			},
 			{ order: 2, action: "脱：小心移除衣物（粘连皮肤不强行）" },
-			{ order: 3, action: "泡：继续在凉水中浸泡 10 分钟", durationSeconds: 600 },
+			{
+				order: 3,
+				action: "泡：继续在凉水中浸泡 10 分钟",
+				durationSeconds: 600,
+			},
 			{ order: 4, action: "盖：用干净纱布/保鲜膜覆盖" },
 			{ order: 5, action: "送：II度以上烧伤送医" },
 		],
@@ -451,10 +497,19 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forInfant: true,
 		forChild: true,
 		steps: [
-			{ order: 1, action: "测量体温：腋温 ≥ 37.5°C 或耳温 ≥ 38°C 即为发热" },
+			{
+				order: 1,
+				action: "测量体温：腋温 ≥ 37.5°C 或耳温 ≥ 38°C 即为发热",
+			},
 			{ order: 2, action: "< 3 月龄：任何发热立即就医" },
-			{ order: 3, action: "3-36 月龄：体温 ≥ 38°C 持续 24h 或伴不适 → 就医" },
-			{ order: 4, action: "对乙酰氨基酚 (≥3 月龄) 或布洛芬 (≥6 月龄) 按剂量服用" },
+			{
+				order: 3,
+				action: "3-36 月龄：体温 ≥ 38°C 持续 24h 或伴不适 → 就医",
+			},
+			{
+				order: 4,
+				action: "对乙酰氨基酚 (≥3 月龄) 或布洛芬 (≥6 月龄) 按剂量服用",
+			},
 			{ order: 5, action: "物理降温：温水擦拭腋下/腹股沟；不要酒精擦浴" },
 			{ order: 6, action: "补充水分，少量多次" },
 		],
@@ -478,7 +533,11 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forChild: true,
 		steps: [
 			{ order: 1, action: "保持冷静，安抚孩子" },
-			{ order: 2, action: "冰敷肿胀处 15-20 分钟（用毛巾隔开皮肤）", durationSeconds: 1200 },
+			{
+				order: 2,
+				action: "冰敷肿胀处 15-20 分钟（用毛巾隔开皮肤）",
+				durationSeconds: 1200,
+			},
 			{ order: 3, action: "观察 24-48 小时：意识、呕吐、行为变化" },
 			{ order: 4, action: "可正常进食但避免剧烈活动" },
 		],
@@ -499,9 +558,18 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forInfant: true,
 		forChild: true,
 		steps: [
-			{ order: 1, action: "轻度（皮疹/瘙痒）：口服抗组胺药（如西替利嗪），观察" },
-			{ order: 2, action: "中度（面部肿胀/呕吐）：肾上腺素自动注射器（如有），立即就医" },
-			{ order: 3, action: "重度（呼吸困难/休克）：肾上腺素 + 立即拨打 120" },
+			{
+				order: 1,
+				action: "轻度（皮疹/瘙痒）：口服抗组胺药（如西替利嗪），观察",
+			},
+			{
+				order: 2,
+				action: "中度（面部肿胀/呕吐）：肾上腺素自动注射器（如有），立即就医",
+			},
+			{
+				order: 3,
+				action: "重度（呼吸困难/休克）：肾上腺素 + 立即拨打 120",
+			},
 			{ order: 4, action: "侧卧位防止误吸，记录过敏源和时间" },
 		],
 		whenToCall911: [
@@ -521,7 +589,10 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		steps: [
 			{ order: 1, action: "立即救上岸，呼叫 120" },
 			{ order: 2, action: "检查反应和呼吸" },
-			{ order: 3, action: "无呼吸：开始 CPR（5 次初始人工呼吸 + 30:2 循环）" },
+			{
+				order: 3,
+				action: "无呼吸：开始 CPR（5 次初始人工呼吸 + 30:2 循环）",
+			},
 			{ order: 4, action: "如有意识：脱湿衣、保暖、侧卧位" },
 			{ order: 5, action: "所有溺水者必须送医观察（继发性溺水风险）" },
 		],
@@ -535,9 +606,16 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 		forInfant: true,
 		forChild: true,
 		steps: [
-			{ order: 1, action: "立即拨打 120 或中毒急救中心 010-83132345（中国）" },
+			{
+				order: 1,
+				action: "立即拨打 120 或中毒急救中心 010-83132345（中国）",
+			},
 			{ order: 2, action: "保留毒物原包装/照片供医生参考" },
-			{ order: 3, action: "若皮肤/眼睛接触：用流动水冲洗 ≥ 15 分钟", durationSeconds: 900 },
+			{
+				order: 3,
+				action: "若皮肤/眼睛接触：用流动水冲洗 ≥ 15 分钟",
+				durationSeconds: 900,
+			},
 			{ order: 4, action: "若吸入：立即到通风处" },
 			{ order: 5, action: "切勿自行催吐（腐蚀性物质会二次损伤）" },
 		],
@@ -546,8 +624,13 @@ export const FIRST_AID_GUIDES: FirstAidGuide[] = [
 	},
 ];
 
-export function getFirstAidGuide(topic: FirstAidTopic, forInfant = false): FirstAidGuide | undefined {
-	return FIRST_AID_GUIDES.find((g) => g.topic === topic && (forInfant ? g.forInfant : g.forChild));
+export function getFirstAidGuide(
+	topic: FirstAidTopic,
+	forInfant = false,
+): FirstAidGuide | undefined {
+	return FIRST_AID_GUIDES.find(
+		(g) => g.topic === topic && (forInfant ? g.forInfant : g.forChild),
+	);
 }
 
 export function getAllFirstAidTopics(): FirstAidTopic[] {
@@ -555,10 +638,14 @@ export function getAllFirstAidTopics(): FirstAidTopic[] {
 }
 
 /** Triage severity for a given symptom description. */
-export function triageSeverity(symptom: string): "emergency" | "urgent" | "routine" {
+export function triageSeverity(
+	symptom: string,
+): "emergency" | "urgent" | "routine" {
 	const s = symptom.toLowerCase();
-	const emergencyKeywords = /(停止呼吸|no.breath|unconscious|意识不清|报警|猝死|晕厥|抽搐|大出血|爆炸|酸碱|中毒|suspect.*ingestion|choking)/i;
-	const urgentKeywords = /(烫伤|烧烫伤|burn|发烧|发热|高烧|摸不到|pulseless|伤口|出血|头部外伤|head.*injur|bleeding)/i;
+	const emergencyKeywords =
+		/(停止呼吸|no.breath|unconscious|意识不清|报警|猝死|晕厥|抽搐|大出血|爆炸|酸碱|中毒|suspect.*ingestion|choking)/i;
+	const urgentKeywords =
+		/(烫伤|烧烫伤|burn|发烧|发热|高烧|摸不到|pulseless|伤口|出血|头部外伤|head.*injur|bleeding)/i;
 	if (emergencyKeywords.test(s)) return "emergency";
 	if (urgentKeywords.test(s)) return "urgent";
 	return "routine";

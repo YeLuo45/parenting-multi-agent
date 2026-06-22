@@ -3,9 +3,13 @@
  * Rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
-import { getTipsForStage, matchTopic, type CollegePrepTip } from "./knowledge.js";
+import {
+	type CollegePrepTip,
+	getTipsForStage,
+	matchTopic,
+} from "./knowledge.js";
 
 export const COLLEGE_PREP_DISCLAIMER =
 	"⚠️ 大学申请因地区、国家、个人情况差异较大。以上建议为通用框架，具体决策请结合当地升学政策和专业咨询。";
@@ -24,7 +28,11 @@ export class CollegePrepAgent implements Agent {
 	readonly topics = ["education"] as const;
 	readonly stages = ["tween", "teen", "young_adult"] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const topic = matchTopic(question);
 
@@ -44,7 +52,9 @@ export class CollegePrepAgent implements Agent {
 
 		const allTips = getTipsForStage(stage);
 		if (allTips.length > 0) {
-			const summary = allTips.map((t) => `- ${t.summary}（${t.ageRange}）`).join("\n");
+			const summary = allTips
+				.map((t) => `- ${t.summary}（${t.ageRange}）`)
+				.join("\n");
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -69,8 +79,8 @@ export function createCollegePrepAgent(): CollegePrepAgent {
 }
 
 export {
+	type CollegePrepTip,
+	type CollegePrepTopic,
 	getTipsForStage,
 	matchTopic,
-	type CollegePrepTopic,
-	type CollegePrepTip,
 } from "./knowledge.js";

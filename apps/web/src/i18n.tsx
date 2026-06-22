@@ -7,13 +7,13 @@
  */
 import {
 	createContext,
+	type ReactElement,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
 	useState,
-	type ReactElement,
-	type ReactNode,
 } from "react";
 
 export type Locale = "zh-CN" | "en";
@@ -86,11 +86,14 @@ export const MESSAGES: Record<Locale, Record<MessageKey, string>> = {
 };
 
 /** Pure helper: read locale from storage. Returns DEFAULT_LOCALE on miss/error. */
-export function readStoredLocale(storage: { getItem: (k: string) => string | null } | null): Locale {
+export function readStoredLocale(
+	storage: { getItem: (k: string) => string | null } | null,
+): Locale {
 	if (!storage) return DEFAULT_LOCALE;
 	try {
 		const raw = storage.getItem(STORAGE_KEY);
-		if (raw && (LOCALES as readonly string[]).includes(raw)) return raw as Locale;
+		if (raw && (LOCALES as readonly string[]).includes(raw))
+			return raw as Locale;
 	} catch {
 		// ignore
 	}
@@ -129,13 +132,19 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 /** Hook to access i18n context. Falls back to defaults if used outside provider. */
 export function useI18n(): I18nContextValue {
 	const ctx = useContext(I18nContext);
-	if (ctx) return ctx;
 	const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 	const setLocale = useCallback((next: Locale) => {
 		setLocaleState(next);
 	}, []);
-	const t = useCallback((key: MessageKey) => translate(locale, key), [locale]);
-	return useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
+	const t = useCallback(
+		(key: MessageKey) => translate(locale, key),
+		[locale],
+	);
+	const fallback = useMemo(
+		() => ({ locale, setLocale, t }),
+		[locale, setLocale, t],
+	);
+	return ctx ?? fallback;
 }
 
 /** Provider that wires locale state + localStorage persistence. */
@@ -148,36 +157,49 @@ export function I18nProvider({
 }): ReactElement {
 	const [locale, setLocaleState] = useState<Locale>(() => {
 		if (initialLocale) return initialLocale;
-		return readStoredLocale(typeof window !== "undefined" ? window.localStorage : null);
+		return readStoredLocale(
+			typeof window !== "undefined" ? window.localStorage : null,
+		);
 	});
 
 	const setLocale = useCallback((next: Locale) => {
 		setLocaleState(next);
 	}, []);
 
-	const t = useCallback((key: MessageKey) => translate(locale, key), [locale]);
+	const t = useCallback(
+		(key: MessageKey) => translate(locale, key),
+		[locale],
+	);
 
 	useEffect(() => {
-		writeStoredLocale(typeof window !== "undefined" ? window.localStorage : null, locale);
+		writeStoredLocale(
+			typeof window !== "undefined" ? window.localStorage : null,
+			locale,
+		);
 		if (typeof document !== "undefined") {
 			document.documentElement.lang = locale;
 		}
 	}, [locale]);
 
-	const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
-	return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+	const value = useMemo(
+		() => ({ locale, setLocale, t }),
+		[locale, setLocale, t],
+	);
+	return (
+		<I18nContext.Provider value={value}>{children}</I18nContext.Provider>
+	);
 }
 
 /** LanguageSwitcher: a dropdown exposing all locales. */
 export function LanguageSwitcher(): ReactElement {
 	const { locale, setLocale } = useI18n();
 	return (
-		<div
+		<fieldset
 			className="language-switcher"
 			data-testid="language-switcher"
-			role="group"
 			aria-label="Language"
 		>
+			<legend className="sr-only">Language</legend>
 			<label htmlFor="locale-select" className="sr-only">
 				Language
 			</label>
@@ -193,6 +215,6 @@ export function LanguageSwitcher(): ReactElement {
 					</option>
 				))}
 			</select>
-		</div>
+		</fieldset>
 	);
 }

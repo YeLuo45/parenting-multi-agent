@@ -1,10 +1,30 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"extends": "./tsconfig.base.json",
-	"compilerOptions": {
-		"rootDir": ".",
-		"outDir": "./dist"
-	},
-	"include": ["src/**/*", "test/**/*"],
-	"exclude": ["node_modules", "dist", "**/*.test.ts"]
+	"files": [],
+	"references": [
+		{ "path": "./packages/orchestrator" },
+		{ "path": "./packages/agents/pediatrician" },
+		{ "path": "./packages/agents/psychologist" },
+		{ "path": "./packages/agents/educator" },
+		{ "path": "./packages/agents/nutritionist" },
+		{ "path": "./packages/agents/sleep-coach" },
+		{ "path": "./packages/agents/family-mediator" },
+		{ "path": "./packages/agents/finance" },
+		{ "path": "./packages/agents/parent-support" },
+		{ "path": "./packages/agents/growth-tracker" },
+		{ "path": "./packages/agents/habit-builder" },
+		{ "path": "./packages/agents/knowledge-rag" },
+		{ "path": "./packages/agents/safety-guard" },
+		{ "path": "./packages/agents/social" },
+		{ "path": "./packages/agents/school-readiness" },
+		{ "path": "./packages/agents/college-prep" },
+		{ "path": "./packages/agents/career" },
+		{ "path": "./packages/agents/legal" },
+		{ "path": "./packages/agents/sibling" },
+		{ "path": "./packages/memory" },
+		{ "path": "./packages/cli" },
+		{ "path": "./packages/tui" },
+		{ "path": "./apps/web" }
+	]
 }

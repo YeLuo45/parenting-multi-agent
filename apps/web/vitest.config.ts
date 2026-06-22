@@ -1,7 +1,8 @@
-import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
 
-const rootNodeModules = new URL("../../node_modules/", import.meta.url).pathname;
+const rootNodeModules = new URL("../../node_modules/", import.meta.url)
+	.pathname;
 
 export default defineConfig({
 	plugins: [react()],
@@ -25,7 +26,12 @@ export default defineConfig({
 			provider: "v8",
 			reporter: ["text", "text-summary"],
 			include: ["src/**/*.ts", "src/**/*.tsx"],
-			thresholds: { lines: 95, branches: 95, functions: 95, statements: 95 },
+			thresholds: {
+				lines: 95,
+				branches: 95,
+				functions: 95,
+				statements: 95,
+			},
 		},
 	},
 });

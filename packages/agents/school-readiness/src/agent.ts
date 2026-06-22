@@ -3,7 +3,7 @@
  * school transitions. Rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 import { getTipsForStage, matchTopic, type ReadinessTip } from "./knowledge.js";
 
@@ -24,7 +24,11 @@ export class SchoolReadinessAgent implements Agent {
 	readonly topics = ["education"] as const;
 	readonly stages = ["toddler", "preschool", "school_age"] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const topic = matchTopic(question);
 
@@ -44,7 +48,9 @@ export class SchoolReadinessAgent implements Agent {
 
 		const allTips = getTipsForStage(stage);
 		if (allTips.length > 0) {
-			const summary = allTips.map((t) => `- ${t.summary}（${t.ageRange}）`).join("\n");
+			const summary = allTips
+				.map((t) => `- ${t.summary}（${t.ageRange}）`)
+				.join("\n");
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -71,6 +77,6 @@ export function createSchoolReadinessAgent(): SchoolReadinessAgent {
 export {
 	getTipsForStage,
 	matchTopic,
-	type ReadinessTopic,
 	type ReadinessTip,
+	type ReadinessTopic,
 } from "./knowledge.js";

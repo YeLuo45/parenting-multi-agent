@@ -5,22 +5,35 @@
  * orchestrator (and per test) without module-level singletons. The factory
  * returns an `<App />` React element bound to a fresh in-memory stack.
  */
-import { useEffect, useReducer, type ReactElement } from "react";
+
 import type { ChildProfile } from "@parenting/memory";
-import { computeWebStage } from "./memory-helpers.js";
-import { createWebOrchestrator, listWebAgentIds, type WebOrchestrator } from "./orchestrator.js";
-import { AppBody, ChatPanel, ChildrenPanel, Composer, Header, MessageBubble, Messages } from "./components.js";
-import { ThemeProvider } from "./theme.js";
+import { type ReactElement, useEffect, useReducer } from "react";
+import { AppBody, Header } from "./components.js";
 import { I18nProvider } from "./i18n.js";
+import { computeWebStage } from "./memory-helpers.js";
+import {
+	createWebOrchestrator,
+	createWebOrchestratorWithPersistence,
+	listWebAgentIds,
+	type WebOrchestrator,
+} from "./orchestrator.js";
+import { ThemeProvider } from "./theme.js";
 
 export interface ChatMessage {
 	id: string;
 	role: "user" | "agent";
 	author: string;
 	content: string;
+	agentId?: string;
+	feedback?: "up" | "down";
 	confidence?: number;
 	urgency?: string;
-	redFlag?: { ruleId: string; severity: string; description: string; action: string };
+	redFlag?: {
+		ruleId: string;
+		severity: string;
+		description: string;
+		action: string;
+	};
 	ts: number;
 }
 
@@ -42,6 +55,7 @@ export type Action =
 	| { type: "askStart" }
 	| { type: "askDone"; messages: ChatMessage[] }
 	| { type: "askError"; error: string }
+	| { type: "feedbackDone"; messageId: string; feedback: "up" | "down" }
 	| { type: "reset" };
 
 export const initialState: AppState = {
@@ -66,11 +80,30 @@ export function reducer(state: AppState, action: Action): AppState {
 		case "askStart":
 			return { ...state, pending: true, error: null };
 		case "askDone":
-			return { ...state, pending: false, messages: action.messages, question: "" };
+			return {
+				...state,
+				pending: false,
+				messages: action.messages,
+				question: "",
+			};
 		case "askError":
 			return { ...state, pending: false, error: action.error };
+		case "feedbackDone":
+			return {
+				...state,
+				messages: state.messages.map((message) =>
+					message.id === action.messageId
+						? { ...message, feedback: action.feedback }
+						: message,
+				),
+			};
 		case "reset":
-			return { ...initialState, children: state.children, selectedChildId: state.selectedChildId, agents: state.agents };
+			return {
+				...initialState,
+				children: state.children,
+				selectedChildId: state.selectedChildId,
+				agents: state.agents,
+			};
 		default:
 			return state;
 	}
@@ -92,13 +125,18 @@ export function defaultChild(): ChildProfile {
 	return {
 		id: "default",
 		name: "示例宝宝",
-		birthDate: new Date(now - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+		birthDate: new Date(now - 365 * 24 * 60 * 60 * 1000)
+			.toISOString()
+			.split("T")[0],
 		stage: "toddler",
 	};
 }
 
 /** Pure view function so tests can assert against the IR without rendering. */
-export function renderView(state: AppState, dispatch: (a: Action) => void): IRNode {
+export function renderView(
+	state: AppState,
+	dispatch: (a: Action) => void,
+): IRNode {
 	const root: IRNode = {
 		tag: "div",
 		props: { className: "app", "data-testid": "app-root" },
@@ -107,7 +145,12 @@ export function renderView(state: AppState, dispatch: (a: Action) => void): IRNo
 				tag: "header",
 				props: { className: "app-header", "data-testid": "app-header" },
 				children: [
-					{ tag: "h1", children: [`parenting-multi-agent (${state.agents.length} agents)`] },
+					{
+						tag: "h1",
+						children: [
+							`parenting-multi-agent (${state.agents.length} agents)`,
+						],
+					},
 				],
 			},
 			{
@@ -139,14 +182,22 @@ function renderChildrenPanel(
 					tag: "li",
 					props: {
 						"data-testid": `child-${c.id}`,
-						className: c.id === state.selectedChildId ? "child selected" : "child",
-						onClick: () => dispatch({ type: "selectChild", childId: c.id }),
+						className:
+							c.id === state.selectedChildId
+								? "child selected"
+								: "child",
+						onClick: () =>
+							dispatch({ type: "selectChild", childId: c.id }),
 					},
 					children: [`${c.name} (${c.stage})`],
 				})),
 			},
 			state.children.length === 0
-				? { tag: "p", props: { "data-testid": "no-children" }, children: ["No children yet."] }
+				? {
+						tag: "p",
+						props: { "data-testid": "no-children" },
+						children: ["No children yet."],
+					}
 				: { tag: "span", children: [] },
 		],
 	};
@@ -166,7 +217,14 @@ function renderChatPanel(
 				props: { className: "messages", "data-testid": "messages" },
 				children:
 					state.messages.length === 0
-						? [{ tag: "p", children: ["Ask a parenting question to get started."] }]
+						? [
+								{
+									tag: "p",
+									children: [
+										"Ask a parenting question to get started.",
+									],
+								},
+							]
 						: state.messages.map((m) => renderMessage(m)),
 			},
 			{
@@ -187,7 +245,10 @@ function renderChatPanel(
 								: "Select a child first",
 							disabled: !state.selectedChildId || state.pending,
 							onChange: (e: { target: { value: string } }) =>
-								dispatch({ type: "setQuestion", question: e.target.value }),
+								dispatch({
+									type: "setQuestion",
+									question: e.target.value,
+								}),
 						},
 					},
 					{
@@ -195,7 +256,10 @@ function renderChatPanel(
 						props: {
 							"data-testid": "ask-button",
 							type: "submit",
-							disabled: !state.selectedChildId || state.pending || state.question.trim() === "",
+							disabled:
+								!state.selectedChildId ||
+								state.pending ||
+								state.question.trim() === "",
 						},
 						children: [state.pending ? "Asking..." : "Ask"],
 					},
@@ -213,9 +277,12 @@ function renderChatPanel(
 			state.error
 				? {
 						tag: "div",
-						props: { className: "error", "data-testid": "error-banner" },
+						props: {
+							className: "error",
+							"data-testid": "error-banner",
+						},
 						children: [state.error],
-				  }
+					}
 				: { tag: "span", children: [] },
 		],
 	};
@@ -239,8 +306,29 @@ function renderMessage(m: ChatMessage): ReturnType<typeof renderView> {
 
 /** Factory that returns the App React element bound to a fresh orchestrator.
  *  Tests can call this directly to assert the React tree. */
-export function createParentingApp(): { App: () => ReactElement; stack: WebOrchestrator } {
+export function createParentingApp(): {
+	App: () => ReactElement;
+	stack: WebOrchestrator;
+} {
 	const stack: WebOrchestrator = createWebOrchestrator();
+	return createAppFromStack(stack);
+}
+
+/**
+ * Factory that hydrates the orchestrator from IndexedDB before mounting the
+ * App. Awaits hydration so the first render already shows persisted data.
+ */
+export async function createParentingAppWithPersistence(
+	dbName?: string,
+): Promise<{ App: () => ReactElement; stack: WebOrchestrator }> {
+	const stack = await createWebOrchestratorWithPersistence(dbName);
+	return createAppFromStack(stack);
+}
+
+function createAppFromStack(stack: WebOrchestrator): {
+	App: () => ReactElement;
+	stack: WebOrchestrator;
+} {
 	function App(): ReactElement {
 		/* v8 ignore next 22 */
 		const [state, dispatch] = useReducer(reducer, initialState);
@@ -249,21 +337,40 @@ export function createParentingApp(): { App: () => ReactElement; stack: WebOrche
 			await dispatchAsk(stack, state, dispatch);
 		};
 		/* v8 ignore next 4 */
+		const onFeedback = (
+			messageId: string,
+			feedback: "up" | "down",
+		): void => {
+			recordMessageFeedback(stack, state, messageId, feedback, dispatch);
+		};
+		/* v8 ignore next 4 */
 		useEffect(() => {
 			const existing = stack.listChildren();
-			const children = existing.length > 0 ? existing : [stack.upsertChild(defaultChild())];
+			const children =
+				existing.length > 0
+					? existing
+					: [stack.upsertChild(defaultChild())];
 			dispatch({ type: "setChildren", children });
 			if (!state.selectedChildId && children.length > 0) {
 				dispatch({ type: "selectChild", childId: children[0].id });
 			}
-		}, []);
+		}, [stack.listChildren, stack.upsertChild, state.selectedChildId]);
 
 		return (
 			<ThemeProvider>
 				<I18nProvider>
-					<div className="app" data-testid="app-root" role="application">
+					<div
+						className="app"
+						data-testid="app-root"
+						role="application"
+					>
 						<Header state={state} />
-						<AppBody state={state} dispatch={dispatch} onAsk={onAsk} />
+						<AppBody
+							state={state}
+							dispatch={dispatch}
+							onAsk={onAsk}
+							onFeedback={onFeedback}
+						/>
 					</div>
 				</I18nProvider>
 			</ThemeProvider>
@@ -278,7 +385,9 @@ export async function runAsk(
 	stack: WebOrchestrator,
 	childId: string,
 	question: string,
-): Promise<{ ok: true; messages: ChatMessage[] } | { ok: false; error: string }> {
+): Promise<
+	{ ok: true; messages: ChatMessage[] } | { ok: false; error: string }
+> {
 	const child = stack.listChildren().find((c) => c.id === childId);
 	if (!child) return { ok: false, error: `Child ${childId} not found` };
 	if (!question.trim()) return { ok: false, error: "Question is empty" };
@@ -308,6 +417,7 @@ export async function runAsk(
 				id: newMessageId(),
 				role: "agent",
 				author: r.agentName,
+				agentId: r.agentId,
 				content: r.content,
 				confidence: r.confidence,
 				urgency: r.urgency,
@@ -340,6 +450,19 @@ export async function dispatchAsk(
 		return;
 	}
 	dispatch({ type: "askDone", messages: [...state.messages, ...r.messages] });
+}
+
+export function recordMessageFeedback(
+	stack: WebOrchestrator,
+	state: AppState,
+	messageId: string,
+	feedback: "up" | "down",
+	dispatch: (a: Action) => void,
+): void {
+	const message = state.messages.find((m) => m.id === messageId);
+	if (!message?.agentId || !state.selectedChildId) return;
+	stack.recordAgentFeedback(state.selectedChildId, message.agentId, feedback);
+	dispatch({ type: "feedbackDone", messageId, feedback });
 }
 
 /** Re-export for tests that need to introspect the registered agent list. */

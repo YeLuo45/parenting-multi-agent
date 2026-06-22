@@ -7,13 +7,13 @@
  */
 import {
 	createContext,
+	type ReactElement,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
 	useState,
-	type ReactElement,
-	type ReactNode,
 } from "react";
 
 export type ThemeName = "light" | "dark" | "sepia" | "nord";
@@ -26,10 +26,26 @@ export interface ThemeMeta {
 }
 
 export const THEMES: Record<ThemeName, ThemeMeta> = {
-	light: { name: "light", label: "Light", description: "Bright default theme" },
-	dark: { name: "dark", label: "Dark", description: "Easy on the eyes at night" },
-	sepia: { name: "sepia", label: "Sepia", description: "Warm beige for reading" },
-	nord: { name: "nord", label: "Nord", description: "Cool blue-gray palette" },
+	light: {
+		name: "light",
+		label: "Light",
+		description: "Bright default theme",
+	},
+	dark: {
+		name: "dark",
+		label: "Dark",
+		description: "Easy on the eyes at night",
+	},
+	sepia: {
+		name: "sepia",
+		label: "Sepia",
+		description: "Warm beige for reading",
+	},
+	nord: {
+		name: "nord",
+		label: "Nord",
+		description: "Cool blue-gray palette",
+	},
 };
 
 export const THEME_NAMES: ThemeName[] = ["light", "dark", "sepia", "nord"];
@@ -105,11 +121,14 @@ export const THEME_VARS: Record<ThemeName, Record<string, string>> = {
 };
 
 /** Pure helper: read theme from a Storage-like object. Returns default on miss/error. */
-export function readStoredTheme(storage: { getItem: (k: string) => string | null } | null): ThemeName {
+export function readStoredTheme(
+	storage: { getItem: (k: string) => string | null } | null,
+): ThemeName {
 	if (!storage) return DEFAULT_THEME;
 	try {
 		const raw = storage.getItem(STORAGE_KEY);
-		if (raw && (THEMES as Record<string, unknown>)[raw]) return raw as ThemeName;
+		if (raw && (THEMES as Record<string, unknown>)[raw])
+			return raw as ThemeName;
 	} catch {
 		// ignore
 	}
@@ -131,7 +150,10 @@ export function writeStoredTheme(
 }
 
 /** Apply theme CSS variables to a document-like root. */
-export function applyTheme(root: { style: { setProperty: (k: string, v: string) => void } }, theme: ThemeName): void {
+export function applyTheme(
+	root: { style: { setProperty: (k: string, v: string) => void } },
+	theme: ThemeName,
+): void {
 	const vars = THEME_VARS[theme];
 	for (const [k, v] of Object.entries(vars)) {
 		root.style.setProperty(k, v);
@@ -150,7 +172,6 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 /** Hook to read the current theme. Returns null-safe defaults if used outside provider. */
 export function useTheme(): ThemeContextValue {
 	const ctx = useContext(ThemeContext);
-	if (ctx) return ctx;
 	// Default no-op fallback (only happens in tests without provider).
 	const [theme, setThemeState] = useState<ThemeName>(DEFAULT_THEME);
 	const setTheme = useCallback((next: ThemeName) => {
@@ -159,7 +180,11 @@ export function useTheme(): ThemeContextValue {
 	const cycle = useCallback(() => {
 		setThemeState((prev) => nextTheme(prev));
 	}, []);
-	return useMemo(() => ({ theme, setTheme, cycle }), [theme, setTheme, cycle]);
+	const fallback = useMemo(
+		() => ({ theme, setTheme, cycle }),
+		[theme, setTheme, cycle],
+	);
+	return ctx ?? fallback;
 }
 
 /** Provider that wires theme state + localStorage persistence. */
@@ -170,7 +195,12 @@ export function ThemeProvider({
 	children: ReactNode;
 	initialTheme?: ThemeName;
 }): ReactElement {
-	const [theme, setThemeState] = useState<ThemeName>(initialTheme ?? readStoredTheme(typeof window !== "undefined" ? window.localStorage : null));
+	const [theme, setThemeState] = useState<ThemeName>(
+		initialTheme ??
+			readStoredTheme(
+				typeof window !== "undefined" ? window.localStorage : null,
+			),
+	);
 
 	const setTheme = useCallback((next: ThemeName) => {
 		setThemeState(next);
@@ -184,23 +214,31 @@ export function ThemeProvider({
 	useEffect(() => {
 		if (typeof document === "undefined") return;
 		applyTheme(document.documentElement, theme);
-		writeStoredTheme(typeof window !== "undefined" ? window.localStorage : null, theme);
+		writeStoredTheme(
+			typeof window !== "undefined" ? window.localStorage : null,
+			theme,
+		);
 	}, [theme]);
 
-	const value = useMemo(() => ({ theme, setTheme, cycle }), [theme, setTheme, cycle]);
-	return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+	const value = useMemo(
+		() => ({ theme, setTheme, cycle }),
+		[theme, setTheme, cycle],
+	);
+	return (
+		<ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+	);
 }
 
 /** ThemeSwitcher: a dropdown exposing all themes. */
 export function ThemeSwitcher(): ReactElement {
 	const { theme, setTheme } = useTheme();
 	return (
-		<div
+		<fieldset
 			className="theme-switcher"
 			data-testid="theme-switcher"
-			role="group"
 			aria-label="Theme"
 		>
+			<legend className="sr-only">Theme</legend>
 			<label htmlFor="theme-select" className="sr-only">
 				Theme
 			</label>
@@ -216,6 +254,6 @@ export function ThemeSwitcher(): ReactElement {
 					</option>
 				))}
 			</select>
-		</div>
+		</fieldset>
 	);
 }

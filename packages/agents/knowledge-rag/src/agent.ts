@@ -5,20 +5,19 @@
  * Returns top-N matching knowledge entries with references.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	KNOWLEDGE_BASE,
 	byStage,
+	type EvidenceLevel,
+	formatReferences,
+	KNOWLEDGE_BASE,
+	type KnowledgeEntry,
+	knowledgeStats,
+	scoreEntry,
 	searchKnowledge,
 	searchKnowledgeIndex,
-	scoreEntry,
-	knowledgeStats,
-	formatReferences,
-	type EvidenceLevel,
-	type KnowledgeEntry,
-	type Reference,
 } from "./knowledge.js";
 
 export const KNOWLEDGE_DISCLAIMER =
@@ -40,7 +39,9 @@ function evidenceLabel(level: EvidenceLevel): string {
 }
 
 function formatEntry(entry: KnowledgeEntry, index: number): string {
-	const stageTag = entry.stage.includes("any") ? "全阶段" : entry.stage.join("/");
+	const stageTag = entry.stage.includes("any")
+		? "全阶段"
+		: entry.stage.join("/");
 	return [
 		`**${index}. ${entry.question}**`,
 		`阶段: ${stageTag} | 证据等级: ${evidenceLabel(entry.evidence)}`,
@@ -52,12 +53,25 @@ function formatEntry(entry: KnowledgeEntry, index: number): string {
 	].join("\n");
 }
 
-function detectKnowledgeIntent(question: string): "search" | "browse" | "evidence" | "general" {
+function detectKnowledgeIntent(
+	question: string,
+): "search" | "browse" | "evidence" | "general" {
 	const q = question.toLowerCase();
-	if (/(为什么|原理|原因|科学|证据|研究|统计|数据|evidence|why|how.*work|机制|mechanism)/i.test(q)) return "evidence";
-	if (/(列表|有什么|全部|所有|list|all|browse|catalog|清单|条目)/i.test(q)) return "browse";
+	if (
+		/(为什么|原理|原因|科学|证据|研究|统计|数据|evidence|why|how.*work|机制|mechanism)/i.test(
+			q,
+		)
+	)
+		return "evidence";
+	if (/(列表|有什么|全部|所有|list|all|browse|catalog|清单|条目)/i.test(q))
+		return "browse";
 	// Search intent: anything that looks like a knowledge query — needs keywords OR question patterns
-	if (/(科普|知识|文章|资料|搜索|搜|找|查询|查|看看|读|看看|查阅|知识库|百科|原理|知识库|reference|knowledge|article|search|应该|怎么|多久|是否|能|可以|哪些|什么是|怎么办|如何|why|how|what|should|can|may|does)/i.test(q)) return "search";
+	if (
+		/(科普|知识|文章|资料|搜索|搜|找|查询|查|看看|读|看看|查阅|知识库|百科|原理|知识库|reference|knowledge|article|search|应该|怎么|多久|是否|能|可以|哪些|什么是|怎么办|如何|why|how|what|should|can|may|does)/i.test(
+			q,
+		)
+	)
+		return "search";
 	return "general";
 }
 
@@ -76,7 +90,11 @@ export class KnowledgeRAGAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectKnowledgeIntent(question);
 
@@ -89,7 +107,10 @@ export class KnowledgeRAGAgent implements Agent {
 				.map(([e, n]) => `${e}: ${n}`)
 				.join(" | ");
 			const entries = byStage(KNOWLEDGE_BASE, stage);
-			const top = entries.slice(0, 5).map((e, i) => `${i + 1}. ${e.question}`).join("\n");
+			const top = entries
+				.slice(0, 5)
+				.map((e, i) => `${i + 1}. ${e.question}`)
+				.join("\n");
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -125,7 +146,9 @@ export class KnowledgeRAGAgent implements Agent {
 
 		// Has matches. For specific intents (search/evidence), use formatted multi-result format
 		if (intent === "search" || intent === "evidence") {
-			const formatted = matches.map((m, i) => formatEntry(m, i + 1)).join("\n\n---\n\n");
+			const formatted = matches
+				.map((m, i) => formatEntry(m, i + 1))
+				.join("\n\n---\n\n");
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -141,7 +164,10 @@ export class KnowledgeRAGAgent implements Agent {
 		// Han-tokenization rules as buildIndex.
 		const stageFiltered2 = byStage(KNOWLEDGE_BASE, stage);
 		const allMatches = searchKnowledgeIndex(stageFiltered2, question, 1);
-		if (allMatches.length > 0 && scoreEntry(question, allMatches[0]) > 0.5) {
+		if (
+			allMatches.length > 0 &&
+			scoreEntry(question, allMatches[0]) > 0.5
+		) {
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -165,13 +191,13 @@ export function createKnowledgeRAGAgent(): KnowledgeRAGAgent {
 }
 
 export {
-	KNOWLEDGE_BASE,
 	byStage,
-	searchKnowledge,
-	knowledgeStats,
-	scoreEntry,
-	type KnowledgeEntry,
-	type Reference,
 	type EvidenceLevel,
+	KNOWLEDGE_BASE,
+	type KnowledgeEntry,
+	knowledgeStats,
+	type Reference,
 	type SourceOrg,
+	scoreEntry,
+	searchKnowledge,
 } from "./knowledge.js";

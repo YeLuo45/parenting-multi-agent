@@ -11,41 +11,40 @@
  * Plus a delta log for future PowerSync cloud sync.
  */
 
-export { MemoryLayer, type MemoryLayerOptions } from "./memory.js";
 export {
 	L0_RULES,
-	matchL0Rule,
 	type L0Rule,
 	type L0RuleSeverity,
+	matchL0Rule,
 } from "./l0-rules.js";
+export { MemoryLayer, type MemoryLayerOptions } from "./memory.js";
 export {
-	computeStage,
-	genId,
+	buildPushResult,
+	type DeviceSyncState,
+	type FullSyncResult,
+	findRowDelta,
+	fullSync,
+	highestId,
+	lwwResolve,
+	mergeDeltas,
+	type PullResult,
+	type PushResult,
+	SyncEngine,
+	selectDeltasSince,
+	selectUnsyncedDeltas,
+} from "./sync.js";
+export {
 	type ChildProfile,
 	type ChildStage,
+	computeStage,
+	type DeltaEntry,
+	type DeltaOp,
 	type Episode,
 	type EpisodeType,
 	type Fact,
 	type FactCategory,
+	genId,
 	type Session,
-	type DeltaEntry,
-	type DeltaOp,
 } from "./types.js";
-
-export {
-	SyncEngine,
-	buildPushResult,
-	fullSync,
-	findRowDelta,
-	highestId,
-	lwwResolve,
-	mergeDeltas,
-	selectDeltasSince,
-	selectUnsyncedDeltas,
-	type DeviceSyncState,
-	type FullSyncResult,
-	type PullResult,
-	type PushResult,
-} from "./sync.js";
 
 export const MEMORY_VERSION = "0.1.0";

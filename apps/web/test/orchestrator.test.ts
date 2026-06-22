@@ -5,9 +5,14 @@
  * this factory. These tests verify the factory wiring, not the agents
  * themselves (which have their own package-level tests).
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createWebOrchestrator, listWebAgentIds, type WebOrchestrator } from "../src/index.js";
+
 import type { ChildProfile } from "@parenting/memory";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	createWebOrchestrator,
+	listWebAgentIds,
+	type WebOrchestrator,
+} from "../src/index.js";
 
 function makeChild(overrides: Partial<ChildProfile> = {}): ChildProfile {
 	return {
@@ -70,7 +75,9 @@ describe("createWebOrchestrator", () => {
 	});
 
 	it("ask escalates L0 emergencies (infant fever)", async () => {
-		const child = stack.upsertChild(makeChild({ id: "c2", birthDate: "2026-04-19" }));
+		const child = stack.upsertChild(
+			makeChild({ id: "c2", birthDate: "2026-04-19" }),
+		);
 		const result = await stack.ask(child, "3 month old baby has fever 39");
 		expect(result.emergencyEscalation).toBe(true);
 		expect(result.redFlag?.ruleId).toMatch(/R00[123]/);
@@ -80,14 +87,51 @@ describe("createWebOrchestrator", () => {
 		const child = stack.upsertChild(makeChild({ id: "c3" }));
 		const r1 = await stack.ask(child, "宝宝发烧");
 		expect(r1.sessionId).toBeDefined();
-		const r2 = await stack.orchestrator.askFollowup(r1.sessionId!, "继续问", child);
+		if (!r1.sessionId) throw new Error("Expected session id");
+		const r2 = await stack.orchestrator.askFollowup(
+			r1.sessionId,
+			"继续问",
+			child,
+		);
 		expect(r2.sessionId).toBe(r1.sessionId);
+	});
+
+	it("records thumbs feedback and boosts the liked agent on the next ask", async () => {
+		const child = stack.upsertChild(makeChild({ id: "feedback-child" }));
+		const first = await stack.ask(child, "孩子不爱学习怎么办");
+		expect(first.replies.length).toBeGreaterThan(1);
+		const secondAgent = first.replies[1];
+		const stored = stack.recordAgentFeedback(
+			child.id,
+			secondAgent.agentId,
+			"up",
+			first.sessionId,
+		);
+		expect(stored?.rating).toBe(5);
+		expect(stack.getAgentFeedbackStats(secondAgent.agentId).avgRating).toBe(
+			5,
+		);
+
+		const second = await stack.ask(child, "孩子不爱学习怎么办");
+		expect(second.replies[0].agentId).toBe(secondAgent.agentId);
+	});
+
+	it("records thumbs down feedback with a default web session id", () => {
+		const child = stack.upsertChild(makeChild({ id: "feedback-default" }));
+		const stored = stack.recordAgentFeedback(child.id, "educator", "down");
+		expect(stored?.episodeId).toBe("web-session");
+		expect(stored?.rating).toBe(1);
 	});
 
 	it("multiple stacks are independent", () => {
 		const a = createWebOrchestrator();
 		const b = createWebOrchestrator();
-		a.upsertChild({ id: "x", name: "X", birthDate: "2024-01-01", stage: "toddler" });
+		a.upsertChild({
+			id: "x",
+			name: "X",
+			birthDate: "2024-01-01",
+			stage: "toddler",
+		});
 		try {
 			expect(a.listChildren()).toHaveLength(1);
 			expect(b.listChildren()).toHaveLength(0);
@@ -99,7 +143,12 @@ describe("createWebOrchestrator", () => {
 
 	it("close releases the memory layer", () => {
 		const s = createWebOrchestrator();
-		s.upsertChild({ id: "x", name: "X", birthDate: "2024-01-01", stage: "toddler" });
+		s.upsertChild({
+			id: "x",
+			name: "X",
+			birthDate: "2024-01-01",
+			stage: "toddler",
+		});
 		s.close();
 		// After close, the in-memory layer is empty (data cleared).
 		expect(s.listChildren()).toEqual([]);

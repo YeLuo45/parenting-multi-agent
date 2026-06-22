@@ -2,15 +2,13 @@
  * FamilyMediatorAgent — couple, intergenerational, sibling dynamics.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
 	FAMILY_GUIDANCE,
-	getFamilyGuidance,
-	matchFamilyIssue,
 	type FamilyGuidance,
-	type FamilyIssue,
+	matchFamilyIssue,
 } from "./knowledge.js";
 
 export const FAMILY_MEDIATOR_DISCLAIMER =
@@ -53,7 +51,7 @@ function formatCommunication(): string {
 		"",
 		"1. 定期家庭会议（每周 1 次，30 分钟）",
 		"2. 轮流发言不打断",
-		"3. 用 \"我\" 句式表达感受",
+		'3. 用 "我" 句式表达感受',
 		"4. 先理解再被理解",
 		"5. 认可情绪，不急于解决",
 		"6. 孩子也参与，培养沟通习惯",
@@ -86,9 +84,13 @@ export class FamilyMediatorAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		void ageInMonths(child.birthDate);
-		const stage = child.stage ?? computeStage(child.birthDate);
+		const _stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectIntent(question);
 
 		switch (intent) {
@@ -119,7 +121,6 @@ export class FamilyMediatorAgent implements Agent {
 					confidence: 0.85,
 					urgency: "info",
 				};
-			case "general":
 			default:
 				return {
 					agentId: this.id,
@@ -138,8 +139,8 @@ export function createFamilyMediatorAgent(): FamilyMediatorAgent {
 
 export {
 	FAMILY_GUIDANCE,
-	getFamilyGuidance,
-	matchFamilyIssue,
 	type FamilyGuidance,
 	type FamilyIssue,
+	getFamilyGuidance,
+	matchFamilyIssue,
 } from "./knowledge.js";

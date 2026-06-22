@@ -5,25 +5,25 @@
  */
 
 export {
-	GrowthTrackerAgent,
 	createGrowthTrackerAgent,
 	GROWTH_DISCLAIMER,
+	GrowthTrackerAgent,
 } from "./agent.js";
 
 export {
-	GROWTH_STANDARDS,
-	estimatePercentile,
-	classifyPercentile,
-	classifyBMI,
 	calculateBMI,
+	classifyBMI,
+	classifyPercentile,
 	detectGrowthConcern,
-	getMilestonesForAge,
-	weightGainVelocity,
-	getPercentiles,
+	estimatePercentile,
+	GROWTH_STANDARDS,
 	type GrowthMetric,
 	type GrowthSex,
 	type GrowthStandardRow,
+	getMilestonesForAge,
+	getPercentiles,
 	type Milestone,
+	weightGainVelocity,
 } from "./knowledge.js";
 
 export const GROWTH_TRACKER_VERSION = "0.1.0";

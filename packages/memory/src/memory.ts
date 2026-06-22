@@ -16,16 +16,18 @@ import Database from "better-sqlite3";
 import {
 	type ChildProfile,
 	type ChildStage,
+	computeStage,
 	type DeltaEntry,
 	type DeltaOp,
 	type Episode,
 	type EpisodeType,
 	type Fact,
 	type FactCategory,
-	type Session,
-	computeStage,
 	genId,
+	type Session,
 } from "./types.js";
+
+export const MEMORY_SCHEMA_VERSION = 1;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS children (
@@ -79,6 +81,12 @@ CREATE TABLE IF NOT EXISTS delta_log (
 );
 CREATE INDEX IF NOT EXISTS idx_delta_synced ON delta_log(synced_at);
 CREATE INDEX IF NOT EXISTS idx_delta_created ON delta_log(created_at);
+
+CREATE TABLE IF NOT EXISTS schema_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 export interface MemoryLayerOptions {
@@ -94,6 +102,31 @@ export class MemoryLayer {
 		this.db = new Database(path);
 		this.db.pragma("journal_mode = WAL");
 		this.db.exec(SCHEMA);
+		this.migrateSchema();
+	}
+
+	private migrateSchema(): void {
+		const now = new Date().toISOString();
+		this.db
+			.prepare(`
+			INSERT INTO schema_meta (key, value, updated_at)
+			VALUES ('schema', ?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+		`)
+			.run(JSON.stringify({ version: MEMORY_SCHEMA_VERSION }), now);
+	}
+
+	getSchemaVersion(): number {
+		return this.getSchemaMeta().version;
+	}
+
+	getSchemaMeta(): { version: number } {
+		const row = this.db
+			.prepare(`SELECT value FROM schema_meta WHERE key = 'schema'`)
+			.get() as { value: string } | undefined;
+		return row
+			? (JSON.parse(row.value) as { version: number })
+			: { version: 0 };
 	}
 
 	// ─── L1: Children (Index) ─────────────────────────────────────────────
@@ -130,8 +163,16 @@ export class MemoryLayer {
 	}
 
 	getChild(id: string): ChildProfile | null {
-		const row = this.db.prepare(`SELECT * FROM children WHERE id = ?`).get(id) as
-			| { id: string; name: string; birth_date: string; stage: ChildStage; metadata: string | null }
+		const row = this.db
+			.prepare(`SELECT * FROM children WHERE id = ?`)
+			.get(id) as
+			| {
+					id: string;
+					name: string;
+					birth_date: string;
+					stage: ChildStage;
+					metadata: string | null;
+			  }
 			| undefined;
 		if (!row) return null;
 		return {
@@ -144,7 +185,9 @@ export class MemoryLayer {
 	}
 
 	listChildren(): ChildProfile[] {
-		const rows = this.db.prepare(`SELECT * FROM children ORDER BY updated_at DESC`).all() as Array<{
+		const rows = this.db
+			.prepare(`SELECT * FROM children ORDER BY updated_at DESC`)
+			.all() as Array<{
 			id: string;
 			name: string;
 			birth_date: string;
@@ -161,7 +204,9 @@ export class MemoryLayer {
 	}
 
 	deleteChild(id: string): boolean {
-		const result = this.db.prepare(`DELETE FROM children WHERE id = ?`).run(id);
+		const result = this.db
+			.prepare(`DELETE FROM children WHERE id = ?`)
+			.run(id);
 		if (result.changes > 0) {
 			this.recordDelta("children", id, "delete", { id });
 			return true;
@@ -171,7 +216,12 @@ export class MemoryLayer {
 
 	// ─── L2: Facts (Global) ───────────────────────────────────────────────
 
-	addFact(childId: string, category: FactCategory, key: string, value: Record<string, unknown>): Fact {
+	addFact(
+		childId: string,
+		category: FactCategory,
+		key: string,
+		value: Record<string, unknown>,
+	): Fact {
 		const fact: Fact = {
 			id: genId("fact"),
 			childId,
@@ -184,7 +234,14 @@ export class MemoryLayer {
 			.prepare(
 				`INSERT INTO facts (id, child_id, category, key, value, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 			)
-			.run(fact.id, fact.childId, fact.category, fact.key, JSON.stringify(fact.value), fact.createdAt);
+			.run(
+				fact.id,
+				fact.childId,
+				fact.category,
+				fact.key,
+				JSON.stringify(fact.value),
+				fact.createdAt,
+			);
 		this.recordDelta("facts", fact.id, "insert", { ...fact });
 		return fact;
 	}
@@ -194,7 +251,9 @@ export class MemoryLayer {
 			? `SELECT * FROM facts WHERE child_id = ? AND category = ? ORDER BY created_at DESC`
 			: `SELECT * FROM facts WHERE child_id = ? ORDER BY created_at DESC`;
 		const stmt = this.db.prepare(sql);
-		const rows = (category ? stmt.all(childId, category) : stmt.all(childId)) as Array<{
+		const rows = (
+			category ? stmt.all(childId, category) : stmt.all(childId)
+		) as Array<{
 			id: string;
 			child_id: string;
 			category: FactCategory;
@@ -213,7 +272,9 @@ export class MemoryLayer {
 	}
 
 	deleteFact(id: string): boolean {
-		const result = this.db.prepare(`DELETE FROM facts WHERE id = ?`).run(id);
+		const result = this.db
+			.prepare(`DELETE FROM facts WHERE id = ?`)
+			.run(id);
 		if (result.changes > 0) {
 			this.recordDelta("facts", id, "delete", { id });
 			return true;
@@ -223,7 +284,11 @@ export class MemoryLayer {
 
 	// ─── L3: Episodes (Episodic) ──────────────────────────────────────────
 
-	addEpisode(childId: string, type: EpisodeType, content: Record<string, unknown>): Episode {
+	addEpisode(
+		childId: string,
+		type: EpisodeType,
+		content: Record<string, unknown>,
+	): Episode {
 		const episode: Episode = {
 			id: genId("ep"),
 			childId,
@@ -232,18 +297,32 @@ export class MemoryLayer {
 			createdAt: new Date().toISOString(),
 		};
 		this.db
-			.prepare(`INSERT INTO episodes (id, child_id, type, content, created_at) VALUES (?, ?, ?, ?, ?)`)
-			.run(episode.id, episode.childId, episode.type, JSON.stringify(episode.content), episode.createdAt);
+			.prepare(
+				`INSERT INTO episodes (id, child_id, type, content, created_at) VALUES (?, ?, ?, ?, ?)`,
+			)
+			.run(
+				episode.id,
+				episode.childId,
+				episode.type,
+				JSON.stringify(episode.content),
+				episode.createdAt,
+			);
 		this.recordDelta("episodes", episode.id, "insert", { ...episode });
 		return episode;
 	}
 
-	getEpisodes(childId: string, type?: EpisodeType, limit?: number): Episode[] {
+	getEpisodes(
+		childId: string,
+		type?: EpisodeType,
+		limit?: number,
+	): Episode[] {
 		const sql = type
 			? `SELECT * FROM episodes WHERE child_id = ? AND type = ? ORDER BY created_at DESC ${limit ? `LIMIT ${limit}` : ""}`
 			: `SELECT * FROM episodes WHERE child_id = ? ORDER BY created_at DESC ${limit ? `LIMIT ${limit}` : ""}`;
 		const stmt = this.db.prepare(sql);
-		const rows = (type ? stmt.all(childId, type) : stmt.all(childId)) as Array<{
+		const rows = (
+			type ? stmt.all(childId, type) : stmt.all(childId)
+		) as Array<{
 			id: string;
 			child_id: string;
 			type: EpisodeType;
@@ -261,7 +340,10 @@ export class MemoryLayer {
 
 	// ─── L4: Sessions (Working Memory) ────────────────────────────────────
 
-	startSession(childId: string, context: Record<string, unknown> = {}): Session {
+	startSession(
+		childId: string,
+		context: Record<string, unknown> = {},
+	): Session {
 		const now = new Date().toISOString();
 		const session: Session = {
 			id: genId("sess"),
@@ -274,25 +356,41 @@ export class MemoryLayer {
 			.prepare(
 				`INSERT INTO sessions (id, child_id, started_at, last_active, context) VALUES (?, ?, ?, ?, ?)`,
 			)
-			.run(session.id, session.childId, session.startedAt, session.lastActive, JSON.stringify(session.context));
+			.run(
+				session.id,
+				session.childId,
+				session.startedAt,
+				session.lastActive,
+				JSON.stringify(session.context),
+			);
 		this.recordDelta("sessions", session.id, "insert", { ...session });
 		return session;
 	}
 
-	updateSession(sessionId: string, context: Record<string, unknown>): Session | null {
+	updateSession(
+		sessionId: string,
+		context: Record<string, unknown>,
+	): Session | null {
 		const now = new Date().toISOString();
 		const result = this.db
-			.prepare(`UPDATE sessions SET context = ?, last_active = ? WHERE id = ?`)
+			.prepare(
+				`UPDATE sessions SET context = ?, last_active = ? WHERE id = ?`,
+			)
 			.run(JSON.stringify(context), now, sessionId);
 		if (result.changes === 0) return null;
-		const row = this.db.prepare(`SELECT * FROM sessions WHERE id = ?`).get(sessionId) as {
+		const row = this.db
+			.prepare(`SELECT * FROM sessions WHERE id = ?`)
+			.get(sessionId) as {
 			id: string;
 			child_id: string;
 			started_at: string;
 			last_active: string;
 			context: string;
 		};
-		this.recordDelta("sessions", sessionId, "update", { context, lastActive: now });
+		this.recordDelta("sessions", sessionId, "update", {
+			context,
+			lastActive: now,
+		});
 		return {
 			id: row.id,
 			childId: row.child_id,
@@ -303,8 +401,16 @@ export class MemoryLayer {
 	}
 
 	getSession(sessionId: string): Session | null {
-		const row = this.db.prepare(`SELECT * FROM sessions WHERE id = ?`).get(sessionId) as
-			| { id: string; child_id: string; started_at: string; last_active: string; context: string }
+		const row = this.db
+			.prepare(`SELECT * FROM sessions WHERE id = ?`)
+			.get(sessionId) as
+			| {
+					id: string;
+					child_id: string;
+					started_at: string;
+					last_active: string;
+					context: string;
+			  }
 			| undefined;
 		if (!row) return null;
 		return {
@@ -320,9 +426,17 @@ export class MemoryLayer {
 		// most recently active session in the last 24 hours
 		const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 		const row = this.db
-			.prepare(`SELECT * FROM sessions WHERE child_id = ? AND last_active > ? ORDER BY last_active DESC LIMIT 1`)
+			.prepare(
+				`SELECT * FROM sessions WHERE child_id = ? AND last_active > ? ORDER BY last_active DESC LIMIT 1`,
+			)
 			.get(childId, cutoff) as
-			| { id: string; child_id: string; started_at: string; last_active: string; context: string }
+			| {
+					id: string;
+					child_id: string;
+					started_at: string;
+					last_active: string;
+					context: string;
+			  }
 			| undefined;
 		if (!row) return null;
 		return {
@@ -336,12 +450,23 @@ export class MemoryLayer {
 
 	// ─── Delta Log (PowerSync-ready) ──────────────────────────────────────
 
-	private recordDelta(tableName: string, rowId: string, op: DeltaOp, payload: Record<string, unknown>): void {
+	private recordDelta(
+		tableName: string,
+		rowId: string,
+		op: DeltaOp,
+		payload: Record<string, unknown>,
+	): void {
 		this.db
 			.prepare(
 				`INSERT INTO delta_log (table_name, row_id, op, payload, synced_at, created_at) VALUES (?, ?, ?, ?, NULL, ?)`,
 			)
-			.run(tableName, rowId, op, JSON.stringify(payload), new Date().toISOString());
+			.run(
+				tableName,
+				rowId,
+				op,
+				JSON.stringify(payload),
+				new Date().toISOString(),
+			);
 	}
 
 	getDeltaLog(since?: number, includeUnsynced: boolean = true): DeltaEntry[] {
@@ -371,7 +496,9 @@ export class MemoryLayer {
 	markDeltaSynced(uptoId: number): number {
 		const now = new Date().toISOString();
 		const result = this.db
-			.prepare(`UPDATE delta_log SET synced_at = ? WHERE id <= ? AND synced_at IS NULL`)
+			.prepare(
+				`UPDATE delta_log SET synced_at = ? WHERE id <= ? AND synced_at IS NULL`,
+			)
 			.run(now, uptoId);
 		return result.changes;
 	}
@@ -381,7 +508,9 @@ export class MemoryLayer {
 		const sql = limit
 			? `SELECT * FROM delta_log WHERE synced_at IS NULL ORDER BY id ASC LIMIT ?`
 			: `SELECT * FROM delta_log WHERE synced_at IS NULL ORDER BY id ASC`;
-		const rows = (limit ? this.db.prepare(sql).all(limit) : this.db.prepare(sql).all()) as Array<{
+		const rows = (
+			limit ? this.db.prepare(sql).all(limit) : this.db.prepare(sql).all()
+		) as Array<{
 			id: number;
 			table_name: string;
 			row_id: string;
@@ -402,15 +531,36 @@ export class MemoryLayer {
 	}
 
 	/** Summary stats for the delta log. */
-	getDeltaStats(): { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> } {
-		const total = (this.db.prepare(`SELECT COUNT(*) AS cnt FROM delta_log`).get() as { cnt: number }).cnt;
-		const unsynced = (this.db.prepare(`SELECT COUNT(*) AS cnt FROM delta_log WHERE synced_at IS NULL`).get() as { cnt: number }).cnt;
+	getDeltaStats(): {
+		total: number;
+		unsynced: number;
+		byTable: Record<string, number>;
+		byOp: Record<string, number>;
+	} {
+		const total = (
+			this.db.prepare(`SELECT COUNT(*) AS cnt FROM delta_log`).get() as {
+				cnt: number;
+			}
+		).cnt;
+		const unsynced = (
+			this.db
+				.prepare(
+					`SELECT COUNT(*) AS cnt FROM delta_log WHERE synced_at IS NULL`,
+				)
+				.get() as { cnt: number }
+		).cnt;
 		const byTable: Record<string, number> = {};
-		for (const row of this.db.prepare(`SELECT table_name, COUNT(*) AS cnt FROM delta_log GROUP BY table_name`).all() as Array<{ table_name: string; cnt: number }>) {
+		for (const row of this.db
+			.prepare(
+				`SELECT table_name, COUNT(*) AS cnt FROM delta_log GROUP BY table_name`,
+			)
+			.all() as Array<{ table_name: string; cnt: number }>) {
 			byTable[row.table_name] = row.cnt;
 		}
 		const byOp: Record<string, number> = {};
-		for (const row of this.db.prepare(`SELECT op, COUNT(*) AS cnt FROM delta_log GROUP BY op`).all() as Array<{ op: string; cnt: number }>) {
+		for (const row of this.db
+			.prepare(`SELECT op, COUNT(*) AS cnt FROM delta_log GROUP BY op`)
+			.all() as Array<{ op: string; cnt: number }>) {
 			byOp[row.op] = row.cnt;
 		}
 		return { total, unsynced, byTable, byOp };

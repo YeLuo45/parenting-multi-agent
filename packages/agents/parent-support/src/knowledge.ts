@@ -29,7 +29,8 @@ export const SUPPORT_GUIDANCE: SupportGuidance[] = [
 		id: "burnout",
 		name: "父母倦怠",
 		nameEn: "Parental Burnout",
-		description: "长期睡眠不足 + 持续付出 + 缺少支持 = 倦怠感。症状：易怒、对孩子失去耐心、想逃。",
+		description:
+			"长期睡眠不足 + 持续付出 + 缺少支持 = 倦怠感。症状：易怒、对孩子失去耐心、想逃。",
 		strategies: [
 			"每天 15 分钟完全属于自己的时间",
 			"每周至少一次托班/帮带 2-3 小时",
@@ -63,7 +64,8 @@ export const SUPPORT_GUIDANCE: SupportGuidance[] = [
 		id: "postpartum",
 		name: "产后抑郁",
 		nameEn: "Postpartum Depression",
-		description: "产后 2 周内可能出现情绪低落，2 周后仍持续需警惕产后抑郁。症状：失眠、焦虑、绝望、伤害念头。",
+		description:
+			"产后 2 周内可能出现情绪低落，2 周后仍持续需警惕产后抑郁。症状：失眠、焦虑、绝望、伤害念头。",
 		strategies: [
 			"不要忽视，产后抑郁是生理疾病",
 			"立即就医（妇产科/精神科）",
@@ -107,9 +109,7 @@ export const SUPPORT_GUIDANCE: SupportGuidance[] = [
 		],
 		urgency: "high",
 		whenToSeekHelp: "出现自杀念头或无法照顾孩子时立即就医",
-		hotline: [
-			{ region: "中国", number: "400-161-9995" },
-		],
+		hotline: [{ region: "中国", number: "400-161-9995" }],
 	},
 	{
 		id: "guilt",
@@ -168,7 +168,8 @@ export function matchSupportIssue(text: string): SupportGuidance | null {
 	for (const g of SUPPORT_GUIDANCE) {
 		const combined = `${g.name} ${g.nameEn}`.toLowerCase();
 		const idReplaced = combined.replace(/_/g, " ");
-		if (text.toLowerCase().includes(idReplaced) || text.includes(g.name)) return g;
+		if (text.toLowerCase().includes(idReplaced) || text.includes(g.name))
+			return g;
 	}
 	// Keyword fallback
 	const keywordMap: Array<[RegExp, SupportTopic]> = [

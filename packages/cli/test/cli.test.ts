@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { MemoryLayer } from "@parenting/memory";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import {
 	cmdHistory,
 	cmdList,
@@ -12,12 +12,11 @@ import {
 	loadDefaultChild,
 	parseReplLine,
 	printResult,
-	runCli,
-	runRepl,
 	type ReplDeps,
 	type ReplReader,
+	runCli,
+	runRepl,
 } from "../src/index.js";
-import { MemoryLayer } from "@parenting/memory";
 
 let tempDir: string;
 let logs: string[];
@@ -28,8 +27,12 @@ beforeEach(() => {
 	process.env.PARENTING_DATA_DIR = tempDir;
 	logs = [];
 	errors = [];
-	vi.spyOn(console, "log").mockImplementation((...args) => logs.push(args.join(" ")));
-	vi.spyOn(console, "error").mockImplementation((...args) => errors.push(args.join(" ")));
+	vi.spyOn(console, "log").mockImplementation((...args) =>
+		logs.push(args.join(" ")),
+	);
+	vi.spyOn(console, "error").mockImplementation((...args) =>
+		errors.push(args.join(" ")),
+	);
 });
 
 afterEach(() => {
@@ -52,7 +55,9 @@ describe("parenting CLI", () => {
 	});
 
 	it("adds and lists a child profile", async () => {
-		await expect(runCli(["add-child", "alice", "爱丽丝", "2024-06-19"])).resolves.toBe(0);
+		await expect(
+			runCli(["add-child", "alice", "爱丽丝", "2024-06-19"]),
+		).resolves.toBe(0);
 		await expect(runCli(["list"])).resolves.toBe(0);
 		expect(logs.join("\n")).toContain("爱丽丝");
 	});
@@ -63,7 +68,9 @@ describe("parenting CLI", () => {
 	});
 
 	it("creates a default child and answers questions", async () => {
-		await expect(runCli(["ask", "我家宝宝3个月发烧38.5度怎么办"])).resolves.toBe(0);
+		await expect(
+			runCli(["ask", "我家宝宝3个月发烧38.5度怎么办"]),
+		).resolves.toBe(0);
 		const output = logs.join("\n");
 		expect(output).toContain("问题:");
 		expect(output).toMatch(/儿科|紧急|发烧|医生/);
@@ -173,7 +180,12 @@ describe("parenting CLI", () => {
 	it("loads an existing default child before creating a sample", () => {
 		const memory = new MemoryLayer({ dbPath: ":memory:" });
 		try {
-			memory.upsertChild({ id: "bob", name: "Bob", birthDate: "2020-01-01", stage: "school_age" });
+			memory.upsertChild({
+				id: "bob",
+				name: "Bob",
+				birthDate: "2020-01-01",
+				stage: "school_age",
+			});
 			expect(loadDefaultChild(memory).id).toBe("bob");
 		} finally {
 			memory.close();
@@ -184,8 +196,18 @@ describe("parenting CLI", () => {
 describe("child history & switching", () => {
 	const openMemory = () => {
 		const memory = new MemoryLayer({ dbPath: ":memory:" });
-		memory.upsertChild({ id: "alice", name: "Alice", birthDate: "2024-06-19", stage: "toddler" });
-		memory.upsertChild({ id: "bob", name: "Bob", birthDate: "2020-01-01", stage: "school_age" });
+		memory.upsertChild({
+			id: "alice",
+			name: "Alice",
+			birthDate: "2024-06-19",
+			stage: "toddler",
+		});
+		memory.upsertChild({
+			id: "bob",
+			name: "Bob",
+			birthDate: "2020-01-01",
+			stage: "school_age",
+		});
 		return memory;
 	};
 
@@ -204,8 +226,15 @@ describe("child history & switching", () => {
 		const memory = openMemory();
 		try {
 			// Direct log an episode to bypass orchestrator
-			memory.addEpisode("alice", "qa", { question: "宝宝发烧怎么办", redFlag: false });
-			memory.addEpisode("alice", "qa", { question: "3月宝宝40度", redFlag: true, severity: "emergency" });
+			memory.addEpisode("alice", "qa", {
+				question: "宝宝发烧怎么办",
+				redFlag: false,
+			});
+			memory.addEpisode("alice", "qa", {
+				question: "3月宝宝40度",
+				redFlag: true,
+				severity: "emergency",
+			});
 			const eps = cmdHistory(memory, "alice", 10);
 			expect(eps.length).toBe(2);
 			const out = logs.join("\n");
@@ -245,14 +274,16 @@ describe("child history & switching", () => {
 		try {
 			const child = cmdUse(memory, "ghost");
 			expect(child).toBeNull();
-			expect(errors.join("\n")).toContain("找不到 child id=\"ghost\"");
+			expect(errors.join("\n")).toContain('找不到 child id="ghost"');
 		} finally {
 			memory.close();
 		}
 	});
 
 	it("runCli use delegates to cmdUse and exits 0", async () => {
-		await expect(runCli(["add-child", "alice", "Alice", "2024-06-19"])).resolves.toBe(0);
+		await expect(
+			runCli(["add-child", "alice", "Alice", "2024-06-19"]),
+		).resolves.toBe(0);
 		await expect(runCli(["use", "alice"])).resolves.toBe(0);
 	});
 
@@ -267,13 +298,17 @@ describe("child history & switching", () => {
 	});
 
 	it("runCli children mirrors list", async () => {
-		await expect(runCli(["add-child", "alice", "Alice", "2024-06-19"])).resolves.toBe(0);
+		await expect(
+			runCli(["add-child", "alice", "Alice", "2024-06-19"]),
+		).resolves.toBe(0);
 		await expect(runCli(["children"])).resolves.toBe(0);
 		expect(logs.join("\n")).toContain("Alice");
 	});
 
 	it("runCli history prints no-records message for fresh child", async () => {
-		await expect(runCli(["add-child", "alice", "Alice", "2024-06-19"])).resolves.toBe(0);
+		await expect(
+			runCli(["add-child", "alice", "Alice", "2024-06-19"]),
+		).resolves.toBe(0);
 		await expect(runCli(["history"])).resolves.toBe(0);
 		expect(logs.join("\n")).toContain("暂无问答记录");
 	});
@@ -339,8 +374,18 @@ describe("REPL parser", () => {
 describe("REPL line handler", () => {
 	function makeDeps(overrides: Partial<ReplDeps> = {}): ReplDeps {
 		const memory = new MemoryLayer({ dbPath: ":memory:" });
-		memory.upsertChild({ id: "alice", name: "Alice", birthDate: "2024-06-19", stage: "toddler" });
-		memory.upsertChild({ id: "bob", name: "Bob", birthDate: "2020-01-01", stage: "school_age" });
+		memory.upsertChild({
+			id: "alice",
+			name: "Alice",
+			birthDate: "2024-06-19",
+			stage: "toddler",
+		});
+		memory.upsertChild({
+			id: "bob",
+			name: "Bob",
+			birthDate: "2020-01-01",
+			stage: "school_age",
+		});
 		const ask = vi.fn(async (_c: any, _q: string) => {});
 		const list = vi.fn();
 		const history = vi.fn();
@@ -437,7 +482,10 @@ describe("REPL line handler", () => {
 			handleReplLine(deps, "宝宝发烧怎么办");
 			// ask is async (void), wait microtask
 			await new Promise((r) => setTimeout(r, 0));
-			expect(deps.ask).toHaveBeenCalledWith(deps.currentChild, "宝宝发烧怎么办");
+			expect(deps.ask).toHaveBeenCalledWith(
+				deps.currentChild,
+				"宝宝发烧怎么办",
+			);
 		} finally {
 			deps.memory.close();
 		}
@@ -447,7 +495,12 @@ describe("REPL line handler", () => {
 describe("REPL run loop", () => {
 	function makeDeps(overrides: Partial<ReplDeps> = {}): ReplDeps {
 		const memory = new MemoryLayer({ dbPath: ":memory:" });
-		memory.upsertChild({ id: "alice", name: "Alice", birthDate: "2024-06-19", stage: "toddler" });
+		memory.upsertChild({
+			id: "alice",
+			name: "Alice",
+			birthDate: "2024-06-19",
+			stage: "toddler",
+		});
 		return {
 			memory,
 			currentChild: memory.getChild("alice")!,
@@ -460,7 +513,11 @@ describe("REPL run loop", () => {
 		};
 	}
 
-	function makeReader(lines: string[]): { reader: ReplReader; prompts: string[]; closed: () => boolean } {
+	function makeReader(lines: string[]): {
+		reader: ReplReader;
+		prompts: string[];
+		closed: () => boolean;
+	} {
 		const prompts: string[] = [];
 		let idx = 0;
 		let closed = false;
@@ -478,7 +535,11 @@ describe("REPL run loop", () => {
 
 	it("runs until /quit and closes reader", async () => {
 		const deps = makeDeps();
-		const { reader, prompts, closed } = makeReader(["/help", "/list", "/quit"]);
+		const { reader, prompts, closed } = makeReader([
+			"/help",
+			"/list",
+			"/quit",
+		]);
 		try {
 			await runRepl(deps, reader);
 		} finally {

@@ -1,22 +1,22 @@
 export {
-	FinanceAgent,
 	createFinanceAgent,
 	FINANCE_DISCLAIMER,
+	FinanceAgent,
 } from "./agent.js";
 
 export {
-	EDUCATION_FUND_PLANS,
-	INSURANCE_TYPES,
-	SCHOOL_FEES,
 	calculateFundValue,
+	EDUCATION_FUND_PLANS,
+	type EducationFundPlan,
 	estimateTotalEducationCost,
+	type FinanceTopic,
 	getEssentialInsurance,
 	getInsurance,
 	getRecommendedPlan,
 	getSchoolFee,
-	type EducationFundPlan,
-	type FinanceTopic,
+	INSURANCE_TYPES,
 	type InsuranceType,
+	SCHOOL_FEES,
 	type SchoolFee,
 } from "./knowledge.js";
 

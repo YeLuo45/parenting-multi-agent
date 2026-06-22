@@ -5,28 +5,28 @@
  */
 
 export {
-	NutritionistAgent,
 	createNutritionistAgent,
 	NUTRITIONIST_DISCLAIMER,
+	NutritionistAgent,
 } from "./agent.js";
 
 export {
+	type Allergen,
 	COMMON_ALLERGENS,
-	FOOD_INTRODUCTION_SCHEDULE,
-	NUTRITION_NEEDS,
-	PICKY_EATING_GUIDANCE,
-	RECIPES,
 	detectAllergens,
+	FOOD_INTRODUCTION_SCHEDULE,
+	type FoodIntroduction,
+	findRecipesWithAllergen,
 	getFoodsForAge,
 	getNextFood,
 	getNutritionNeeds,
 	getPickyEatingGuidance,
 	getRecipesForAge,
-	findRecipesWithAllergen,
-	type Allergen,
-	type FoodIntroduction,
+	NUTRITION_NEEDS,
 	type NutritionNeeds,
+	PICKY_EATING_GUIDANCE,
 	type PickyEatingGuidance,
+	RECIPES,
 	type Recipe,
 } from "./knowledge.js";
 

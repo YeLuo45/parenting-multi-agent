@@ -1,9 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("ask flow", () => {
-	test("asking an emergency question produces an agent reply", async ({ page }) => {
+	test("asking an emergency question produces an agent reply", async ({
+		page,
+	}) => {
 		await page.goto("/", { waitUntil: "load" });
-		await page.waitForSelector('[data-testid="question-input"]', { timeout: 10_000 });
+		await page.waitForSelector('[data-testid="question-input"]', {
+			timeout: 10_000,
+		});
 		await expect(page.getByTestId("question-input")).toBeEnabled();
 
 		const emergencyText = "我家宝宝3个月发烧38.5度怎么办";
@@ -12,7 +16,9 @@ test.describe("ask flow", () => {
 
 		// Wait for at least one agent bubble to appear
 		await expect(async () => {
-			const count = await page.locator('[data-testid^="message-"]').count();
+			const count = await page
+				.locator('[data-testid^="message-"]')
+				.count();
 			expect(count).toBeGreaterThan(0);
 		}).toPass({ timeout: 5_000 });
 
@@ -21,9 +27,13 @@ test.describe("ask flow", () => {
 		expect(allText ?? "").toContain(emergencyText);
 	});
 
-	test("empty question keeps ask button disabled and messages empty", async ({ page }) => {
+	test("empty question keeps ask button disabled and messages empty", async ({
+		page,
+	}) => {
 		await page.goto("/", { waitUntil: "load" });
-		await page.waitForSelector('[data-testid="ask-button"]', { timeout: 10_000 });
+		await page.waitForSelector('[data-testid="ask-button"]', {
+			timeout: 10_000,
+		});
 
 		const askButton = page.getByTestId("ask-button");
 		await expect(askButton).toBeDisabled();

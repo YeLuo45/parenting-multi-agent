@@ -5,39 +5,42 @@
  */
 
 import { existsSync, mkdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
 import readline from "node:readline";
-import { OrchestratorCore } from "@parenting/orchestrator";
-import {
-	MemoryLayer,
-	computeStage,
-	type ChildProfile,
-	type Episode,
-} from "@parenting/memory";
-import { createPediatricianAgent } from "@parenting/agent-pediatrician";
-import { createPsychologistAgent } from "@parenting/agent-psychologist";
+import { fileURLToPath } from "node:url";
+import { createCareerAgent } from "@parenting/agent-career";
+import { createCollegePrepAgent } from "@parenting/agent-college-prep";
 import { createEducatorAgent } from "@parenting/agent-educator";
-import { createNutritionistAgent } from "@parenting/agent-nutritionist";
-import { createSleepCoachAgent } from "@parenting/agent-sleep-coach";
 import { createFamilyMediatorAgent } from "@parenting/agent-family-mediator";
 import { createFinanceAgent } from "@parenting/agent-finance";
-import { createParentSupportAgent } from "@parenting/agent-parent-support";
 import { createGrowthTrackerAgent } from "@parenting/agent-growth-tracker";
 import { createHabitBuilderAgent } from "@parenting/agent-habit-builder";
 import { createKnowledgeRAGAgent } from "@parenting/agent-knowledge-rag";
-import { createSafetyGuardAgent } from "@parenting/agent-safety-guard";
-import { createSocialAgent } from "@parenting/agent-social";
-import { createSchoolReadinessAgent } from "@parenting/agent-school-readiness";
-import { createCollegePrepAgent } from "@parenting/agent-college-prep";
-import { createCareerAgent } from "@parenting/agent-career";
 import { createLegalAgent } from "@parenting/agent-legal";
+import { createNutritionistAgent } from "@parenting/agent-nutritionist";
+import { createParentSupportAgent } from "@parenting/agent-parent-support";
+import { createPediatricianAgent } from "@parenting/agent-pediatrician";
+import { createPsychologistAgent } from "@parenting/agent-psychologist";
+import { createSafetyGuardAgent } from "@parenting/agent-safety-guard";
+import { createSchoolReadinessAgent } from "@parenting/agent-school-readiness";
 import { createSiblingAgent } from "@parenting/agent-sibling";
+import { createSleepCoachAgent } from "@parenting/agent-sleep-coach";
+import { createSocialAgent } from "@parenting/agent-social";
+import {
+	type ChildProfile,
+	computeStage,
+	type Episode,
+	MemoryLayer,
+} from "@parenting/memory";
+import { OrchestratorCore } from "@parenting/orchestrator";
 
 function dataDir(): string {
 	/* v8 ignore next */
-	return process.env.PARENTING_DATA_DIR ?? join(homedir(), ".parenting-multi-agent");
+	return (
+		process.env.PARENTING_DATA_DIR ??
+		join(homedir(), ".parenting-multi-agent")
+	);
 }
 
 function dbPath(): string {
@@ -57,7 +60,9 @@ export function loadDefaultChild(memory: MemoryLayer): ChildProfile {
 		const sample: ChildProfile = {
 			id: "default",
 			name: "示例宝宝",
-			birthDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+			birthDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+				.toISOString()
+				.split("T")[0],
 			stage: "toddler",
 		};
 		memory.upsertChild(sample);
@@ -67,7 +72,11 @@ export function loadDefaultChild(memory: MemoryLayer): ChildProfile {
 }
 
 export function createOrchestrator(memory: MemoryLayer): OrchestratorCore {
-	const orch = new OrchestratorCore({ memory, maxAgentsPerAsk: 3, minConfidence: 0.3 });
+	const orch = new OrchestratorCore({
+		memory,
+		maxAgentsPerAsk: 3,
+		minConfidence: 0.3,
+	});
 	orch.registerAgent(createPediatricianAgent());
 	orch.registerAgent(createPsychologistAgent());
 	orch.registerAgent(createEducatorAgent());
@@ -89,8 +98,10 @@ export function createOrchestrator(memory: MemoryLayer): OrchestratorCore {
 	return orch;
 }
 
-export function printResult(result: Awaited<ReturnType<OrchestratorCore["ask"]>>): void {
-	console.log("\n" + "=".repeat(60));
+export function printResult(
+	result: Awaited<ReturnType<OrchestratorCore["ask"]>>,
+): void {
+	console.log(`\n${"=".repeat(60)}`);
 	console.log(`问题: ${result.question}`);
 	console.log("=".repeat(60));
 
@@ -108,7 +119,9 @@ export function printResult(result: Awaited<ReturnType<OrchestratorCore["ask"]>>
 	}
 
 	for (const reply of result.replies) {
-		console.log(`\n[${reply.agentName}] (confidence: ${(reply.confidence * 100).toFixed(0)}%${reply.urgency ? `, urgency: ${reply.urgency}` : ""})`);
+		console.log(
+			`\n[${reply.agentName}] (confidence: ${(reply.confidence * 100).toFixed(0)}%${reply.urgency ? `, urgency: ${reply.urgency}` : ""})`,
+		);
 		console.log("-".repeat(60));
 		console.log(reply.content);
 	}
@@ -171,16 +184,24 @@ export function cmdHistory(
 	}
 	console.log(`\n📜 child ${childId} 最近 ${episodes.length} 条问答：\n`);
 	for (const ep of episodes) {
-		const content = ep.content as { question?: string; redFlag?: boolean; severity?: string };
+		const content = ep.content as {
+			question?: string;
+			redFlag?: boolean;
+			severity?: string;
+		};
 		const tag = content.redFlag ? "🚨" : "💬";
-		const summary = content.question ?? JSON.stringify(content).slice(0, 60);
+		const summary =
+			content.question ?? JSON.stringify(content).slice(0, 60);
 		console.log(`  ${tag} [${ep.createdAt}] ${summary}`);
 	}
 	console.log();
 	return episodes;
 }
 
-export function cmdUse(memory: MemoryLayer, childId: string): ChildProfile | null {
+export function cmdUse(
+	memory: MemoryLayer,
+	childId: string,
+): ChildProfile | null {
 	const child = memory.getChild(childId);
 	if (!child) {
 		console.error(`错误: 找不到 child id="${childId}"`);
@@ -208,15 +229,23 @@ export type ReplAction =
 
 export function parseReplLine(line: string, defaultLimit: number): ReplAction {
 	const trimmed = normalizeReplLine(line);
-	if (trimmed === "" || trimmed === "/quit" || trimmed === "quit" || trimmed === "exit") {
+	if (
+		trimmed === "" ||
+		trimmed === "/quit" ||
+		trimmed === "quit" ||
+		trimmed === "exit"
+	) {
 		return trimmed === "" ? { kind: "noop" } : { kind: "quit" };
 	}
-	if (trimmed === "/help" || trimmed === "help" || trimmed === "?") return { kind: "help" };
+	if (trimmed === "/help" || trimmed === "help" || trimmed === "?")
+		return { kind: "help" };
 	if (trimmed === "/list" || trimmed === "list") return { kind: "list" };
 	if (trimmed === "/clear" || trimmed === "clear") return { kind: "clear" };
-	if (trimmed === "/history" || trimmed === "history") return { kind: "history", limit: defaultLimit };
+	if (trimmed === "/history" || trimmed === "history")
+		return { kind: "history", limit: defaultLimit };
 	const historyMatch = /^\/(?:history|hist)\s+(\d+)$/.exec(trimmed);
-	if (historyMatch) return { kind: "history", limit: Number(historyMatch[1]) };
+	if (historyMatch)
+		return { kind: "history", limit: Number(historyMatch[1]) };
 	const useMatch = /^\/use\s+(\S+)$/.exec(trimmed);
 	if (useMatch) return { kind: "use", childId: useMatch[1] };
 	return { kind: "ask", question: trimmed };
@@ -295,10 +324,17 @@ export async function runRepl(
 
 /** Production REPL: real readline over stdin/stdout. */
 /* v8 ignore next 24 */
-export function startRepl(memory: MemoryLayer, currentChild: ChildProfile): void {
-	const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+export function startRepl(
+	memory: MemoryLayer,
+	currentChild: ChildProfile,
+): void {
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
 	const reader: ReplReader = {
-		question: (prompt) => new Promise<string>((res) => rl.question(prompt, res)),
+		question: (prompt) =>
+			new Promise<string>((res) => rl.question(prompt, res)),
 		close: () => rl.close(),
 	};
 	const deps: ReplDeps = {
@@ -369,7 +405,9 @@ export async function runCli(args: string[]): Promise<number> {
 		case "add-child": {
 			const [, id, name, birthDate] = args;
 			if (!id || !name || !birthDate) {
-				console.error("错误: parenting add-child <id> <name> <birthDate>");
+				console.error(
+					"错误: parenting add-child <id> <name> <birthDate>",
+				);
 				return 1;
 			}
 			cmdAddChild(id, name, birthDate);

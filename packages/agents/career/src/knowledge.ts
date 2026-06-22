@@ -115,22 +115,31 @@ export const CAREER_TIPS: CareerTip[] = [
 	},
 ];
 
-export function getTipsForStage(stage: string | undefined, topic?: CareerTopic): CareerTip[] {
+export function getTipsForStage(
+	stage: string | undefined,
+	topic?: CareerTopic,
+): CareerTip[] {
 	return CAREER_TIPS.filter(
 		(t) =>
-			(stage === undefined || t.stage.includes("any") || t.stage.includes(stage)) &&
+			(stage === undefined ||
+				t.stage.includes("any") ||
+				t.stage.includes(stage)) &&
 			(topic === undefined || t.topic === topic),
 	);
 }
 
 export function matchTopic(text: string): CareerTopic | null {
 	const q = text.toLowerCase();
-	if (/(职业探索|职业规划|career|职业方向|职业选择|职业测试)/i.test(q)) return "exploration";
+	if (/(职业探索|职业规划|career|职业方向|职业选择|职业测试)/i.test(q))
+		return "exploration";
 	if (/(实习|intern|internship|实习机会)/i.test(q)) return "internship";
 	if (/(简历|resume|cv|求职信|cover.letter)/i.test(q)) return "resume";
 	if (/(面试|interview|行为面试|技术面试)/i.test(q)) return "interview";
-	if (/(人脉|networking|linkedin|校友|networking|coffee.chat)/i.test(q)) return "networking";
-	if (/(技能|skill|学习|学什么|coding|编程|ai|技能)/i.test(q)) return "skills";
-	if (/(第一份工作|first.job|找工作|求职|应聘|投简历)/i.test(q)) return "first_job";
+	if (/(人脉|networking|linkedin|校友|networking|coffee.chat)/i.test(q))
+		return "networking";
+	if (/(技能|skill|学习|学什么|coding|编程|ai|技能)/i.test(q))
+		return "skills";
+	if (/(第一份工作|first.job|找工作|求职|应聘|投简历)/i.test(q))
+		return "first_job";
 	return null;
 }

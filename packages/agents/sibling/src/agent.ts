@@ -3,7 +3,7 @@
  * Rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 import { getTipsForStage, matchTopic, type SiblingTip } from "./knowledge.js";
 
@@ -31,7 +31,11 @@ export class SiblingAgent implements Agent {
 		"teen",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const topic = matchTopic(question);
 
@@ -78,6 +82,6 @@ export function createSiblingAgent(): SiblingAgent {
 export {
 	getTipsForStage,
 	matchTopic,
-	type SiblingTopic,
 	type SiblingTip,
+	type SiblingTopic,
 } from "./knowledge.js";

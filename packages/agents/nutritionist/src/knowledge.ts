@@ -28,11 +28,30 @@ export interface FoodIntroduction {
 
 export const FOOD_INTRODUCTION_SCHEDULE: FoodIntroduction[] = [
 	{ food: "米糊", recommendedAgeMonths: 6, category: "谷物" },
-	{ food: "蔬菜泥（胡萝卜、南瓜、土豆）", recommendedAgeMonths: 6, category: "蔬菜", notes: "先蔬菜后水果" },
-	{ food: "水果泥（苹果泥、香蕉泥）", recommendedAgeMonths: 6, category: "水果" },
-	{ food: "蛋黄（先少量）", recommendedAgeMonths: 7, category: "蛋白", notes: "观察过敏" },
+	{
+		food: "蔬菜泥（胡萝卜、南瓜、土豆）",
+		recommendedAgeMonths: 6,
+		category: "蔬菜",
+		notes: "先蔬菜后水果",
+	},
+	{
+		food: "水果泥（苹果泥、香蕉泥）",
+		recommendedAgeMonths: 6,
+		category: "水果",
+	},
+	{
+		food: "蛋黄（先少量）",
+		recommendedAgeMonths: 7,
+		category: "蛋白",
+		notes: "观察过敏",
+	},
 	{ food: "肉泥（猪肉、鸡肉）", recommendedAgeMonths: 7, category: "蛋白" },
-	{ food: "鱼肉（无骨）", recommendedAgeMonths: 8, category: "蛋白", notes: "避免高汞鱼" },
+	{
+		food: "鱼肉（无骨）",
+		recommendedAgeMonths: 8,
+		category: "蛋白",
+		notes: "避免高汞鱼",
+	},
 	{ food: "豆腐", recommendedAgeMonths: 8, category: "蛋白" },
 	{ food: "酸奶（无糖）", recommendedAgeMonths: 8, category: "乳制品" },
 	{ food: "全蛋", recommendedAgeMonths: 9, category: "蛋白" },
@@ -41,20 +60,34 @@ export const FOOD_INTRODUCTION_SCHEDULE: FoodIntroduction[] = [
 	{ food: "软豆腐/豆制品", recommendedAgeMonths: 10, category: "蛋白" },
 	{ food: "小块软水果", recommendedAgeMonths: 12, category: "水果" },
 	{ food: "全脂牛奶", recommendedAgeMonths: 12, category: "乳制品" },
-	{ food: "蜂蜜", recommendedAgeMonths: 12, category: "蔬菜", notes: "1 岁前禁食（肉毒杆菌）" },
-	{ food: "坚果碎（粉）", recommendedAgeMonths: 12, category: "蛋白", notes: "整颗易呛咳" },
+	{
+		food: "蜂蜜",
+		recommendedAgeMonths: 12,
+		category: "蔬菜",
+		notes: "1 岁前禁食（肉毒杆菌）",
+	},
+	{
+		food: "坚果碎（粉）",
+		recommendedAgeMonths: 12,
+		category: "蛋白",
+		notes: "整颗易呛咳",
+	},
 	{ food: "鸡蛋（蛋白全）", recommendedAgeMonths: 12, category: "蛋白" },
 	{ food: "虾蟹", recommendedAgeMonths: 18, category: "蛋白" },
 ];
 
 /** Get foods due for given age. */
 export function getFoodsForAge(ageMonths: number): FoodIntroduction[] {
-	return FOOD_INTRODUCTION_SCHEDULE.filter((f) => f.recommendedAgeMonths <= ageMonths);
+	return FOOD_INTRODUCTION_SCHEDULE.filter(
+		(f) => f.recommendedAgeMonths <= ageMonths,
+	);
 }
 
 /** Get next food to introduce. */
 export function getNextFood(ageMonths: number): FoodIntroduction | null {
-	const upcoming = FOOD_INTRODUCTION_SCHEDULE.filter((f) => f.recommendedAgeMonths > ageMonths);
+	const upcoming = FOOD_INTRODUCTION_SCHEDULE.filter(
+		(f) => f.recommendedAgeMonths > ageMonths,
+	);
 	upcoming.sort((a, b) => a.recommendedAgeMonths - b.recommendedAgeMonths);
 	return upcoming[0] ?? null;
 }
@@ -69,11 +102,38 @@ export interface NutritionNeeds {
 }
 
 export const NUTRITION_NEEDS: NutritionNeeds[] = [
-	{ ageMonths: 0, caloriesPerDay: 500, proteinGramsPerDay: 10, formulaOzPerDay: 24, notes: "纯母乳/配方奶" },
-	{ ageMonths: 3, caloriesPerDay: 600, proteinGramsPerDay: 12, formulaOzPerDay: 28 },
-	{ ageMonths: 6, caloriesPerDay: 750, proteinGramsPerDay: 14, formulaOzPerDay: 24, notes: "开始辅食" },
-	{ ageMonths: 9, caloriesPerDay: 900, proteinGramsPerDay: 18, formulaOzPerDay: 16 },
-	{ ageMonths: 12, caloriesPerDay: 1000, proteinGramsPerDay: 20, notes: "转全脂牛奶" },
+	{
+		ageMonths: 0,
+		caloriesPerDay: 500,
+		proteinGramsPerDay: 10,
+		formulaOzPerDay: 24,
+		notes: "纯母乳/配方奶",
+	},
+	{
+		ageMonths: 3,
+		caloriesPerDay: 600,
+		proteinGramsPerDay: 12,
+		formulaOzPerDay: 28,
+	},
+	{
+		ageMonths: 6,
+		caloriesPerDay: 750,
+		proteinGramsPerDay: 14,
+		formulaOzPerDay: 24,
+		notes: "开始辅食",
+	},
+	{
+		ageMonths: 9,
+		caloriesPerDay: 900,
+		proteinGramsPerDay: 18,
+		formulaOzPerDay: 16,
+	},
+	{
+		ageMonths: 12,
+		caloriesPerDay: 1000,
+		proteinGramsPerDay: 20,
+		notes: "转全脂牛奶",
+	},
 	{ ageMonths: 24, caloriesPerDay: 1100, proteinGramsPerDay: 25 },
 	{ ageMonths: 36, caloriesPerDay: 1300, proteinGramsPerDay: 30 },
 	{ ageMonths: 60, caloriesPerDay: 1500, proteinGramsPerDay: 35 },
@@ -128,7 +188,12 @@ export const RECIPES: Recipe[] = [
 		category: "蛋白",
 		minAgeMonths: 8,
 		ingredients: ["鸡胸肉 30g", "大米 20g", "胡萝卜 20g", "西兰花 20g"],
-		steps: ["鸡肉切碎煮熟", "大米煮粥", "胡萝卜西兰花蒸熟切碎", "所有材料混合煮 5 分钟"],
+		steps: [
+			"鸡肉切碎煮熟",
+			"大米煮粥",
+			"胡萝卜西兰花蒸熟切碎",
+			"所有材料混合煮 5 分钟",
+		],
 		allergens: ["小麦"],
 	},
 	{
@@ -144,7 +209,12 @@ export const RECIPES: Recipe[] = [
 		category: "谷物",
 		minAgeMonths: 12,
 		ingredients: ["细面 30g", "番茄 1/2 个", "鸡蛋 1 个", "葱花少许"],
-		steps: ["番茄切碎炒出汁", "加水煮开下细面", "打散鸡蛋倒入", "出锅撒葱花"],
+		steps: [
+			"番茄切碎炒出汁",
+			"加水煮开下细面",
+			"打散鸡蛋倒入",
+			"出锅撒葱花",
+		],
 		allergens: ["鸡蛋", "小麦"],
 	},
 	{
@@ -214,7 +284,9 @@ export const PICKY_EATING_GUIDANCE: PickyEatingGuidance[] = [
 ];
 
 /** Get guidance for given stage. */
-export function getPickyEatingGuidance(stage: ChildStage): PickyEatingGuidance | null {
+export function getPickyEatingGuidance(
+	stage: ChildStage,
+): PickyEatingGuidance | null {
 	return PICKY_EATING_GUIDANCE.find((g) => g.stage === stage) ?? null;
 }
 

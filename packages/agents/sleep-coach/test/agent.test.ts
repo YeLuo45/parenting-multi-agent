@@ -1,20 +1,27 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import {
-	SleepCoachAgent,
 	createSleepCoachAgent,
-	getSleepMethodsForAge,
-	getSleepMethod,
-	getSleepRegression,
 	getNapSchedule,
 	getNightWakingCauses,
+	getSleepMethod,
+	getSleepMethodsForAge,
+	getSleepRegression,
+	SleepCoachAgent,
 } from "../src/index.js";
-import type { ChildProfile } from "@parenting/memory";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "TestChild", stage?: ChildProfile["stage"]): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "TestChild",
+	stage?: ChildProfile["stage"],
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -127,39 +134,59 @@ describe("SleepCoachAgent", () => {
 
 	describe("training queries", () => {
 		it("returns methods for 8-month-old", async () => {
-			const reply = await agent.respond("宝宝睡眠训练方法", makeChild(240, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝睡眠训练方法",
+				makeChild(240, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/Ferber|哭声|消退/);
 		});
 
 		it("returns no methods for newborn", async () => {
-			const reply = await agent.respond("宝宝睡眠训练", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝睡眠训练",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("暂不适合");
 		});
 	});
 
 	describe("regression queries", () => {
 		it("returns 4-month regression info", async () => {
-			const reply = await agent.respond("宝宝突然不睡", makeChild(120, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝突然不睡",
+				makeChild(120, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/倒退|regression/);
 		});
 
 		it("returns 8-month regression info", async () => {
-			const reply = await agent.respond("宝宝睡眠倒退", makeChild(240, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝睡眠倒退",
+				makeChild(240, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("8 月");
 		});
 
 		it("returns no regression for unusual age", async () => {
-			const reply = await agent.respond("宝宝突然不睡", makeChild(365 * 6, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝突然不睡",
+				makeChild(365 * 6, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// 6yo — no standard regression, but generic advice
 			expect(reply.content).toMatch(/检查|出牙|生病/);
 		});
@@ -167,34 +194,50 @@ describe("SleepCoachAgent", () => {
 
 	describe("schedule queries", () => {
 		it("returns newborn schedule notes", async () => {
-			const reply = await agent.respond("宝宝作息", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝作息",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("新生儿期");
 			expect(reply.content).toContain("💡");
 		});
 
 		it("returns schedule for 9-month-old", async () => {
-			const reply = await agent.respond("宝宝作息", makeChild(270, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝作息",
+				makeChild(270, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/小睡|夜间/);
 		});
 
 		it("returns schedule for 18-month-old", async () => {
 			// Use 18*30 days ≈ 540 days; nearest schedule is 12 or 18 depending on rounding
-			const reply = await agent.respond("宝宝每天小睡几次", makeChild(18 * 30.4, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝每天小睡几次",
+				makeChild(18 * 30.4, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// 18mo schedule is 1 nap; 12mo is 2 naps
 			expect(reply.content).toMatch(/次小睡/);
 			expect(reply.content).toMatch(/小睡 1/);
 		});
 
 		it("returns 0-nap schedule for 6-year-old (covers branches 72 + 78 false)", async () => {
-			const reply = await agent.respond("宝宝作息", makeChild(365 * 6, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝作息",
+				makeChild(365 * 6, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// 6yo schedule has totalNaps=0 and no notes
 			expect(reply.content).toMatch(/无小睡/);
 			expect(reply.content).toMatch(/夜间睡眠/);
@@ -202,9 +245,13 @@ describe("SleepCoachAgent", () => {
 
 		it("returns schedule for 19-month-old (no notes, covers branch 78 false)", async () => {
 			// 19*30.44 = 578 days = 19 months. 18mo schedule has no notes.
-			const reply = await agent.respond("宝宝作息", makeChild(19 * 30.44, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝作息",
+				makeChild(19 * 30.44, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// 18mo schedule: 1 nap, no notes — no "💡 ..." line
 			expect(reply.content).toMatch(/1\s*次小睡/);
 			expect(reply.content).not.toMatch(/💡/);
@@ -213,34 +260,50 @@ describe("SleepCoachAgent", () => {
 
 	describe("night waking queries", () => {
 		it("returns causes for 6-month-old", async () => {
-			const reply = await agent.respond("宝宝夜醒", makeChild(180, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝夜醒",
+				makeChild(180, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/倒退|焦虑|出牙/);
 		});
 
 		it("returns causes for 2-year-old", async () => {
-			const reply = await agent.respond("宝宝夜里哭", makeChild(365 * 2, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝夜里哭",
+				makeChild(365 * 2, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/噩梦|怕黑/);
 		});
 	});
 
 	describe("routine queries", () => {
 		it("returns bedtime routine", async () => {
-			const reply = await agent.respond("宝宝睡前程序", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝睡前程序",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("洗澡");
 		});
 	});
 
 	describe("general queries", () => {
 		it("introduces itself for vague questions", async () => {
-			const reply = await agent.respond("你好", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"你好",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("睡眠顾问");
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -250,9 +313,13 @@ describe("SleepCoachAgent", () => {
 		it("createSleepCoachAgent returns a working agent", async () => {
 			const a = createSleepCoachAgent();
 			expect(a.id).toBe("sleep-coach");
-			const reply = await a.respond("宝宝夜醒", makeChild(180, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await a.respond(
+				"宝宝夜醒",
+				makeChild(180, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.agentId).toBe("sleep-coach");
 		});
 

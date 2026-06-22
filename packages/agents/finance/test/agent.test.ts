@@ -1,21 +1,28 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import {
-	FinanceAgent,
-	createFinanceAgent,
 	calculateFundValue,
+	createFinanceAgent,
 	estimateTotalEducationCost,
-	getRecommendedPlan,
-	getSchoolFee,
+	FinanceAgent,
 	getEssentialInsurance,
 	getInsurance,
+	getRecommendedPlan,
+	getSchoolFee,
 } from "../src/index.js";
-import type { ChildProfile } from "@parenting/memory";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "TestChild", stage?: ChildProfile["stage"]): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "TestChild",
+	stage?: ChildProfile["stage"],
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -117,17 +124,25 @@ describe("FinanceAgent", () => {
 
 	describe("fund queries", () => {
 		it("returns fund plan for newborn", async () => {
-			const reply = await agent.respond("宝宝教育金怎么存", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝教育金怎么存",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("教育金");
 		});
 
 		it("returns fund plan for 7-year-old (mid_start)", async () => {
 			// 7yo = 84mo → exactly mid_start (72)
-			const reply = await agent.respond("教育金怎么存", makeChild(7 * 365, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"教育金怎么存",
+				makeChild(7 * 365, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// 6yo plan: monthlyAmount=3000, yearsToMaturity=12
 			expect(reply.content).toContain("3000");
 		});
@@ -135,53 +150,81 @@ describe("FinanceAgent", () => {
 
 	describe("insurance queries", () => {
 		it("returns insurance priority list", async () => {
-			const reply = await agent.respond("宝宝保险怎么买", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝保险怎么买",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("医保");
 		});
 	});
 
 	describe("fees queries", () => {
 		it("returns 小学 fees for school-age child", async () => {
-			const reply = await agent.respond("小学学费多少", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"小学学费多少",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("小学");
 		});
 
 		it("returns 大学 fees for young_adult", async () => {
-			const reply = await agent.respond("大学学费", makeChild(365 * 19, "c", "Kid", "young_adult"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"大学学费",
+				makeChild(365 * 19, "c", "Kid", "young_adult"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("大学");
 		});
 
 		it("returns 幼儿园 fees for toddler", async () => {
-			const reply = await agent.respond("幼儿园学费", makeChild(365 * 2, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"幼儿园学费",
+				makeChild(365 * 2, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("幼儿园");
 		});
 
 		it("returns 初中 fees for tween", async () => {
-			const reply = await agent.respond("初中学费", makeChild(365 * 13, "c", "Kid", "tween"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"初中学费",
+				makeChild(365 * 13, "c", "Kid", "tween"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("初中");
 		});
 
 		it("returns 高中 fees for teen", async () => {
-			const reply = await agent.respond("高中学费", makeChild(365 * 16, "c", "Kid", "teen"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"高中学费",
+				makeChild(365 * 16, "c", "Kid", "teen"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("高中");
 		});
 
 		it("falls back to 小学 for newborn stage (covers branch 153 false)", async () => {
-			const reply = await agent.respond("宝宝学费", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝学费",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// newborn has no fee entry → falls back to 小学
 			expect(reply.content).toContain("小学");
 		});
@@ -189,32 +232,48 @@ describe("FinanceAgent", () => {
 
 	describe("total cost queries", () => {
 		it("returns public total cost", async () => {
-			const reply = await agent.respond("教育总费用", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"教育总费用",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/\d/);
 		});
 
 		it("returns private total cost", async () => {
-			const reply = await agent.respond("私立教育总费用", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"私立教育总费用",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("私立");
 		});
 
 		it("returns study_abroad total cost", async () => {
-			const reply = await agent.respond("留学总费用", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"留学总费用",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("留学");
 		});
 	});
 
 	describe("general queries", () => {
 		it("introduces itself for vague questions", async () => {
-			const reply = await agent.respond("你好", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"你好",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("家庭财务规划师");
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -224,9 +283,13 @@ describe("FinanceAgent", () => {
 		it("createFinanceAgent returns a working agent", async () => {
 			const a = createFinanceAgent();
 			expect(a.id).toBe("finance");
-			const reply = await a.respond("宝宝保险", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await a.respond(
+				"宝宝保险",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.agentId).toBe("finance");
 		});
 

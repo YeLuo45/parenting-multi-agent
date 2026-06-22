@@ -6,23 +6,23 @@
  */
 
 export {
-	PediatricianAgent,
 	createPediatricianAgent,
-	PEDIATRICIAN_DISCLAIMER,
 	formatMilestonesForTest,
+	PEDIATRICIAN_DISCLAIMER,
+	PediatricianAgent,
 } from "./agent.js";
 
 export {
-	VACCINE_SCHEDULE,
-	getVaccinesForAge,
-	getNextVaccine,
-	triageSymptom,
-	getMilestonesForAge,
 	calculateDose,
-	type VaccineInfo,
-	type TriageRule,
-	type Milestone,
 	type DoseInfo,
+	getMilestonesForAge,
+	getNextVaccine,
+	getVaccinesForAge,
+	type Milestone,
+	type TriageRule,
+	triageSymptom,
+	VACCINE_SCHEDULE,
+	type VaccineInfo,
 } from "./knowledge.js";
 
 export const PEDIATRICIAN_VERSION = "0.1.0";

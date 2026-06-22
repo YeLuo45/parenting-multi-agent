@@ -1,18 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
-import {
-	PsychologistAgent,
-	detectEmotions,
-	matchBehaviorProblem,
-	getEriksonStage,
-} from "../src/index.js";
-import * as agentModule from "../src/agent.js";
 import type { ChildProfile } from "@parenting/memory";
+import { describe, expect, it } from "vitest";
+import {
+	detectEmotions,
+	getEriksonStage,
+	matchBehaviorProblem,
+	PsychologistAgent,
+} from "../src/index.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "TestChild"): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "TestChild",
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -125,9 +130,13 @@ describe("PsychologistAgent", () => {
 
 	describe("self-harm crisis", () => {
 		it("returns emergency with red flag", async () => {
-			const reply = await agent.respond("孩子说想死怎么办", makeChild(365 * 14), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子说想死怎么办",
+				makeChild(365 * 14),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.urgency).toBe("emergency");
 			expect(reply.redFlag).toBeDefined();
 			expect(reply.content).toContain("400-161-9995");
@@ -136,23 +145,35 @@ describe("PsychologistAgent", () => {
 
 	describe("emotion queries", () => {
 		it("identifies angry emotion", async () => {
-			const reply = await agent.respond("孩子很生气", makeChild(365 * 4), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子很生气",
+				makeChild(365 * 4),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("生气");
 		});
 
 		it("identifies fear", async () => {
-			const reply = await agent.respond("宝宝很害怕", makeChild(365 * 3), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝很害怕",
+				makeChild(365 * 3),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("害怕");
 		});
 
 		it("identifies multiple emotions", async () => {
-			const reply = await agent.respond("孩子又生气又焦虑", makeChild(365 * 8), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子又生气又焦虑",
+				makeChild(365 * 8),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("生气");
 			expect(reply.content).toContain("焦虑");
 		});
@@ -161,9 +182,13 @@ describe("PsychologistAgent", () => {
 			// '孩子总是压抑' contains emotion keyword '压抑' but not in our patterns
 			// Actually '压抑' is not in any emotion pattern
 			// '情绪低落' contains '情绪' → emotion intent, but no specific emotion matches
-			const reply = await agent.respond("孩子情绪很低落但是说不清", makeChild(365 * 8), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子情绪很低落但是说不清",
+				makeChild(365 * 8),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// Should fall back to intro (confidence < 0.5)
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -171,31 +196,47 @@ describe("PsychologistAgent", () => {
 
 	describe("behavior queries", () => {
 		it("returns tantrum strategies", async () => {
-			const reply = await agent.respond("2岁宝宝总发脾气", makeChild(365 * 2), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"2岁宝宝总发脾气",
+				makeChild(365 * 2),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("发脾气");
 			expect(reply.confidence).toBeGreaterThan(0.7);
 		});
 
 		it("returns biting strategies", async () => {
-			const reply = await agent.respond("宝宝在幼儿园咬小朋友", makeChild(365 * 2), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝在幼儿园咬小朋友",
+				makeChild(365 * 2),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("咬");
 		});
 
 		it("returns screen time guidance", async () => {
-			const reply = await agent.respond("3岁孩子天天看手机", makeChild(365 * 3), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"3岁孩子天天看手机",
+				makeChild(365 * 3),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("屏幕");
 		});
 
 		it("returns sibling rivalry guidance", async () => {
-			const reply = await agent.respond("老大和弟弟老是抢东西", makeChild(365 * 5), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"老大和弟弟老是抢东西",
+				makeChild(365 * 5),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/同胞|兄弟姐妹|哥哥|弟弟/);
 		});
 
@@ -203,18 +244,26 @@ describe("PsychologistAgent", () => {
 			// '不听话' matches behavior keyword but matchBehaviorProblem requires specific pattern
 			// and age range. Use a behavior keyword with wrong age.
 			// B006_separation_anxiety age 6-36, ask with 14yo about separation → returns null
-			const reply = await agent.respond("14岁孩子分离焦虑", makeChild(365 * 14), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"14岁孩子分离焦虑",
+				makeChild(365 * 14),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// Should fall back to intro
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
 
 		it("returns red flag for self-harm behavior (covers branch 155-162 high urgency)", async () => {
 			// B009_self_harm has urgency="high" → maps to "emergency" in red flag
-			const reply = await agent.respond("我家孩子说想死", makeChild(365 * 14), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我家孩子说想死",
+				makeChild(365 * 14),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.urgency).toBe("emergency");
 			expect(reply.redFlag).toBeDefined();
 		});
@@ -222,34 +271,50 @@ describe("PsychologistAgent", () => {
 
 	describe("development queries", () => {
 		it("returns Erikson stage for teen", async () => {
-			const reply = await agent.respond("青春期孩子叛逆", { ...makeChild(365 * 14), stage: "tween" }, {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"青春期孩子叛逆",
+				{ ...makeChild(365 * 14), stage: "tween" },
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("Erikson");
 			expect(reply.content).toContain("Identity");
 		});
 
 		it("returns toddler stage guidance", async () => {
-			const reply = await agent.respond("孩子自主性发展", { ...makeChild(365 * 2), stage: "toddler" }, {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子自主性发展",
+				{ ...makeChild(365 * 2), stage: "toddler" },
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("自主");
 		});
 
 		it("returns intro when development intent but no erikson stage (covers branch 168-169)", async () => {
 			// infant stage has no Erikson stage defined
-			const reply = await agent.respond("孩子发展心理", { ...makeChild(365 * 1), stage: "infant" }, {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子发展心理",
+				{ ...makeChild(365 * 1), stage: "infant" },
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
 	});
 
 	describe("family queries", () => {
 		it("returns family dynamics guidance", async () => {
-			const reply = await agent.respond("夫妻总是吵架孩子怎么办", makeChild(365 * 5), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"夫妻总是吵架孩子怎么办",
+				makeChild(365 * 5),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("父母");
 		});
 	});
@@ -292,11 +357,13 @@ describe("PsychologistAgent", () => {
 			// We test that BEHAVIOR_PROBLEMS includes a high-urgency problem
 			// (B009_self_harm). The behavior case high-urgency path in respond() is
 			// covered by a private-function test below.
-			const { matchBehaviorProblem, BEHAVIOR_PROBLEMS } = await import("../src/index.js");
+			const { matchBehaviorProblem, BEHAVIOR_PROBLEMS } = await import(
+				"../src/index.js"
+			);
 			// matchBehaviorProblem takes ageMonths, not ageDays
 			const problem = matchBehaviorProblem("孩子想死", 14 * 12);
 			expect(problem).not.toBeNull();
-			expect(problem!.urgency).toBe("high");
+			expect(problem?.urgency).toBe("high");
 			expect(BEHAVIOR_PROBLEMS[8].id).toBe("B009_self_harm");
 		});
 
@@ -319,9 +386,12 @@ describe("PsychologistAgent", () => {
 			// This is the only way to hit the behavior case with high urgency
 			// (otherwise B009_self_harm is caught by self_harm case)
 			const { matchBehaviorProblem } = await import("../src/index.js");
-			const highUrgencyProblem = matchBehaviorProblem("孩子想死", 14 * 12);
+			const highUrgencyProblem = matchBehaviorProblem(
+				"孩子想死",
+				14 * 12,
+			);
 			expect(highUrgencyProblem).not.toBeNull();
-			expect(highUrgencyProblem!.urgency).toBe("high");
+			expect(highUrgencyProblem?.urgency).toBe("high");
 
 			// Now invoke respond with a question that routes to behavior
 			// (not self_harm). To do that we need to use a question that
@@ -332,7 +402,7 @@ describe("PsychologistAgent", () => {
 			// except B009_self_harm. So to test the high-urgency path,
 			// we modify the source temporarily... or just verify the structure.
 			// The branch is structurally covered by the ternary in source.
-			expect(highUrgencyProblem!.id).toBe("B009_self_harm");
+			expect(highUrgencyProblem?.id).toBe("B009_self_harm");
 		});
 	});
 });

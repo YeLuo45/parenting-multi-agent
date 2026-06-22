@@ -1,22 +1,28 @@
 /**
  * Tests for theme switching (light/dark/sepia/nord).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, cleanup, within, act } from "@testing-library/react";
-import type { ReactElement } from "react";
+
 import {
-	THEMES,
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	within,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	applyTheme,
+	DEFAULT_THEME,
+	nextTheme,
+	readStoredTheme,
 	THEME_NAMES,
 	THEME_VARS,
-	DEFAULT_THEME,
+	THEMES,
 	ThemeProvider,
 	ThemeSwitcher,
-	applyTheme,
-	readStoredTheme,
-	writeStoredTheme,
-	nextTheme,
 	useTheme,
-	type ThemeName,
+	writeStoredTheme,
 } from "../src/index.js";
 
 let testContainer: HTMLDivElement;
@@ -30,7 +36,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
-	if (testContainer && testContainer.parentNode) {
+	if (testContainer?.parentNode) {
 		testContainer.parentNode.removeChild(testContainer);
 	}
 });
@@ -132,18 +138,30 @@ describe("applyTheme", () => {
 	it("sets all CSS variables on the root", () => {
 		const setProperty = vi.fn();
 		const root = { style: { setProperty } };
-		applyTheme(root as any, "dark");
-		expect(setProperty).toHaveBeenCalledWith("--bg", THEME_VARS.dark["--bg"]);
-		expect(setProperty).toHaveBeenCalledWith("--fg", THEME_VARS.dark["--fg"]);
-		expect(setProperty).toHaveBeenCalledWith("--accent", THEME_VARS.dark["--accent"]);
+		applyTheme(root, "dark");
+		expect(setProperty).toHaveBeenCalledWith(
+			"--bg",
+			THEME_VARS.dark["--bg"],
+		);
+		expect(setProperty).toHaveBeenCalledWith(
+			"--fg",
+			THEME_VARS.dark["--fg"],
+		);
+		expect(setProperty).toHaveBeenCalledWith(
+			"--accent",
+			THEME_VARS.dark["--accent"],
+		);
 	});
 
 	it("works with all theme names", () => {
 		for (const name of THEME_NAMES) {
 			const setProperty = vi.fn();
 			const root = { style: { setProperty } };
-			applyTheme(root as any, name);
-			expect(setProperty).toHaveBeenCalledWith("--bg", THEME_VARS[name]["--bg"]);
+			applyTheme(root, name);
+			expect(setProperty).toHaveBeenCalledWith(
+				"--bg",
+				THEME_VARS[name]["--bg"],
+			);
 		}
 	});
 });
@@ -171,7 +189,9 @@ describe("ThemeSwitcher", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("theme-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"theme-select",
+		) as HTMLSelectElement;
 		const options = Array.from(select.options).map((o) => o.value);
 		expect(options).toEqual(THEME_NAMES);
 	});
@@ -183,7 +203,9 @@ describe("ThemeSwitcher", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("theme-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"theme-select",
+		) as HTMLSelectElement;
 		expect(select.value).toBe("light");
 	});
 
@@ -206,7 +228,9 @@ describe("ThemeSwitcher", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("theme-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"theme-select",
+		) as HTMLSelectElement;
 		expect(select.value).toBe("sepia");
 	});
 
@@ -239,7 +263,9 @@ describe("ThemeSwitcher", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("theme-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"theme-select",
+		) as HTMLSelectElement;
 		expect(select.value).toBe("sepia");
 	});
 
@@ -250,7 +276,9 @@ describe("ThemeSwitcher", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		expect(within(testContainer).getByRole("group", { name: "Theme" })).toBeInTheDocument();
+		expect(
+			within(testContainer).getByRole("group", { name: "Theme" }),
+		).toBeInTheDocument();
 	});
 });
 
@@ -273,7 +301,9 @@ describe("ThemeProvider default behavior", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		expect(within(testContainer).getByTestId("child-content")).toBeInTheDocument();
+		expect(
+			within(testContainer).getByTestId("child-content"),
+		).toBeInTheDocument();
 	});
 
 	it("applies CSS vars to document on mount", () => {
@@ -283,7 +313,8 @@ describe("ThemeProvider default behavior", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		const accent = document.documentElement.style.getPropertyValue("--accent");
+		const accent =
+			document.documentElement.style.getPropertyValue("--accent");
 		expect(accent).toBe(THEME_VARS.dark["--accent"]);
 	});
 
@@ -294,7 +325,13 @@ describe("ThemeProvider default behavior", () => {
 			</ThemeProvider>,
 			{ container: testContainer },
 		);
-		expect((within(testContainer).getByTestId("theme-select") as HTMLSelectElement).value).toBe("sepia");
+		expect(
+			(
+				within(testContainer).getByTestId(
+					"theme-select",
+				) as HTMLSelectElement
+			).value,
+		).toBe("sepia");
 	});
 });
 
@@ -317,7 +354,9 @@ describe("useTheme fallback (used outside provider)", () => {
 		}
 		render(<Probe />, { container: testContainer });
 		act(() => captured?.setTheme("dark"));
-		expect(within(testContainer).getByTestId("probe").textContent).toBe("dark");
+		expect(within(testContainer).getByTestId("probe").textContent).toBe(
+			"dark",
+		);
 	});
 
 	it("cycle advances theme in fallback", () => {
@@ -328,8 +367,12 @@ describe("useTheme fallback (used outside provider)", () => {
 		}
 		render(<Probe />, { container: testContainer });
 		act(() => captured?.cycle());
-		expect(within(testContainer).getByTestId("probe").textContent).toBe("dark");
+		expect(within(testContainer).getByTestId("probe").textContent).toBe(
+			"dark",
+		);
 		act(() => captured?.cycle());
-		expect(within(testContainer).getByTestId("probe").textContent).toBe("sepia");
+		expect(within(testContainer).getByTestId("probe").textContent).toBe(
+			"sepia",
+		);
 	});
 });

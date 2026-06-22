@@ -114,22 +114,36 @@ export const COLLEGE_PREP_TIPS: CollegePrepTip[] = [
 	},
 ];
 
-export function getTipsForStage(stage: string | undefined, topic?: CollegePrepTopic): CollegePrepTip[] {
+export function getTipsForStage(
+	stage: string | undefined,
+	topic?: CollegePrepTopic,
+): CollegePrepTip[] {
 	return COLLEGE_PREP_TIPS.filter(
 		(t) =>
-			(stage === undefined || t.stage.includes("any") || t.stage.includes(stage)) &&
+			(stage === undefined ||
+				t.stage.includes("any") ||
+				t.stage.includes(stage)) &&
 			(topic === undefined || t.topic === topic),
 	);
 }
 
 export function matchTopic(text: string): CollegePrepTopic | null {
 	const q = text.toLowerCase();
-	if (/(sat|act|标化|标准化考试|standardized.test|toefl|ielts|gre|gmat)/i.test(q)) return "standardized_test";
+	if (
+		/(sat|act|标化|标准化考试|standardized.test|toefl|ielts|gre|gmat)/i.test(
+			q,
+		)
+	)
+		return "standardized_test";
 	if (/(文书|essay|个人陈述|ps|personal.statement)/i.test(q)) return "essay";
-	if (/(课外|社团|义工|volunteer|extracurricular|竞赛|夏校)/i.test(q)) return "extracurricular";
+	if (/(课外|社团|义工|volunteer|extracurricular|竞赛|夏校)/i.test(q))
+		return "extracurricular";
 	if (/(申请|application|ed|ea|rd|早申|早录)/i.test(q)) return "application";
-	if (/(奖学金|助学金|财务|fafsa|financial.aid|学费|贷款)/i.test(q)) return "financial_aid";
-	if (/(选校|择校|择业|大学排名|college.ranking|选大学|申请什么)/i.test(q)) return "selection";
-	if (/(学业|gpa|成绩|课程|选课|ap|honor|academic)/i.test(q)) return "academics";
+	if (/(奖学金|助学金|财务|fafsa|financial.aid|学费|贷款)/i.test(q))
+		return "financial_aid";
+	if (/(选校|择校|择业|大学排名|college.ranking|选大学|申请什么)/i.test(q))
+		return "selection";
+	if (/(学业|gpa|成绩|课程|选课|ap|honor|academic)/i.test(q))
+		return "academics";
 	return null;
 }

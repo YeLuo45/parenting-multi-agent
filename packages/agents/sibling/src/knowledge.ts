@@ -114,10 +114,15 @@ export const SIBLING_TIPS: SiblingTip[] = [
 	},
 ];
 
-export function getTipsForStage(stage: string | undefined, topic?: SiblingTopic): SiblingTip[] {
+export function getTipsForStage(
+	stage: string | undefined,
+	topic?: SiblingTopic,
+): SiblingTip[] {
 	return SIBLING_TIPS.filter(
 		(t) =>
-			(stage === undefined || t.stage.includes("any") || t.stage.includes(stage)) &&
+			(stage === undefined ||
+				t.stage.includes("any") ||
+				t.stage.includes(stage)) &&
 			(topic === undefined || t.topic === topic),
 	);
 }
@@ -125,7 +130,8 @@ export function getTipsForStage(stage: string | undefined, topic?: SiblingTopic)
 export function matchTopic(text: string): SiblingTopic | null {
 	const q = text.toLowerCase();
 	if (/(手足|sibling|rival|竞争|吃醋|嫉妒)/i.test(q)) return "rivalry";
-	if (/(新宝宝|new.baby|二宝|新生儿.*哥哥|新生儿.*姐姐)/i.test(q)) return "new_baby";
+	if (/(新宝宝|new.baby|二宝|新生儿.*哥哥|新生儿.*姐姐)/i.test(q))
+		return "new_baby";
 	if (/(分享|share|sharing|轮流|take.turn)/i.test(q)) return "sharing";
 	if (/(打架|fight|争吵|冲突|hit|打.*弟|打.*妹)/i.test(q)) return "fighting";
 	if (/(年龄差|age.gap|差.*岁)/i.test(q)) return "age_gap";

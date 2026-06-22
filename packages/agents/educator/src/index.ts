@@ -5,25 +5,25 @@
  */
 
 export {
-	EducatorAgent,
 	createEducatorAgent,
 	EDUCATOR_DISCLAIMER,
+	EducatorAgent,
 } from "./agent.js";
 
 export {
-	EDU_STAGES,
-	LEARNING_STYLES,
-	INTERESTS,
-	getEduStage,
-	detectLearningStyle,
 	detectInterests,
-	suggestActivities,
+	detectLearningStyle,
+	EDU_STAGES,
 	type EduStage,
 	type EduStageInfo,
-	type LearningStyle,
-	type LearningStylePattern,
+	getEduStage,
+	INTERESTS,
 	type InterestCategory,
 	type InterestInfo,
+	LEARNING_STYLES,
+	type LearningStyle,
+	type LearningStylePattern,
+	suggestActivities,
 } from "./knowledge.js";
 
 export const EDUCATOR_VERSION = "0.1.0";

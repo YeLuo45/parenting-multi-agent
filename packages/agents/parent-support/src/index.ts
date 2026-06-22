@@ -1,14 +1,14 @@
 export {
-	ParentSupportAgent,
 	createParentSupportAgent,
 	PARENT_SUPPORT_DISCLAIMER,
+	ParentSupportAgent,
 } from "./agent.js";
 
 export {
-	SUPPORT_GUIDANCE,
 	getAllHotlines,
 	getSupportGuidance,
 	matchSupportIssue,
+	SUPPORT_GUIDANCE,
 	type SupportGuidance,
 	type SupportTopic,
 } from "./knowledge.js";

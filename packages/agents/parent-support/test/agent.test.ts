@@ -1,18 +1,25 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import {
-	ParentSupportAgent,
 	createParentSupportAgent,
+	getAllHotlines,
 	getSupportGuidance,
 	matchSupportIssue,
-	getAllHotlines,
+	ParentSupportAgent,
 } from "../src/index.js";
-import type { ChildProfile } from "@parenting/memory";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "TestChild", stage?: ChildProfile["stage"]): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "TestChild",
+	stage?: ChildProfile["stage"],
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -93,36 +100,52 @@ describe("ParentSupportAgent", () => {
 
 	describe("crisis detection", () => {
 		it("returns emergency with hotlines for 想死", async () => {
-			const reply = await agent.respond("我想死", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我想死",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.urgency).toBe("emergency");
 			expect(reply.redFlag).toBeDefined();
 			expect(reply.content).toContain("热线");
 		});
 
 		it("returns emergency for 自伤", async () => {
-			const reply = await agent.respond("我想自伤", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我想自伤",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.urgency).toBe("emergency");
 		});
 	});
 
 	describe("burnout queries", () => {
 		it("returns burnout guidance", async () => {
-			const reply = await agent.respond("我好累，撑不住了", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我好累，撑不住了",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("倦怠");
 		});
 	});
 
 	describe("postpartum queries", () => {
 		it("returns postpartum guidance with urgency high", async () => {
-			const reply = await agent.respond("我产后抑郁", makeChild(30, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我产后抑郁",
+				makeChild(30, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("产后");
 			expect(reply.urgency).toBe("high");
 		});
@@ -130,9 +153,13 @@ describe("ParentSupportAgent", () => {
 
 	describe("depression queries", () => {
 		it("returns depression guidance with red flag", async () => {
-			const reply = await agent.respond("我感到绝望崩溃", makeChild(365, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我感到绝望崩溃",
+				makeChild(365, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// crisis path triggered first (崩溃)
 			expect(reply.urgency).toBe("emergency");
 		});
@@ -140,45 +167,65 @@ describe("ParentSupportAgent", () => {
 
 	describe("anxiety queries", () => {
 		it("returns anxiety guidance", async () => {
-			const reply = await agent.respond("我好焦虑", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我好焦虑",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("焦虑");
 		});
 	});
 
 	describe("guilt queries", () => {
 		it("returns guilt guidance", async () => {
-			const reply = await agent.respond("我对不起孩子", makeChild(365, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我对不起孩子",
+				makeChild(365, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("内疚");
 		});
 	});
 
 	describe("isolation queries", () => {
 		it("returns isolation guidance", async () => {
-			const reply = await agent.respond("我好孤独一个人", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我好孤独一个人",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("孤立");
 		});
 	});
 
 	describe("couple queries", () => {
 		it("returns couple relationship guidance", async () => {
-			const reply = await agent.respond("我和老公总是吵架", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我和老公总是吵架",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("伴侣");
 		});
 	});
 
 	describe("self_care queries", () => {
 		it("returns self-care checklist", async () => {
-			const reply = await agent.respond("父母怎么自我关怀", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"父母怎么自我关怀",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("自我关怀");
 		});
 	});
@@ -186,9 +233,13 @@ describe("ParentSupportAgent", () => {
 	describe("unmatched issue", () => {
 		it("asks for more info when no specific issue detected", async () => {
 			// '压力' triggers issue intent but no specific issue keyword matches alone
-			const reply = await agent.respond("我最近压力很大", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"我最近压力很大",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// issue path triggered (压力 → issue intent), but no specific match → null branch
 			expect(reply.content).toContain("请告诉我");
 			expect(reply.confidence).toBeLessThan(0.6);
@@ -197,9 +248,13 @@ describe("ParentSupportAgent", () => {
 
 	describe("general queries", () => {
 		it("introduces itself for vague questions", async () => {
-			const reply = await agent.respond("你好", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"你好",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("父母支持顾问");
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -209,9 +264,13 @@ describe("ParentSupportAgent", () => {
 		it("createParentSupportAgent returns a working agent", async () => {
 			const a = createParentSupportAgent();
 			expect(a.id).toBe("parent-support");
-			const reply = await a.respond("我好累", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await a.respond(
+				"我好累",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.agentId).toBe("parent-support");
 		});
 

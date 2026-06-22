@@ -136,7 +136,7 @@ export const FAMILY_GUIDANCE: FamilyGuidance[] = [
 		strategies: [
 			"定期家庭会议",
 			"轮流发言不打断",
-			"用 \"我\" 句式表达感受（\"我觉得...\" 而非 \"你总是...\"）",
+			'用 "我" 句式表达感受（"我觉得..." 而非 "你总是..."）',
 			"先理解再被理解",
 			"认可情绪，不急于解决",
 		],
@@ -155,12 +155,16 @@ export function matchFamilyIssue(text: string): FamilyGuidance | null {
 	for (const g of FAMILY_GUIDANCE) {
 		const combined = `${g.name} ${g.nameEn} ${g.id}`.toLowerCase();
 		const idReplaced = combined.replace(/_/g, " ");
-		if (text.toLowerCase().includes(idReplaced) || text.includes(g.name)) return g;
+		if (text.toLowerCase().includes(idReplaced) || text.includes(g.name))
+			return g;
 	}
 	// Try specific keywords
 	const keywordMap: Array<[RegExp, FamilyIssue]> = [
 		[/夫妻|两口子|伴侣|吵架|couple/i, "couple_conflict"],
-		[/祖辈|爷爷奶奶|外公外婆|老人|grandparent/i, "grandparent_interference"],
+		[
+			/祖辈|爷爷奶奶|外公外婆|老人|grandparent/i,
+			"grandparent_interference",
+		],
 		[/同胞|兄弟姐妹|抢|嫉妒|sibling/i, "sibling_rivalry"],
 		[/婆媳|翁婿|in\.law|亲家/i, "in_law_conflict"],
 		[/重组|继父|继母|blended/i, "blended_family"],

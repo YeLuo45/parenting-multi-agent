@@ -4,24 +4,19 @@
  * Phase 2: rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	COMMON_ALLERGENS,
-	FOOD_INTRODUCTION_SCHEDULE,
-	NUTRITION_NEEDS,
-	PICKY_EATING_GUIDANCE,
-	RECIPES,
+	type Allergen,
 	detectAllergens,
+	type FoodIntroduction,
+	findRecipesWithAllergen,
 	getFoodsForAge,
 	getNextFood,
 	getNutritionNeeds,
 	getPickyEatingGuidance,
 	getRecipesForAge,
-	findRecipesWithAllergen,
-	type Allergen,
-	type FoodIntroduction,
 	type NutritionNeeds,
 	type PickyEatingGuidance,
 	type Recipe,
@@ -39,30 +34,50 @@ function detectIntent(
 	question: string,
 ): "intro" | "allergy" | "recipe" | "picky" | "nutrition" | "general" {
 	const q = question.toLowerCase();
-	if (/(辅食|米糊|食物|加什么|添加|泥|introduc|food|吃辅)/i.test(q)) return "intro";
-	if (/(过敏|过敏|allergy|allergic|不耐受|起疹子|湿疹|腹泻|过敏源)/i.test(q)) return "allergy";
-	if (/(食谱|做法|怎么做|怎么煮|recipe|cook|meal|辅食做法)/i.test(q)) return "recipe";
-	if (/(挑食|偏食|不好好吃|不吃|picky|fussy|拒绝吃饭|不爱吃)/i.test(q)) return "picky";
-	if (/(营养|热量|蛋白质|奶粉|配方奶|母乳|nutrition|calorie|protein|formula|breastfeed|奶量)/i.test(q))
+	if (/(辅食|米糊|食物|加什么|添加|泥|introduc|food|吃辅)/i.test(q))
+		return "intro";
+	if (/(过敏|过敏|allergy|allergic|不耐受|起疹子|湿疹|腹泻|过敏源)/i.test(q))
+		return "allergy";
+	if (/(食谱|做法|怎么做|怎么煮|recipe|cook|meal|辅食做法)/i.test(q))
+		return "recipe";
+	if (/(挑食|偏食|不好好吃|不吃|picky|fussy|拒绝吃饭|不爱吃)/i.test(q))
+		return "picky";
+	if (
+		/(营养|热量|蛋白质|奶粉|配方奶|母乳|nutrition|calorie|protein|formula|breastfeed|奶量)/i.test(
+			q,
+		)
+	)
 		return "nutrition";
 	return "general";
 }
 
-function formatIntro(past: FoodIntroduction[], next: FoodIntroduction | null, ageMonths: number): string {
+function formatIntro(
+	past: FoodIntroduction[],
+	next: FoodIntroduction | null,
+	ageMonths: number,
+): string {
 	const pastLines = past.map(
-		(f) => `- ${f.food}（${f.category}，${f.recommendedAgeMonths} 月龄）${f.notes ? ` — ${f.notes}` : ""}`,
+		(f) =>
+			`- ${f.food}（${f.category}，${f.recommendedAgeMonths} 月龄）${f.notes ? ` — ${f.notes}` : ""}`,
 	);
 	const lines = [`宝宝 ${Math.floor(ageMonths)} 月龄，可以尝试的食物：`];
 	if (pastLines.length > 0) lines.push("", ...pastLines);
 	if (next) {
-		lines.push("", `🔜 下一步推荐：${next.food}（${next.category}），建议 ${next.recommendedAgeMonths} 月龄开始`);
+		lines.push(
+			"",
+			`🔜 下一步推荐：${next.food}（${next.category}），建议 ${next.recommendedAgeMonths} 月龄开始`,
+		);
 	} else {
 		lines.push("", "🎉 已完成所有阶段辅食添加计划");
 	}
 	return lines.join("\n");
 }
 
-function formatAllergens(allergens: Allergen[], ageMonths: number, avoidRecipes: Recipe[]): string {
+function formatAllergens(
+	allergens: Allergen[],
+	_ageMonths: number,
+	avoidRecipes: Recipe[],
+): string {
 	const lines = [
 		`⚠️ 检测到提及的过敏原：${allergens.join("、")}`,
 		"",
@@ -73,7 +88,10 @@ function formatAllergens(allergens: Allergen[], ageMonths: number, avoidRecipes:
 		"- 轻微过敏（皮疹/腹泻）应停止该食物并咨询医生",
 	];
 	if (avoidRecipes.length > 0) {
-		lines.push("", `🚫 避免以下含 ${allergens.join("/")} 的食谱：${avoidRecipes.map((r) => r.name).join("、")}`);
+		lines.push(
+			"",
+			`🚫 避免以下含 ${allergens.join("/")} 的食谱：${avoidRecipes.map((r) => r.name).join("、")}`,
+		);
 	}
 	return lines.join("\n");
 }
@@ -92,12 +110,17 @@ function formatRecipes(recipes: Recipe[]): string {
 	return lines.join("\n");
 }
 
-function formatNutritionNeeds(needs: NutritionNeeds, ageMonths: number): string {
+function formatNutritionNeeds(
+	needs: NutritionNeeds,
+	ageMonths: number,
+): string {
 	const lines = [`📊 ${Math.floor(ageMonths)} 月龄宝宝每日营养需求：`];
 	lines.push(`- 热量：${needs.caloriesPerDay} kcal`);
 	lines.push(`- 蛋白质：${needs.proteinGramsPerDay} g`);
 	if (needs.formulaOzPerDay) {
-		lines.push(`- 奶量：${needs.formulaOzPerDay} oz（约 ${Math.round(needs.formulaOzPerDay * 30)} ml）`);
+		lines.push(
+			`- 奶量：${needs.formulaOzPerDay} oz（约 ${Math.round(needs.formulaOzPerDay * 30)} ml）`,
+		);
 	}
 	if (needs.notes) {
 		lines.push("", `💡 ${needs.notes}`);
@@ -129,7 +152,11 @@ export class NutritionistAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectIntent(question);
@@ -157,7 +184,9 @@ export class NutritionistAgent implements Agent {
 						urgency: "info",
 					};
 				}
-				const avoidRecipes = allergens.flatMap((a) => findRecipesWithAllergen(a));
+				const avoidRecipes = allergens.flatMap((a) =>
+					findRecipesWithAllergen(a),
+				);
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -205,7 +234,6 @@ export class NutritionistAgent implements Agent {
 					urgency: "info",
 				};
 			}
-			case "general":
 			default:
 				return {
 					agentId: this.id,
@@ -223,21 +251,21 @@ export function createNutritionistAgent(): NutritionistAgent {
 }
 
 export {
+	type Allergen,
 	COMMON_ALLERGENS,
-	FOOD_INTRODUCTION_SCHEDULE,
-	NUTRITION_NEEDS,
-	PICKY_EATING_GUIDANCE,
-	RECIPES,
 	detectAllergens,
+	FOOD_INTRODUCTION_SCHEDULE,
+	type FoodIntroduction,
+	findRecipesWithAllergen,
 	getFoodsForAge,
 	getNextFood,
 	getNutritionNeeds,
 	getPickyEatingGuidance,
 	getRecipesForAge,
-	findRecipesWithAllergen,
-	type Allergen,
-	type FoodIntroduction,
+	NUTRITION_NEEDS,
 	type NutritionNeeds,
+	PICKY_EATING_GUIDANCE,
 	type PickyEatingGuidance,
+	RECIPES,
 	type Recipe,
 } from "./knowledge.js";

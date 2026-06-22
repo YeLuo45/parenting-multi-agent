@@ -1,20 +1,23 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import { createKnowledgeRAGAgent } from "../src/agent.js";
 import {
-	KNOWLEDGE_BASE,
 	buildIndex,
 	byStage,
 	formatReferences,
+	KNOWLEDGE_BASE,
+	type KnowledgeEntry,
 	knowledgeStats,
 	queryIndex,
 	scoreEntry,
 	searchKnowledge,
 	searchKnowledgeIndex,
-	type KnowledgeEntry,
 } from "../src/knowledge.js";
-import type { ChildProfile } from "@parenting/memory";
 
-function makeChild(stage: ChildProfile["stage"] = "toddler", ageYears = 2): ChildProfile {
+function makeChild(
+	stage: ChildProfile["stage"] = "toddler",
+	ageYears = 2,
+): ChildProfile {
 	const birthYear = new Date().getFullYear() - ageYears;
 	return {
 		id: "test-child",
@@ -102,13 +105,21 @@ describe("KnowledgeRAGAgent — respond: browse intent", () => {
 	const ctx = { memory: undefined } as any;
 
 	it("lists knowledge base for browse intent", async () => {
-		const r = await agent.respond("知识库列表", makeChild("toddler", 2), ctx);
+		const r = await agent.respond(
+			"知识库列表",
+			makeChild("toddler", 2),
+			ctx,
+		);
 		expect(r.confidence).toBeGreaterThan(0.5);
 		expect(r.content).toContain("育儿知识库");
 	});
 
 	it("includes stats in browse output", async () => {
-		const r = await agent.respond("所有条目", makeChild("preschool", 4), ctx);
+		const r = await agent.respond(
+			"所有条目",
+			makeChild("preschool", 4),
+			ctx,
+		);
 		expect(r.content).toContain("证据分布");
 		expect(r.content).toContain("阶段覆盖");
 	});
@@ -119,13 +130,21 @@ describe("KnowledgeRAGAgent — respond: no match", () => {
 	const ctx = { memory: undefined } as any;
 
 	it("returns low confidence for unrelated query", async () => {
-		const r = await agent.respond("搜索 xyzabc123", makeChild("toddler", 2), ctx);
+		const r = await agent.respond(
+			"搜索 xyzabc123",
+			makeChild("toddler", 2),
+			ctx,
+		);
 		expect(r.confidence).toBeLessThan(0.5);
 		expect(r.content).toMatch(/没有找到|换个关键词/);
 	});
 
 	it("returns help for general intent with no match", async () => {
-		const r = await agent.respond("asdf qwerty xyz", makeChild("toddler", 2), ctx);
+		const r = await agent.respond(
+			"asdf qwerty xyz",
+			makeChild("toddler", 2),
+			ctx,
+		);
 		expect(r.confidence).toBeLessThanOrEqual(0.5);
 		expect(r.content).toMatch(/我是|知识库助手/);
 	});
@@ -181,7 +200,9 @@ describe("edge case branches", () => {
 		const childNoStage: ChildProfile = {
 			id: "t",
 			name: "test",
-			birthDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+			birthDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+				.toISOString()
+				.split("T")[0],
 			stage: undefined,
 		};
 		const r = await agent.respond("母乳喂养", childNoStage, ctx);
@@ -205,7 +226,11 @@ describe("edge case branches", () => {
 	});
 
 	it("handles evidence intent", async () => {
-		const r = await agent.respond("为什么宝宝需要睡眠", makeChild("toddler", 2), ctx);
+		const r = await agent.respond(
+			"为什么宝宝需要睡眠",
+			makeChild("toddler", 2),
+			ctx,
+		);
 		expect(r.content).toMatch(/证据等级|证据/);
 	});
 });
@@ -295,21 +320,27 @@ describe("searchKnowledge", () => {
 
 	it("prefers entries with matching tags", () => {
 		const results = searchKnowledge("发脾气", KNOWLEDGE_BASE, 2);
-		const hasMatchingTags = results.some((r) => r.tags.some((t) => t.includes("发脾气") || t.includes("tantrum")));
+		const hasMatchingTags = results.some((r) =>
+			r.tags.some((t) => t.includes("发脾气") || t.includes("tantrum")),
+		);
 		expect(hasMatchingTags).toBe(true);
 	});
 });
 
 describe("byStage", () => {
 	it("returns entries matching the stage", () => {
-		const teen = KNOWLEDGE_BASE.filter((e) => e.stage.includes("teen") || e.stage.includes("any"));
+		const teen = KNOWLEDGE_BASE.filter(
+			(e) => e.stage.includes("teen") || e.stage.includes("any"),
+		);
 		const got = byStage(KNOWLEDGE_BASE, "teen");
 		expect(got.length).toBe(teen.length);
 	});
 
 	it("'any' stage always matches", () => {
 		const r = byStage(KNOWLEDGE_BASE, "preschool");
-		const any = KNOWLEDGE_BASE.filter((e) => e.stage.includes("any") || e.stage.includes("preschool"));
+		const any = KNOWLEDGE_BASE.filter(
+			(e) => e.stage.includes("any") || e.stage.includes("preschool"),
+		);
 		expect(r.length).toBe(any.length);
 	});
 
@@ -413,7 +444,9 @@ describe("HanTokenIndex inverted index", () => {
 	});
 
 	it("queryIndex returns empty for stop-words only", () => {
-		expect(queryIndex(buildIndex(KNOWLEDGE_BASE), "我 你 他 的 了", 3)).toEqual([]);
+		expect(
+			queryIndex(buildIndex(KNOWLEDGE_BASE), "我 你 他 的 了", 3),
+		).toEqual([]);
 	});
 
 	it("queryIndex returns empty for empty query", () => {
@@ -471,15 +504,19 @@ describe("HanTokenIndex inverted index", () => {
 		// Either exact hit OR prefix hit. At minimum, kb-breastfeeding should
 		// appear because it has token "duration" in tags.
 		expect(ranked.length).toBeGreaterThan(0);
-		const breastfeeding = ranked.find((r) => r.id === "kb-breastfeeding-duration");
+		const breastfeeding = ranked.find(
+			(r) => r.id === "kb-breastfeeding-duration",
+		);
 		expect(breastfeeding).toBeDefined();
-		expect(breastfeeding!.score).toBeGreaterThan(0);
+		expect(breastfeeding?.score).toBeGreaterThan(0);
 	});
 
 	it("queryIndex matches via prefix when query is a strict prefix of a KB token", () => {
 		// "nurs" (4 chars) is a prefix of "nursing" (7 chars) in KB tags.
 		const ranked = queryIndex(buildIndex(KNOWLEDGE_BASE), "nurs", 5);
-		const breastfeeding = ranked.find((r) => r.id === "kb-breastfeeding-duration");
+		const breastfeeding = ranked.find(
+			(r) => r.id === "kb-breastfeeding-duration",
+		);
 		expect(breastfeeding).toBeDefined();
 	});
 });
@@ -531,16 +568,18 @@ describe("STOP_WORDS Han character safety", () => {
 describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 	it("tokenizes Traditional Chinese characters individually", () => {
 		const ranked = queryIndex(
-			buildIndex([{
-				id: "tc-fever",
-				topic: "test",
-				tags: ["發燒"],
-				stage: ["any"],
-				question: "什麼是發燒？",
-				answer: "TC fever",
-				evidence: "anecdotal",
-				references: [],
-			}]),
+			buildIndex([
+				{
+					id: "tc-fever",
+					topic: "test",
+					tags: ["發燒"],
+					stage: ["any"],
+					question: "什麼是發燒？",
+					answer: "TC fever",
+					evidence: "anecdotal",
+					references: [],
+				},
+			]),
 			"發燒",
 			5,
 		);
@@ -550,16 +589,18 @@ describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 
 	it("Traditional query matches Simplified entry when both share Han characters", () => {
 		const ranked = queryIndex(
-			buildIndex([{
-				id: "tc-nursing",
-				topic: "test",
-				tags: ["母乳餵養", "breastfeeding"],
-				stage: ["any"],
-				question: "母乳餵養需要多久？",
-				answer: "WHO recommends",
-				evidence: "systematic_review",
-				references: [],
-			}]),
+			buildIndex([
+				{
+					id: "tc-nursing",
+					topic: "test",
+					tags: ["母乳餵養", "breastfeeding"],
+					stage: ["any"],
+					question: "母乳餵養需要多久？",
+					answer: "WHO recommends",
+					evidence: "systematic_review",
+					references: [],
+				},
+			]),
 			"母乳",
 			5,
 		);
@@ -569,16 +610,18 @@ describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 
 	it("mixed CJK + English query finds entry with both Han and English tokens", () => {
 		const ranked = queryIndex(
-			buildIndex([{
-				id: "mixed-entry",
-				topic: "test",
-				tags: ["vitamin", "D", "維生素", "补充"],
-				stage: ["any"],
-				question: "vitamin D supplement for babies",
-				answer: "AAP recommends",
-				evidence: "systematic_review",
-				references: [],
-			}]),
+			buildIndex([
+				{
+					id: "mixed-entry",
+					topic: "test",
+					tags: ["vitamin", "D", "維生素", "补充"],
+					stage: ["any"],
+					question: "vitamin D supplement for babies",
+					answer: "AAP recommends",
+					evidence: "systematic_review",
+					references: [],
+				},
+			]),
 			"vitamin D supplement",
 			5,
 		);
@@ -623,16 +666,18 @@ describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 
 	it("preserves non-Han non-Latin characters in tokens (numbers)", () => {
 		const ranked = queryIndex(
-			buildIndex([{
-				id: "num-entry",
-				topic: "test",
-				tags: ["37.5", "度", "temperature"],
-				stage: ["any"],
-				question: "37.5 degrees",
-				answer: "answer",
-				evidence: "anecdotal",
-				references: [],
-			}]),
+			buildIndex([
+				{
+					id: "num-entry",
+					topic: "test",
+					tags: ["37.5", "度", "temperature"],
+					stage: ["any"],
+					question: "37.5 degrees",
+					answer: "answer",
+					evidence: "anecdotal",
+					references: [],
+				},
+			]),
 			"37.5",
 			5,
 		);
@@ -641,16 +686,18 @@ describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 
 	it("empty query returns empty results for Traditional Chinese fixture", () => {
 		const ranked = queryIndex(
-			buildIndex([{
-				id: "tc-empty",
-				topic: "test",
-				tags: ["發燒"],
-				stage: ["any"],
-				question: "什麼是發燒？",
-				answer: "TC fever",
-				evidence: "anecdotal",
-				references: [],
-			}]),
+			buildIndex([
+				{
+					id: "tc-empty",
+					topic: "test",
+					tags: ["發燒"],
+					stage: ["any"],
+					question: "什麼是發燒？",
+					answer: "TC fever",
+					evidence: "anecdotal",
+					references: [],
+				},
+			]),
 			"",
 			5,
 		);
@@ -660,7 +707,12 @@ describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 	it("agent respond works with Traditional Chinese questions", async () => {
 		const agent = createKnowledgeRAGAgent();
 		const ctx = { memory: undefined } as any;
-		const child = { id: "tc-child", name: "TC", birthDate: "2024-01-01", stage: "toddler" } as any;
+		const child = {
+			id: "tc-child",
+			name: "TC",
+			birthDate: "2024-01-01",
+			stage: "toddler",
+		} as any;
 		const r = await agent.respond("母乳喂養", child, ctx);
 		expect(r.agentId).toBe("knowledge-rag");
 		expect(r.content).toMatch(/母乳/);

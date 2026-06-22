@@ -2,20 +2,17 @@
  * SleepCoachAgent — sleep training, regressions, nap schedule, night-waking causes.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import type { ChildProfile } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
 	BEDTIME_ROUTINE_STEPS,
-	SLEEP_REGRESSIONS,
 	getNapSchedule,
 	getNightWakingCauses,
-	getSleepMethod,
 	getSleepMethodsForAge,
 	getSleepRegression,
 	type NapSchedule,
 	type NightWakingCause,
-	type SleepMethod,
 	type SleepRegression,
 	type SleepTrainingMethod,
 } from "./knowledge.js";
@@ -30,18 +27,41 @@ function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 
 function detectIntent(
 	question: string,
-): "training" | "regression" | "schedule" | "night_waking" | "routine" | "general" {
+):
+	| "training"
+	| "regression"
+	| "schedule"
+	| "night_waking"
+	| "routine"
+	| "general" {
 	const q = question.toLowerCase();
-	if (/(训练|睡眠训练|哭声|ferber|消退法|哄睡方法|训练方法|train|cry.it.out)/i.test(q)) return "training";
-	if (/(倒退|regression|睡眠倒退|突然不睡|夜醒频繁|夜惊)/i.test(q)) return "regression";
-	if (/(作息|schedule|小睡|nap|白天睡|几点睡|几时睡|晚间|睡觉时间)/i.test(q)) return "schedule";
-	if (/(夜醒|夜里哭|半夜醒|夜醒怎么办|夜醒原因|晚上哭|night.wak|频繁夜醒)/i.test(q)) return "night_waking";
-	if (/(睡前程序|routine|睡前流程|哄睡|怎么哄|bedtime)/i.test(q)) return "routine";
+	if (
+		/(训练|睡眠训练|哭声|ferber|消退法|哄睡方法|训练方法|train|cry.it.out)/i.test(
+			q,
+		)
+	)
+		return "training";
+	if (/(倒退|regression|睡眠倒退|突然不睡|夜醒频繁|夜惊)/i.test(q))
+		return "regression";
+	if (/(作息|schedule|小睡|nap|白天睡|几点睡|几时睡|晚间|睡觉时间)/i.test(q))
+		return "schedule";
+	if (
+		/(夜醒|夜里哭|半夜醒|夜醒怎么办|夜醒原因|晚上哭|night.wak|频繁夜醒)/i.test(
+			q,
+		)
+	)
+		return "night_waking";
+	if (/(睡前程序|routine|睡前流程|哄睡|怎么哄|bedtime)/i.test(q))
+		return "routine";
 	return "general";
 }
 
-function formatMethods(methods: SleepTrainingMethod[], ageMonths: number): string {
-	if (methods.length === 0) return `${Math.floor(ageMonths)} 月龄暂不适合睡眠训练，建议先建立规律作息。`;
+function formatMethods(
+	methods: SleepTrainingMethod[],
+	ageMonths: number,
+): string {
+	if (methods.length === 0)
+		return `${Math.floor(ageMonths)} 月龄暂不适合睡眠训练，建议先建立规律作息。`;
 	const lines = [`😴 ${Math.floor(ageMonths)} 月龄可用的睡眠训练方法：`];
 	for (const m of methods) {
 		lines.push("", `【${m.name}】（${m.nameEn}，${m.minAgeMonths}+ 月龄）`);
@@ -68,18 +88,25 @@ function formatRegression(regression: SleepRegression): string {
 }
 
 function formatSchedule(schedule: NapSchedule, ageMonths: number): string {
-	const lines = [`📅 ${Math.floor(ageMonths)} 月龄作息建议：${schedule.totalNaps} 次小睡`];
+	const lines = [
+		`📅 ${Math.floor(ageMonths)} 月龄作息建议：${schedule.totalNaps} 次小睡`,
+	];
 	if (schedule.totalNaps === 0) {
 		lines.push("无小睡");
 	} else {
-		schedule.napDurations.forEach((d, i) => lines.push(`小睡 ${i + 1}：${d}`));
+		schedule.napDurations.forEach((d, i) => {
+			lines.push(`小睡 ${i + 1}：${d}`);
+		});
 	}
 	lines.push("", `夜间睡眠：${schedule.nightSleep}`);
 	if (schedule.notes) lines.push(`💡 ${schedule.notes}`);
 	return lines.join("\n");
 }
 
-function formatNightWaking(causes: NightWakingCause[], ageMonths: number): string {
+function formatNightWaking(
+	causes: NightWakingCause[],
+	ageMonths: number,
+): string {
 	const lines = [`🌙 ${Math.floor(ageMonths)} 月龄夜醒可能原因：`];
 	for (const c of causes) {
 		lines.push("", `【${c.cause}】`);
@@ -90,7 +117,9 @@ function formatNightWaking(causes: NightWakingCause[], ageMonths: number): strin
 
 function formatRoutine(): string {
 	const lines = ["🌙 标准睡前程序（30-45 分钟）："];
-	BEDTIME_ROUTINE_STEPS.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
+	BEDTIME_ROUTINE_STEPS.forEach((s, i) => {
+		lines.push(`${i + 1}. ${s}`);
+	});
 	return lines.join("\n");
 }
 
@@ -109,7 +138,11 @@ export class SleepCoachAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
 		const intent = detectIntent(question);
 
@@ -172,7 +205,6 @@ export class SleepCoachAgent implements Agent {
 					urgency: "info",
 				};
 			}
-			case "general":
 			default:
 				return {
 					agentId: this.id,
@@ -191,7 +223,6 @@ export function createSleepCoachAgent(): SleepCoachAgent {
 
 export {
 	BEDTIME_ROUTINE_STEPS,
-	SLEEP_REGRESSIONS,
 	getNapSchedule,
 	getNightWakingCauses,
 	getSleepMethod,
@@ -199,6 +230,7 @@ export {
 	getSleepRegression,
 	type NapSchedule,
 	type NightWakingCause,
+	SLEEP_REGRESSIONS,
 	type SleepMethod,
 	type SleepRegression,
 	type SleepTrainingMethod,

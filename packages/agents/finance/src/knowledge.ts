@@ -2,7 +2,12 @@
  * Finance knowledge base — education fund, insurance, school fees.
  */
 
-export type FinanceTopic = "education_fund" | "insurance" | "school_fees" | "budget" | "savings";
+export type FinanceTopic =
+	| "education_fund"
+	| "insurance"
+	| "school_fees"
+	| "budget"
+	| "savings";
 
 export interface EducationFundPlan {
 	id: string;
@@ -64,16 +69,21 @@ export const EDUCATION_FUND_PLANS: EducationFundPlan[] = [
 ];
 
 /** Calculate total accumulated amount. */
-export function calculateFundValue(plan: EducationFundPlan, totalMonths: number = plan.yearsToMaturity * 12): number {
+export function calculateFundValue(
+	plan: EducationFundPlan,
+	totalMonths: number = plan.yearsToMaturity * 12,
+): number {
 	const months = Math.min(totalMonths, plan.yearsToMaturity * 12);
 	const r = plan.expectedAnnualReturn / 100 / 12;
 	// Future value of annuity: FV = PMT * [((1+r)^n - 1) / r]
-	return plan.monthlyAmount * ((Math.pow(1 + r, months) - 1) / r);
+	return plan.monthlyAmount * (((1 + r) ** months - 1) / r);
 }
 
 /** Get recommended plan for given age. */
 export function getRecommendedPlan(ageMonths: number): EducationFundPlan {
-	const eligible = EDUCATION_FUND_PLANS.filter((p) => ageMonths >= p.minAgeMonths);
+	const eligible = EDUCATION_FUND_PLANS.filter(
+		(p) => ageMonths >= p.minAgeMonths,
+	);
 	eligible.sort((a, b) => b.minAgeMonths - a.minAgeMonths);
 	return eligible[0];
 }
@@ -156,12 +166,48 @@ export interface SchoolFee {
 }
 
 export const SCHOOL_FEES: SchoolFee[] = [
-	{ stage: "幼儿园", ageRange: "3-6 岁", publicSchool: 1000, privateSchool: 30000, extracurricular: 5000 },
-	{ stage: "小学", ageRange: "6-12 岁", publicSchool: 0, privateSchool: 50000, extracurricular: 8000 },
-	{ stage: "初中", ageRange: "12-15 岁", publicSchool: 0, privateSchool: 30000, extracurricular: 10000 },
-	{ stage: "高中", ageRange: "15-18 岁", publicSchool: 2000, privateSchool: 50000, extracurricular: 12000 },
-	{ stage: "大学（国内）", ageRange: "18-22 岁", publicSchool: 6000, privateSchool: 30000, extracurricular: 5000 },
-	{ stage: "大学（留学）", ageRange: "18-22 岁", publicSchool: 300000, privateSchool: 300000, extracurricular: 20000 },
+	{
+		stage: "幼儿园",
+		ageRange: "3-6 岁",
+		publicSchool: 1000,
+		privateSchool: 30000,
+		extracurricular: 5000,
+	},
+	{
+		stage: "小学",
+		ageRange: "6-12 岁",
+		publicSchool: 0,
+		privateSchool: 50000,
+		extracurricular: 8000,
+	},
+	{
+		stage: "初中",
+		ageRange: "12-15 岁",
+		publicSchool: 0,
+		privateSchool: 30000,
+		extracurricular: 10000,
+	},
+	{
+		stage: "高中",
+		ageRange: "15-18 岁",
+		publicSchool: 2000,
+		privateSchool: 50000,
+		extracurricular: 12000,
+	},
+	{
+		stage: "大学（国内）",
+		ageRange: "18-22 岁",
+		publicSchool: 6000,
+		privateSchool: 30000,
+		extracurricular: 5000,
+	},
+	{
+		stage: "大学（留学）",
+		ageRange: "18-22 岁",
+		publicSchool: 300000,
+		privateSchool: 300000,
+		extracurricular: 20000,
+	},
 ];
 
 /** Get school fee for given stage. */
@@ -170,11 +216,14 @@ export function getSchoolFee(stage: string): SchoolFee | null {
 }
 
 /** Total estimated cost from birth to college (CNY). */
-export function estimateTotalEducationCost(tier: "public" | "private" | "study_abroad"): number {
+export function estimateTotalEducationCost(
+	tier: "public" | "private" | "study_abroad",
+): number {
 	let total = 0;
 	for (const f of SCHOOL_FEES) {
 		if (tier === "public") total += f.publicSchool + f.extracurricular;
-		else if (tier === "private") total += f.privateSchool + f.extracurricular;
+		else if (tier === "private")
+			total += f.privateSchool + f.extracurricular;
 		else total += f.privateSchool + f.extracurricular;
 	}
 	return total;

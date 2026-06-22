@@ -1,21 +1,26 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { computeStage, MemoryLayer } from "@parenting/memory";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Agent, ChildProfile } from "../src/index.js";
 import {
-	OrchestratorCore,
-	MessageBus,
-	detectTopics,
-	applyTopicMatch,
-	applyStageBonus,
 	applyFeedbackBoost,
+	applyStageBonus,
+	applyTopicMatch,
+	detectTopics,
+	MessageBus,
+	OrchestratorCore,
 } from "../src/index.js";
-import { MemoryLayer, computeStage } from "@parenting/memory";
-import type { Agent, AgentContext, AgentReply, ChildProfile, ChildStage } from "../src/index.js";
+
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string => {
 	const d = new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000);
 	return d.toISOString().split("T")[0];
 };
 
-const makeChild = (ageDays: number, id: string = "c1", name: string = "TestChild"): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id: string = "c1",
+	name: string = "TestChild",
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -25,8 +30,32 @@ const makeChild = (ageDays: number, id: string = "c1", name: string = "TestChild
 const makeAgent = (overrides: Partial<Agent> = {}): Agent => ({
 	id: "test-agent",
 	name: "Test Agent",
-	topics: ["health", "illness", "development", "sleep", "emotion", "behavior", "education", "school", "family", "nutrition", "vaccine", "finance", "legal", "parent_support"],
-	stages: ["newborn", "infant", "toddler", "preschool", "school_age", "tween", "teen", "young_adult"],
+	topics: [
+		"health",
+		"illness",
+		"development",
+		"sleep",
+		"emotion",
+		"behavior",
+		"education",
+		"school",
+		"family",
+		"nutrition",
+		"vaccine",
+		"finance",
+		"legal",
+		"parent_support",
+	],
+	stages: [
+		"newborn",
+		"infant",
+		"toddler",
+		"preschool",
+		"school_age",
+		"tween",
+		"teen",
+		"young_adult",
+	],
 	respond: vi.fn(async (q: string) => ({
 		agentId: "test-agent",
 		agentName: "Test Agent",
@@ -41,9 +70,19 @@ describe("MessageBus", () => {
 		const bus = new MessageBus();
 		const handler = vi.fn();
 		bus.subscribe(handler);
-		bus.publish({ type: "ask_started", question: "x", childId: "c1", at: 1 });
+		bus.publish({
+			type: "ask_started",
+			question: "x",
+			childId: "c1",
+			at: 1,
+		});
 		expect(handler).toHaveBeenCalledTimes(1);
-		expect(handler).toHaveBeenCalledWith({ type: "ask_started", question: "x", childId: "c1", at: 1 });
+		expect(handler).toHaveBeenCalledWith({
+			type: "ask_started",
+			question: "x",
+			childId: "c1",
+			at: 1,
+		});
 	});
 
 	it("multiple subscribers all receive event", () => {
@@ -52,7 +91,12 @@ describe("MessageBus", () => {
 		const h2 = vi.fn();
 		bus.subscribe(h1);
 		bus.subscribe(h2);
-		bus.publish({ type: "ask_started", question: "x", childId: "c1", at: 1 });
+		bus.publish({
+			type: "ask_started",
+			question: "x",
+			childId: "c1",
+			at: 1,
+		});
 		expect(h1).toHaveBeenCalledTimes(1);
 		expect(h2).toHaveBeenCalledTimes(1);
 	});
@@ -61,9 +105,19 @@ describe("MessageBus", () => {
 		const bus = new MessageBus();
 		const handler = vi.fn();
 		const unsub = bus.subscribe(handler);
-		bus.publish({ type: "ask_started", question: "x", childId: "c1", at: 1 });
+		bus.publish({
+			type: "ask_started",
+			question: "x",
+			childId: "c1",
+			at: 1,
+		});
 		unsub();
-		bus.publish({ type: "ask_started", question: "y", childId: "c1", at: 2 });
+		bus.publish({
+			type: "ask_started",
+			question: "y",
+			childId: "c1",
+			at: 2,
+		});
 		expect(handler).toHaveBeenCalledTimes(1);
 	});
 
@@ -80,10 +134,30 @@ describe("MessageBus", () => {
 
 	it("history retains published events up to limit", () => {
 		const bus = new MessageBus(3);
-		bus.publish({ type: "ask_started", question: "a", childId: "c", at: 1 });
-		bus.publish({ type: "ask_started", question: "b", childId: "c", at: 2 });
-		bus.publish({ type: "ask_started", question: "c", childId: "c", at: 3 });
-		bus.publish({ type: "ask_started", question: "d", childId: "c", at: 4 });
+		bus.publish({
+			type: "ask_started",
+			question: "a",
+			childId: "c",
+			at: 1,
+		});
+		bus.publish({
+			type: "ask_started",
+			question: "b",
+			childId: "c",
+			at: 2,
+		});
+		bus.publish({
+			type: "ask_started",
+			question: "c",
+			childId: "c",
+			at: 3,
+		});
+		bus.publish({
+			type: "ask_started",
+			question: "d",
+			childId: "c",
+			at: 4,
+		});
 		const h = bus.getHistory();
 		expect(h.length).toBe(3);
 		expect(h[0].at).toBe(2);
@@ -92,28 +166,57 @@ describe("MessageBus", () => {
 
 	it("getHistory filters by type", () => {
 		const bus = new MessageBus();
-		bus.publish({ type: "ask_started", question: "a", childId: "c", at: 1 });
-		bus.publish({ type: "routing", childId: "c", matchedAgentIds: [], at: 2 });
-		bus.publish({ type: "ask_started", question: "b", childId: "c", at: 3 });
+		bus.publish({
+			type: "ask_started",
+			question: "a",
+			childId: "c",
+			at: 1,
+		});
+		bus.publish({
+			type: "routing",
+			childId: "c",
+			matchedAgentIds: [],
+			at: 2,
+		});
+		bus.publish({
+			type: "ask_started",
+			question: "b",
+			childId: "c",
+			at: 3,
+		});
 		const started = bus.getHistory("ask_started");
 		expect(started.length).toBe(2);
 	});
 
 	it("clearHistory empties history", () => {
 		const bus = new MessageBus();
-		bus.publish({ type: "ask_started", question: "a", childId: "c", at: 1 });
+		bus.publish({
+			type: "ask_started",
+			question: "a",
+			childId: "c",
+			at: 1,
+		});
 		bus.clearHistory();
 		expect(bus.getHistory().length).toBe(0);
 	});
 
 	it("handler errors don't break bus", () => {
 		const bus = new MessageBus();
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const consoleSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
 		bus.subscribe(() => {
 			throw new Error("boom");
 		});
 		bus.subscribe(vi.fn());
-		expect(() => bus.publish({ type: "ask_started", question: "x", childId: "c", at: 1 })).not.toThrow();
+		expect(() =>
+			bus.publish({
+				type: "ask_started",
+				question: "x",
+				childId: "c",
+				at: 1,
+			}),
+		).not.toThrow();
 		consoleSpy.mockRestore();
 	});
 });
@@ -188,7 +291,12 @@ describe("OrchestratorCore", () => {
 		it("subscribe exposes MessageBus events", () => {
 			const handler = vi.fn();
 			orch.subscribe(handler);
-			orch.busOrFail().publish({ type: "ask_started", question: "x", childId: "c1", at: 1 });
+			orch.busOrFail().publish({
+				type: "ask_started",
+				question: "x",
+				childId: "c1",
+				at: 1,
+			});
 			expect(handler).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -197,7 +305,10 @@ describe("OrchestratorCore", () => {
 		it("returns immediately on emergency without invoking agents", async () => {
 			const agent = makeAgent();
 			orch.registerAgent(agent);
-			const result = await orch.ask("我家宝宝3个月发烧38.5度", makeChild(90));
+			const result = await orch.ask(
+				"我家宝宝3个月发烧38.5度",
+				makeChild(90),
+			);
 			expect(result.emergencyEscalation).toBe(true);
 			expect(result.redFlag?.severity).toBe("emergency");
 			expect(agent.respond).not.toHaveBeenCalled();
@@ -231,7 +342,10 @@ describe("OrchestratorCore", () => {
 
 	describe("Routing", () => {
 		it("routes health question to health agent", async () => {
-			const pedAgent = makeAgent({ id: "pediatrician", topics: ["health", "illness"] });
+			const pedAgent = makeAgent({
+				id: "pediatrician",
+				topics: ["health", "illness"],
+			});
 			orch.registerAgent(pedAgent);
 			await orch.ask("宝宝有点不舒服", makeChild(365 * 5));
 			expect(pedAgent.respond).toHaveBeenCalled();
@@ -245,8 +359,14 @@ describe("OrchestratorCore", () => {
 		});
 
 		it("routes to multiple agents when topics overlap", async () => {
-			const ped = makeAgent({ id: "pediatrician", topics: ["illness", "health"] });
-			const psych = makeAgent({ id: "psychologist", topics: ["emotion", "sleep"] });
+			const ped = makeAgent({
+				id: "pediatrician",
+				topics: ["illness", "health"],
+			});
+			const psych = makeAgent({
+				id: "psychologist",
+				topics: ["emotion", "sleep"],
+			});
 			orch.registerAgent(ped);
 			orch.registerAgent(psych);
 			await orch.ask("宝宝发烧哭闹不肯睡", makeChild(90));
@@ -267,7 +387,8 @@ describe("OrchestratorCore", () => {
 			orch.registerAgent(c);
 			const events: string[] = [];
 			orch.subscribe((e) => {
-				if (e.type === "routing") events.push(`routing:${e.matchedAgentIds.join(",")}`);
+				if (e.type === "routing")
+					events.push(`routing:${e.matchedAgentIds.join(",")}`);
 			});
 			await orch.ask("宝宝发烧", makeChild(90));
 			// last routing event should have at most 2 agents
@@ -277,7 +398,10 @@ describe("OrchestratorCore", () => {
 		});
 
 		it("alwaysInvoke forces agent invocation", async () => {
-			orch = new OrchestratorCore({ memory, alwaysInvoke: ["pediatrician"] });
+			orch = new OrchestratorCore({
+				memory,
+				alwaysInvoke: ["pediatrician"],
+			});
 			const ped = makeAgent({ id: "pediatrician", topics: ["health"] });
 			orch.registerAgent(ped);
 			// ask about finance, pediatrician should still be called
@@ -299,14 +423,24 @@ describe("OrchestratorCore", () => {
 				makeAgent({
 					id: "low",
 					topics: ["health"],
-					respond: async () => ({ agentId: "low", agentName: "Low", content: "x", confidence: 0.1 }),
+					respond: async () => ({
+						agentId: "low",
+						agentName: "Low",
+						content: "x",
+						confidence: 0.1,
+					}),
 				}),
 			);
 			orch.registerAgent(
 				makeAgent({
 					id: "high",
 					topics: ["health"],
-					respond: async () => ({ agentId: "high", agentName: "High", content: "x", confidence: 0.9 }),
+					respond: async () => ({
+						agentId: "high",
+						agentName: "High",
+						content: "x",
+						confidence: 0.9,
+					}),
 				}),
 			);
 			orch = new OrchestratorCore({ memory, minConfidence: 0.5 });
@@ -314,14 +448,24 @@ describe("OrchestratorCore", () => {
 				makeAgent({
 					id: "low",
 					topics: ["health"],
-					respond: async () => ({ agentId: "low", agentName: "Low", content: "x", confidence: 0.1 }),
+					respond: async () => ({
+						agentId: "low",
+						agentName: "Low",
+						content: "x",
+						confidence: 0.1,
+					}),
 				}),
 			);
 			orch.registerAgent(
 				makeAgent({
 					id: "high",
 					topics: ["health"],
-					respond: async () => ({ agentId: "high", agentName: "High", content: "x", confidence: 0.9 }),
+					respond: async () => ({
+						agentId: "high",
+						agentName: "High",
+						content: "x",
+						confidence: 0.9,
+					}),
 				}),
 			);
 			const result = await orch.ask("宝宝不舒服", makeChild(90));
@@ -343,7 +487,12 @@ describe("OrchestratorCore", () => {
 				makeAgent({
 					id: "good",
 					topics: ["health"],
-					respond: async () => ({ agentId: "good", agentName: "Good", content: "ok", confidence: 0.9 }),
+					respond: async () => ({
+						agentId: "good",
+						agentName: "Good",
+						content: "ok",
+						confidence: 0.9,
+					}),
 				}),
 			);
 			orch = new OrchestratorCore({ memory });
@@ -360,7 +509,12 @@ describe("OrchestratorCore", () => {
 				makeAgent({
 					id: "good",
 					topics: ["health"],
-					respond: async () => ({ agentId: "good", agentName: "Good", content: "ok", confidence: 0.9 }),
+					respond: async () => ({
+						agentId: "good",
+						agentName: "Good",
+						content: "ok",
+						confidence: 0.9,
+					}),
 				}),
 			);
 			const result = await orch.ask("宝宝不舒服", makeChild(90));
@@ -389,7 +543,16 @@ describe("OrchestratorCore", () => {
 			const allStages = makeAgent({
 				id: "all-stages",
 				topics: ["health"],
-				stages: ["newborn", "infant", "toddler", "preschool", "school_age", "tween", "teen", "young_adult"],
+				stages: [
+					"newborn",
+					"infant",
+					"toddler",
+					"preschool",
+					"school_age",
+					"tween",
+					"teen",
+					"young_adult",
+				],
 			});
 			orch = new OrchestratorCore({ memory, maxAgentsPerAsk: 1 });
 			orch.registerAgent(infantOnly);
@@ -471,7 +634,9 @@ describe("OrchestratorCore", () => {
 				}),
 			);
 			// Verify scores map is empty for newagent before ask
-			const scoresMap = (orch as unknown as { agents: Map<string, unknown> }).agents;
+			const scoresMap = (
+				orch as unknown as { agents: Map<string, unknown> }
+			).agents;
 			expect(scoresMap.has("newagent")).toBe(true);
 			const result = await orch.ask("宝宝不舒服", makeChild(90));
 			expect(result.replies.length).toBeGreaterThan(0);
@@ -488,10 +653,16 @@ describe("OrchestratorCore", () => {
 			);
 			const child = makeChild(90);
 			// Just exercise the integration with bonus agent
-			const matchedIds = (orch as unknown as {
-				testRoute(q: string, c: ChildProfile): string[];
-			}).testRoute
-				? (orch as unknown as { testRoute: (q: string, c: ChildProfile) => string[] }).testRoute("宝宝不舒服", child)
+			const matchedIds = (
+				orch as unknown as {
+					testRoute(q: string, c: ChildProfile): string[];
+				}
+			).testRoute
+				? (
+						orch as unknown as {
+							testRoute: (q: string, c: ChildProfile) => string[];
+						}
+					).testRoute("宝宝不舒服", child)
 				: [];
 			expect(matchedIds.length).toBeGreaterThanOrEqual(0);
 		});
@@ -507,12 +678,15 @@ describe("OrchestratorCore", () => {
 					stages: ["infant"],
 				}),
 			);
-			const events: Array<{ type: string; matchedAgentIds?: string[] }> = [];
+			const events: Array<{ type: string; matchedAgentIds?: string[] }> =
+				[];
 			orch.subscribe((e) => {
 				if (e.type === "routing") events.push(e);
 			});
 			await orch.ask("宝宝发烧不舒服", makeChild(90));
-			expect(events[events.length - 1]?.matchedAgentIds).toContain("doubly");
+			expect(events[events.length - 1]?.matchedAgentIds).toContain(
+				"doubly",
+			);
 		});
 
 		it("stage bonus uses 0 fallback for new alwaysInvoke agent (covers ternary false branch)", async () => {
@@ -549,12 +723,17 @@ describe("OrchestratorCore", () => {
 
 		it("returns no emergency on normal question", async () => {
 			orch.registerAgent(makeAgent({ id: "p" }));
-			const result = await orch.ask("宝宝最近挑食怎么办", makeChild(365 * 3));
+			const result = await orch.ask(
+				"宝宝最近挑食怎么办",
+				makeChild(365 * 3),
+			);
 			expect(result.emergencyEscalation).toBe(false);
 		});
 
 		it("handles memory write failure gracefully (logEpisode catch)", async () => {
-			const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+			const consoleSpy = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {});
 			// Use a memory layer that throws on addEpisode
 			const brokenMemory = {
 				addEpisode: () => {
@@ -598,8 +777,15 @@ describe("OrchestratorCore", () => {
 		it("covers !agent defensive null branch in reply loop", async () => {
 			// Force the routing to return an id that's not in the agents map.
 			// We do this by intercepting the route method via a spy that returns a fake id.
-			const realRoute = (orch as unknown as { route: (q: string, c: ChildProfile) => string[] }).route;
-			(orch as unknown as { route: typeof realRoute }).route = (_q: string, _c: ChildProfile) => ["ghost-id"];
+			const realRoute = (
+				orch as unknown as {
+					route: (q: string, c: ChildProfile) => string[];
+				}
+			).route;
+			(orch as unknown as { route: typeof realRoute }).route = (
+				_q: string,
+				_c: ChildProfile,
+			) => ["ghost-id"];
 			// Also need to mark agent as matched for stage bonus... actually no,
 			// this is just to test the !agent null branch in the reply loop.
 			orch.registerAgent(makeAgent({ id: "real-agent" }));
@@ -617,7 +803,9 @@ declare module "../src/orchestrator.js" {
 		busOrFail(): MessageBus;
 	}
 }
-OrchestratorCore.prototype.busOrFail = function (this: OrchestratorCore): MessageBus {
+OrchestratorCore.prototype.busOrFail = function (
+	this: OrchestratorCore,
+): MessageBus {
 	return (this as unknown as { getBus: () => MessageBus }).getBus();
 };
 
@@ -660,7 +848,9 @@ describe("Direct: applyStageBonus", () => {
 		const scores = new Map<string, number>();
 		scores.set("a1", 10);
 		const matched = new Set(["a1"]);
-		applyStageBonus(agents, scores, matched, [], { stage: "infant" } as ChildProfile);
+		applyStageBonus(agents, scores, matched, [], {
+			stage: "infant",
+		} as ChildProfile);
 		expect(scores.get("a1")).toBe(15);
 	});
 
@@ -671,7 +861,9 @@ describe("Direct: applyStageBonus", () => {
 			makeAgent({ id: "a1", topics: ["health"], stages: ["infant"] }),
 		);
 		const scores = new Map<string, number>();
-		applyStageBonus(agents, scores, new Set(["a1"]), [], { stage: "infant" } as ChildProfile);
+		applyStageBonus(agents, scores, new Set(["a1"]), [], {
+			stage: "infant",
+		} as ChildProfile);
 		expect(scores.get("a1")).toBe(5);
 	});
 
@@ -679,7 +871,9 @@ describe("Direct: applyStageBonus", () => {
 		const agents = new Map<string, Agent>();
 		agents.set("a1", makeAgent({ id: "a1", topics: ["health"] }));
 		const scores = new Map<string, number>();
-		applyStageBonus(agents, scores, new Set(), [], { stage: "infant" } as ChildProfile);
+		applyStageBonus(agents, scores, new Set(), [], {
+			stage: "infant",
+		} as ChildProfile);
 		expect(scores.has("a1")).toBe(false);
 	});
 
@@ -688,7 +882,9 @@ describe("Direct: applyStageBonus", () => {
 		agents.set("forced", makeAgent({ id: "forced", topics: ["health"] }));
 		const scores = new Map<string, number>();
 		scores.set("forced", 1000);
-		applyStageBonus(agents, scores, new Set(), ["forced"], { stage: "infant" } as ChildProfile);
+		applyStageBonus(agents, scores, new Set(), ["forced"], {
+			stage: "infant",
+		} as ChildProfile);
 		expect(scores.get("forced")).toBe(1005);
 	});
 
@@ -699,7 +895,9 @@ describe("Direct: applyStageBonus", () => {
 			makeAgent({ id: "a1", topics: ["health"], stages: ["teen"] }),
 		);
 		const scores = new Map<string, number>();
-		applyStageBonus(agents, scores, new Set(["a1"]), [], { stage: "infant" } as ChildProfile);
+		applyStageBonus(agents, scores, new Set(["a1"]), [], {
+			stage: "infant",
+		} as ChildProfile);
 		expect(scores.has("a1")).toBe(false);
 	});
 });
@@ -760,7 +958,11 @@ describe("L4 working-memory sessions", () => {
 	it("askFollowup reuses the existing session id", async () => {
 		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
 		const first = await orch.ask("宝宝发烧", child);
-		const second = await orch.askFollowup(first.sessionId!, "还需要注意什么", child);
+		const second = await orch.askFollowup(
+			first.sessionId!,
+			"还需要注意什么",
+			child,
+		);
 		expect(second.sessionId).toBe(first.sessionId);
 		const eps = memory.getEpisodes(child.id, "qa");
 		expect(eps.length).toBe(2);
@@ -770,9 +972,9 @@ describe("L4 working-memory sessions", () => {
 
 	it("askFollowup throws on unknown session", async () => {
 		orch.registerAgent(makeAgent({ id: "a1", topics: ["health"] }));
-		await expect(orch.askFollowup("sess-nope", "宝宝发烧", child)).rejects.toThrow(
-			/Session sess-nope not found/,
-		);
+		await expect(
+			orch.askFollowup("sess-nope", "宝宝发烧", child),
+		).rejects.toThrow(/Session sess-nope not found/);
 	});
 
 	it("buildContext includes sessionId and recentEpisodes count", () => {
@@ -817,7 +1019,11 @@ describe("L4 working-memory sessions", () => {
 			throw new Error("db locked");
 		};
 		try {
-			const second = await orch.askFollowup(first.sessionId!, "继续", child);
+			const second = await orch.askFollowup(
+				first.sessionId!,
+				"继续",
+				child,
+			);
 			expect(second.sessionId).toBe(first.sessionId);
 		} finally {
 			(memory as any).updateSession = original;
@@ -830,13 +1036,21 @@ describe("feedback & self-evolution", () => {
 		const feedback: any[] = [];
 		return {
 			memory: {
-				startSession: vi.fn().mockReturnValue({ id: "sess_1", childId: "c1" }),
+				startSession: vi
+					.fn()
+					.mockReturnValue({ id: "sess_1", childId: "c1" }),
 				getSession: vi.fn().mockReturnValue(null),
-				updateSession: vi.fn().mockReturnValue({ id: "sess_1", childId: "c1" }),
+				updateSession: vi
+					.fn()
+					.mockReturnValue({ id: "sess_1", childId: "c1" }),
 				addEpisode: vi.fn(),
 				getEpisodes: vi.fn().mockReturnValue([]),
 				addFeedback: vi.fn((fb: any) => {
-					const stored = { ...fb, id: `fb_${feedback.length + 1}`, createdAt: new Date().toISOString() };
+					const stored = {
+						...fb,
+						id: `fb_${feedback.length + 1}`,
+						createdAt: new Date().toISOString(),
+					};
 					feedback.push(stored);
 					return stored;
 				}),
@@ -851,7 +1065,9 @@ describe("feedback & self-evolution", () => {
 	function makeNoFeedbackMemory() {
 		return {
 			memory: {
-				startSession: vi.fn().mockReturnValue({ id: "sess_1", childId: "c1" }),
+				startSession: vi
+					.fn()
+					.mockReturnValue({ id: "sess_1", childId: "c1" }),
 				getSession: vi.fn().mockReturnValue(null),
 				updateSession: vi.fn(),
 				addEpisode: vi.fn(),
@@ -870,7 +1086,13 @@ describe("feedback & self-evolution", () => {
 	it("recordFeedback calls memory.addFeedback and returns stored entry", () => {
 		const { memory } = makeMockMemory();
 		const orch = new OrchestratorCore({ memory });
-		const result = orch.recordFeedback("c1", "ep_1", "a1", 5, "great answer");
+		const result = orch.recordFeedback(
+			"c1",
+			"ep_1",
+			"a1",
+			5,
+			"great answer",
+		);
 		expect(result).toEqual(
 			expect.objectContaining({
 				childId: "c1",
@@ -887,7 +1109,12 @@ describe("feedback & self-evolution", () => {
 		const { memory } = makeNoFeedbackMemory();
 		const orch = new OrchestratorCore({ memory });
 		const stats = orch.getAgentStats("a1");
-		expect(stats).toEqual({ agentId: "a1", count: 0, avgRating: 0, positiveCount: 0 });
+		expect(stats).toEqual({
+			agentId: "a1",
+			count: 0,
+			avgRating: 0,
+			positiveCount: 0,
+		});
 	});
 
 	it("getAgentStats returns zeros when no feedback exists", () => {
@@ -947,7 +1174,10 @@ describe("feedback & self-evolution", () => {
 
 describe("applyFeedbackBoost", () => {
 	it("boosts scores by avg rating", () => {
-		const scores = new Map<string, number>([["a1", 10], ["a2", 5]]);
+		const scores = new Map<string, number>([
+			["a1", 10],
+			["a2", 5],
+		]);
 		const getAvg = (id: string): number => (id === "a1" ? 4 : 0);
 		applyFeedbackBoost(scores, getAvg);
 		expect(scores.get("a1")).toBe(14);
@@ -969,7 +1199,10 @@ describe("applyFeedbackBoost", () => {
 	});
 
 	it("boosts all agents with positive ratings", () => {
-		const scores = new Map<string, number>([["a1", 5], ["a2", 5]]);
+		const scores = new Map<string, number>([
+			["a1", 5],
+			["a2", 5],
+		]);
 		const getAvg = (): number => 5;
 		applyFeedbackBoost(scores, getAvg);
 		expect(scores.get("a1")).toBe(10);

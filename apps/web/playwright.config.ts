@@ -18,12 +18,15 @@ export default defineConfig({
 	timeout: 30_000,
 	expect: { timeout: 5_000 },
 	fullyParallel: true,
-	forbidOnly: !!process.env["CI"],
-	retries: process.env["CI"] ? 1 : 0,
-	workers: process.env["CI"] ? 1 : undefined,
-	reporter: process.env["CI"]
+	forbidOnly: !!process.env.CI,
+	retries: process.env.CI ? 1 : 0,
+	workers: process.env.CI ? 1 : undefined,
+	reporter: process.env.CI
 		? [["list"], ["github"]]
-		: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+		: [
+				["list"],
+				["html", { open: "never", outputFolder: "playwright-report" }],
+			],
 	use: {
 		baseURL: "http://127.0.0.1:4173",
 		trace: "retain-on-failure",
@@ -38,7 +41,7 @@ export default defineConfig({
 	webServer: {
 		command: "npm run preview:e2e -- --port 4173 --host 127.0.0.1",
 		url: "http://127.0.0.1:4173",
-		reuseExistingServer: !process.env["CI"],
+		reuseExistingServer: !process.env.CI,
 		timeout: 60_000,
 		stdout: "ignore",
 		stderr: "pipe",

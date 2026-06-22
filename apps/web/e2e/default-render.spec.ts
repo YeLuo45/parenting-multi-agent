@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("default render", () => {
-	test("app shell renders header, children panel and chat panel with default child", async ({ page }) => {
+	test("app shell renders header, children panel and chat panel with default child", async ({
+		page,
+	}) => {
 		const errors: string[] = [];
 		page.on("pageerror", (e) => errors.push(e.message));
 
@@ -9,7 +11,9 @@ test.describe("default render", () => {
 		// Wait for the React app to mount; if the production bundle has a
 		// React 19 mount issue, the test will fail loudly here so we don't
 		// silently pass on broken UI.
-		await page.waitForSelector('[data-testid="app-root"]', { timeout: 10_000 });
+		await page.waitForSelector('[data-testid="app-root"]', {
+			timeout: 10_000,
+		});
 
 		await expect(page.getByTestId("app-root")).toBeVisible();
 		await expect(page.getByTestId("app-header")).toBeVisible();

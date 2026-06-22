@@ -1,21 +1,27 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import {
-	PediatricianAgent,
-	getVaccinesForAge,
-	getNextVaccine,
-	triageSymptom,
-	getMilestonesForAge,
 	calculateDose,
 	formatMilestonesForTest as formatMilestonesForTestDirect,
+	getMilestonesForAge,
+	getNextVaccine,
+	getVaccinesForAge,
+	PediatricianAgent,
+	triageSymptom,
 } from "../src/index.js";
-import type { ChildProfile } from "@parenting/memory";
 import type { Milestone } from "../src/knowledge.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id: string = "c1", name: string = "TestChild"): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id: string = "c1",
+	name: string = "TestChild",
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -43,7 +49,7 @@ describe("Knowledge: vaccine schedule", () => {
 	it("next vaccine for 18 months points to later vaccine", () => {
 		const next = getNextVaccine(18);
 		expect(next).not.toBeNull();
-		expect(next!.recommendedAgeMonths).toBeGreaterThan(18);
+		expect(next?.recommendedAgeMonths).toBeGreaterThan(18);
 	});
 
 	it("returns null for very old children (no more in schedule)", () => {
@@ -165,9 +171,13 @@ describe("PediatricianAgent", () => {
 
 	describe("vaccine queries", () => {
 		it("returns vaccine schedule for 3-month-old", async () => {
-			const reply = await agent.respond("宝宝疫苗接种时间", makeChild(90), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝疫苗接种时间",
+				makeChild(90),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.agentId).toBe("pediatrician");
 			expect(reply.content).toContain("BCG");
 			expect(reply.urgency).toBe("info");
@@ -193,18 +203,26 @@ describe("PediatricianAgent", () => {
 		});
 
 		it("triage fever in 2-year-old as medium", async () => {
-			const reply = await agent.respond("宝宝发烧38.5", makeChild(365 * 2), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝发烧38.5",
+				makeChild(365 * 2),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.urgency).toBe("medium");
 		});
 
 		it("asks for more info on vague symptoms (illness intent but no rule match)", async () => {
 			// '肚子痛' (stomach pain) matches '痛' → illness intent
 			// but no triage rule has 'stomach pain' symptom → triageSymptom returns null
-			const reply = await agent.respond("宝宝肚子痛", makeChild(365 * 2), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝肚子痛",
+				makeChild(365 * 2),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.confidence).toBeLessThan(0.6);
 			expect(reply.content).toContain("无法确定");
 		});
@@ -237,9 +255,13 @@ describe("PediatricianAgent", () => {
 		it("handles age with no milestone data (empty milestones)", async () => {
 			// Test formatMilestones with empty array — use a very specific age
 			// that doesn't match ±3 months of any milestone.
-			const reply = await agent.respond("宝宝发育里程碑", makeChild(365 * 30), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝发育里程碑",
+				makeChild(365 * 30),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// Will return the "暂缺" message
 			expect(reply.content).toMatch(/暂缺|发育里程碑/);
 		});
@@ -286,17 +308,25 @@ describe("PediatricianAgent", () => {
 
 	describe("medication queries", () => {
 		it("computes dose when weight and drug are given", async () => {
-			const reply = await agent.respond("10kg 宝宝吃美林多少", makeChild(365), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"10kg 宝宝吃美林多少",
+				makeChild(365),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/50(\.\d+)?\s*mg/);
 			expect(reply.confidence).toBeGreaterThan(0.5);
 		});
 
 		it("computes acetaminophen dose for 12kg child", async () => {
-			const reply = await agent.respond("12kg 宝宝用泰诺林", makeChild(365), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"12kg 宝宝用泰诺林",
+				makeChild(365),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/120(\.\d+)?\s*mg/);
 		});
 
@@ -309,18 +339,26 @@ describe("PediatricianAgent", () => {
 		});
 
 		it("rejects when drug is missing", async () => {
-			const reply = await agent.respond("10kg 宝宝吃什么药", makeChild(365), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"10kg 宝宝吃什么药",
+				makeChild(365),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("药名");
 		});
 
 		it("rejects when age is too young for drug (covers !result.ok branch)", async () => {
 			// 1 month old baby (30 days), given 美林 (ibuprofen, min 6 months)
 			// weight + drug + illness keyword
-			const reply = await agent.respond("5kg 宝宝发烧吃美林", makeChild(30), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"5kg 宝宝发烧吃美林",
+				makeChild(30),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/❌|age too young/);
 		});
 	});

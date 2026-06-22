@@ -4,21 +4,19 @@
  * Phase 1: rule-based + keyword matching (no LLM call).
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	EDU_STAGES,
-	LEARNING_STYLES,
-	INTERESTS,
-	getEduStage,
-	detectLearningStyle,
 	detectInterests,
-	suggestActivities,
+	detectLearningStyle,
 	type EduStageInfo,
+	getEduStage,
+	INTERESTS,
 	type InterestCategory,
+	LEARNING_STYLES,
 	type LearningStyle,
-	type LearningStylePattern,
+	suggestActivities,
 } from "./knowledge.js";
 
 export const EDUCATOR_DISCLAIMER =
@@ -29,21 +27,35 @@ function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 	return (asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
 }
 
-function detectIntent(question: string): "stage" | "style" | "interest" | "activity" | "subject" | "general" {
+function detectIntent(
+	question: string,
+): "stage" | "style" | "interest" | "activity" | "subject" | "general" {
 	const q = question.toLowerCase();
 	// subject comes first to avoid "怎么学数学" being misclassified as style
-	if (/(数学|语文|英语|英文|物理|化学|数学题|怎么学|学不会|不爱学习)/i.test(q))
+	if (
+		/(数学|语文|英语|英文|物理|化学|数学题|怎么学|学不会|不爱学习)/i.test(q)
+	)
 		return "subject";
-	if (/(学习风格|学习类型|visual|auditory|kinesthetic|视觉|听觉|动觉|怎么记)/i.test(q)) return "style";
+	if (
+		/(学习风格|学习类型|visual|auditory|kinesthetic|视觉|听觉|动觉|怎么记)/i.test(
+			q,
+		)
+	)
+		return "style";
 	// activity comes before interest because "怎么做" with interest word should still be activity
-	if (/(做什么|玩什么|活动|怎么玩|做什么好|建议|recommend|suggest)/i.test(q)) return "activity";
+	if (/(做什么|玩什么|活动|怎么玩|做什么好|建议|recommend|suggest)/i.test(q))
+		return "activity";
 	if (
 		/(兴趣班|课外班|兴趣|班|课程|stem|编程|艺术|画画|乐器|钢琴|游泳|体育|积木|lego|绘画|机器人)/i.test(
 			q,
 		)
 	)
 		return "interest";
-	if (/(学校|学什么|几岁|阶段|学龄前|幼小衔接|小学|初中|高中|大学|school|kindergarten|elementary|middle|high|college|grade)/i.test(q))
+	if (
+		/(学校|学什么|几岁|阶段|学龄前|幼小衔接|小学|初中|高中|大学|school|kindergarten|elementary|middle|high|college|grade)/i.test(
+			q,
+		)
+	)
 		return "stage";
 	return "general";
 }
@@ -113,9 +125,13 @@ export class EducatorAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
-		const stage = child.stage ?? computeStage(child.birthDate);
+		const _stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectIntent(question);
 
 		switch (intent) {
@@ -165,7 +181,11 @@ export class EducatorAgent implements Agent {
 				const interests = detectInterests(question);
 				const finalInterests: InterestCategory[] =
 					interests.length > 0 ? interests : ["stem", "arts"];
-				const suggestions = suggestActivities(finalInterests, months, 30);
+				const suggestions = suggestActivities(
+					finalInterests,
+					months,
+					30,
+				);
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -193,7 +213,6 @@ export class EducatorAgent implements Agent {
 					urgency: "info",
 				};
 			}
-			case "general":
 			default:
 				return this.introReply();
 		}
@@ -215,17 +234,17 @@ export function createEducatorAgent(): EducatorAgent {
 }
 
 export {
-	EDU_STAGES,
-	LEARNING_STYLES,
-	INTERESTS,
-	getEduStage,
-	detectLearningStyle,
 	detectInterests,
-	suggestActivities,
+	detectLearningStyle,
+	EDU_STAGES,
 	type EduStage,
 	type EduStageInfo,
-	type LearningStyle,
-	type LearningStylePattern,
+	getEduStage,
+	INTERESTS,
 	type InterestCategory,
 	type InterestInfo,
+	LEARNING_STYLES,
+	type LearningStyle,
+	type LearningStylePattern,
+	suggestActivities,
 } from "./knowledge.js";

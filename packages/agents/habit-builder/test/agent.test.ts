@@ -1,31 +1,43 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import { createHabitBuilderAgent } from "../src/agent.js";
 import {
-	HABITS,
-	HABIT_FORMATION_AVG_DAYS,
-	SCREEN_TIME_GUIDELINES,
-	SLEEP_HOURS_GUIDELINES,
-	getHabitsForAge,
-	getHabitsByDomain,
 	getHabitById,
+	getHabitsByDomain,
+	getHabitsForAge,
+	HABIT_FORMATION_AVG_DAYS,
+	HABITS,
+	type Habit,
+	habitLoop,
 	habitStepCount,
 	habitTotalDuration,
-	habitLoop,
-	streakLevel,
+	SCREEN_TIME_GUIDELINES,
+	SLEEP_HOURS_GUIDELINES,
 	screenTimeForAge,
 	sleepHoursForAge,
-	type Habit,
-	type HabitDomain,
+	streakLevel,
 } from "../src/knowledge.js";
-import type { ChildProfile } from "@parenting/memory";
 
 function makeChild(ageMonths: number): ChildProfile {
-	const birthYear = new Date().getFullYear() - Math.floor(ageMonths / 12);
+	const _birthYear = new Date().getFullYear() - Math.floor(ageMonths / 12);
 	return {
 		id: "test-child",
 		name: "测试宝宝",
-		birthDate: new Date(Date.now() - ageMonths * 30.44 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-		stage: ageMonths < 3 ? "newborn" : ageMonths < 12 ? "infant" : ageMonths < 36 ? "toddler" : ageMonths < 72 ? "preschool" : "school_age",
+		birthDate: new Date(
+			Date.now() - ageMonths * 30.44 * 24 * 60 * 60 * 1000,
+		)
+			.toISOString()
+			.split("T")[0],
+		stage:
+			ageMonths < 3
+				? "newborn"
+				: ageMonths < 12
+					? "infant"
+					: ageMonths < 36
+						? "toddler"
+						: ageMonths < 72
+							? "preschool"
+							: "school_age",
 	};
 }
 
@@ -284,7 +296,7 @@ describe("getHabitById", () => {
 	it("returns habit when found", () => {
 		const h = getHabitById("habit-brushing-teeth");
 		expect(h).toBeDefined();
-		expect(h!.id).toBe("habit-brushing-teeth");
+		expect(h?.id).toBe("habit-brushing-teeth");
 	});
 
 	it("returns undefined for unknown id", () => {
@@ -373,7 +385,9 @@ describe("habitLoop", () => {
 			description: "",
 			ageMonthsMin: 0,
 			ageMonthsMax: 12,
-			steps: [{ order: 1, cue: "time", action: "do", durationMinutes: 1 }],
+			steps: [
+				{ order: 1, cue: "time", action: "do", durationMinutes: 1 },
+			],
 			frequencyPerDay: 1,
 			difficulty: "easy",
 			formationDays: 30,
@@ -392,8 +406,18 @@ describe("habitLoop", () => {
 			ageMonthsMin: 0,
 			ageMonthsMax: 12,
 			steps: [
-				{ order: 1, cue: "time", action: "cue step", durationMinutes: 1 },
-				{ order: 2, action: "and reward", reward: "treat", durationMinutes: 1 },
+				{
+					order: 1,
+					cue: "time",
+					action: "cue step",
+					durationMinutes: 1,
+				},
+				{
+					order: 2,
+					action: "and reward",
+					reward: "treat",
+					durationMinutes: 1,
+				},
 			],
 			frequencyPerDay: 1,
 			difficulty: "easy",
@@ -430,19 +454,19 @@ describe("screenTimeForAge", () => {
 	it("returns 0 for <18 months", () => {
 		const g = screenTimeForAge(12);
 		expect(g).toBeDefined();
-		expect(g!.dailyLimitMinutes).toBe(0);
+		expect(g?.dailyLimitMinutes).toBe(0);
 	});
 
 	it("returns 30 for 18-24 months", () => {
-		expect(screenTimeForAge(20)!.dailyLimitMinutes).toBe(30);
+		expect(screenTimeForAge(20)?.dailyLimitMinutes).toBe(30);
 	});
 
 	it("returns 60 for 24-60 months", () => {
-		expect(screenTimeForAge(36)!.dailyLimitMinutes).toBe(60);
+		expect(screenTimeForAge(36)?.dailyLimitMinutes).toBe(60);
 	});
 
 	it("returns 120 for 60+ months", () => {
-		expect(screenTimeForAge(72)!.dailyLimitMinutes).toBe(120);
+		expect(screenTimeForAge(72)?.dailyLimitMinutes).toBe(120);
 	});
 
 	it("returns undefined for out of range", () => {
@@ -452,31 +476,31 @@ describe("screenTimeForAge", () => {
 
 describe("sleepHoursForAge", () => {
 	it("returns 16 hours for newborn", () => {
-		expect(sleepHoursForAge(1)!.hoursPerDay).toBe(16);
+		expect(sleepHoursForAge(1)?.hoursPerDay).toBe(16);
 	});
 
 	it("returns 12 for 4-11 months", () => {
-		expect(sleepHoursForAge(8)!.hoursPerDay).toBe(12);
+		expect(sleepHoursForAge(8)?.hoursPerDay).toBe(12);
 	});
 
 	it("returns 11 for 1-5 years", () => {
-		expect(sleepHoursForAge(36)!.hoursPerDay).toBe(11);
+		expect(sleepHoursForAge(36)?.hoursPerDay).toBe(11);
 	});
 
 	it("returns 10 for school age", () => {
-		expect(sleepHoursForAge(96)!.hoursPerDay).toBe(10);
+		expect(sleepHoursForAge(96)?.hoursPerDay).toBe(10);
 	});
 
 	it("returns 9 for teen", () => {
-		expect(sleepHoursForAge(180)!.hoursPerDay).toBe(9);
+		expect(sleepHoursForAge(180)?.hoursPerDay).toBe(9);
 	});
 
 	it("includes nap for younger ages", () => {
-		expect(sleepHoursForAge(12)!.includesNap).toBe(true);
+		expect(sleepHoursForAge(12)?.includesNap).toBe(true);
 	});
 
 	it("excludes nap for older ages", () => {
-		expect(sleepHoursForAge(48)!.includesNap).toBe(false);
+		expect(sleepHoursForAge(48)?.includesNap).toBe(false);
 	});
 });
 

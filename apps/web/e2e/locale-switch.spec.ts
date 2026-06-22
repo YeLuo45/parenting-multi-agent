@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 test.describe("locale switching", () => {
 	test("switching locale changes chat title text", async ({ page }) => {
 		await page.goto("/", { waitUntil: "load" });
-		await page.waitForSelector('[data-testid="locale-select"]', { timeout: 10_000 });
+		await page.waitForSelector('[data-testid="locale-select"]', {
+			timeout: 10_000,
+		});
 
 		const select = page.getByTestId("locale-select");
 

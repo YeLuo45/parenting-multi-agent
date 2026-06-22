@@ -1,37 +1,37 @@
 export {
-	KnowledgeRAGAgent,
 	createKnowledgeRAGAgent,
 	KNOWLEDGE_DISCLAIMER,
+	KnowledgeRAGAgent,
 } from "./agent.js";
 
 export {
-	KNOWLEDGE_BASE,
+	buildIndex,
 	byStage,
+	type EvidenceLevel,
+	formatReferences,
+	type HanTokenIndex,
+	KNOWLEDGE_BASE,
+	type KnowledgeEntry,
+	knowledgeStats,
+	queryIndex,
+	type Reference,
+	type SourceOrg,
+	scoreEntry,
 	searchKnowledge,
 	searchKnowledgeIndex,
-	buildIndex,
-	queryIndex,
-	scoreEntry,
 	tokenize,
-	knowledgeStats,
-	formatReferences,
-	type EvidenceLevel,
-	type SourceOrg,
-	type Reference,
-	type KnowledgeEntry,
-	type HanTokenIndex,
 } from "./knowledge.js";
 
 export {
 	buildTfIdfIndex,
-	searchByVector,
-	searchByRelevance,
-	vectorize,
+	type CombinedResult,
 	cosineSimilarity,
-	type Vector,
+	searchByRelevance,
+	searchByVector,
 	type TfIdfIndex,
 	type TfIdfOptions,
-	type CombinedResult,
+	type Vector,
+	vectorize,
 } from "./tfidf.js";
 
 export const KNOWLEDGE_RAG_VERSION = "0.1.0";

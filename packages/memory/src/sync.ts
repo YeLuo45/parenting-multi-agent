@@ -65,7 +65,8 @@ export function highestId(deltas: DeltaEntry[]): number {
  *  Returns the delta that wins under LWW. Tiebreaker: higher id wins.
  *  If the deltas differ only in createdAt, the later timestamp wins. */
 export function lwwResolve(local: DeltaEntry, remote: DeltaEntry): DeltaEntry {
-	if (local.createdAt === remote.createdAt) return remote.id > local.id ? remote : local;
+	if (local.createdAt === remote.createdAt)
+		return remote.id > local.id ? remote : local;
 	return remote.createdAt > local.createdAt ? remote : local;
 }
 
@@ -107,7 +108,7 @@ export function mergeDeltas(
 		// Same row — LWW: replace local in merged array if remote wins.
 		const winner = lwwResolve(local, remote);
 		if (winner !== local) {
-			const idx = merged.findIndex((d) => d === local);
+			const idx = merged.indexOf(local);
 			if (idx >= 0) merged[idx] = remote;
 			localByRow.set(key, remote);
 			conflicts++;
@@ -170,7 +171,11 @@ export class SyncEngine {
 	}
 
 	/** Merge remote deltas into local. Returns the merged log + PullResult. */
-	pull(localDeltas: DeltaEntry[], remoteDeltas: DeltaEntry[], deviceId: string): PullResult {
+	pull(
+		localDeltas: DeltaEntry[],
+		remoteDeltas: DeltaEntry[],
+		deviceId: string,
+	): PullResult {
 		const state = this.getDeviceState(deviceId);
 		const { result } = mergeDeltas(localDeltas, remoteDeltas);
 		// After merge, the remote is caught up to our new high-water.

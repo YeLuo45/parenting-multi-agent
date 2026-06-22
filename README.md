@@ -95,9 +95,9 @@ NODE_ENV=development npm run test:coverage
 
 Verified result in this workspace:
 
-- Total tests: 1261 passed
+- Total tests: 1269 passed
 - Full workspace pass rate: 100%
-- Lowest overall workspace coverage: `@parenting/web` branch coverage 95.96%, lines 100%, statements 100%, functions 98.68%
+- Lowest overall workspace coverage: `@parenting/web` branch coverage 95.30%, lines 99.29%, statements 99.29%, functions 95.52%
 
 ## Verified Commands
 

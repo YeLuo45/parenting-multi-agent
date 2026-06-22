@@ -9,7 +9,12 @@
  * 5. Log: write episode to memory + publish events on bus
  */
 
-import { computeStage, matchL0Rule, type ChildProfile, type Episode } from "@parenting/memory";
+import {
+	type ChildProfile,
+	computeStage,
+	type Episode,
+	matchL0Rule,
+} from "@parenting/memory";
 
 import { MessageBus } from "./bus.js";
 import {
@@ -18,15 +23,14 @@ import {
 	type AgentReply,
 	type AgentStats,
 	type AgentTopic,
+	detectTopics,
 	type Feedback,
 	type FeedbackRating,
-	type MemoryLayerLike,
 	type OrchestratorConfig,
 	type OrchestratorEvent,
 	type OrchestratorResult,
 	type RedFlag,
 	type UrgencyLevel,
-	detectTopics,
 } from "./types.js";
 
 // ─── Helper functions (exposed for direct testing) ─────────────────
@@ -59,7 +63,8 @@ export function applyStageBonus(
 	child: ChildProfile,
 ): void {
 	for (const agent of agents.values()) {
-		const eligible = topicMatched.has(agent.id) || alwaysInvoke.includes(agent.id);
+		const eligible =
+			topicMatched.has(agent.id) || alwaysInvoke.includes(agent.id);
 		if (eligible && agent.stages.includes(child.stage)) {
 			const existing = scores.get(agent.id);
 			scores.set(agent.id, (existing ?? 0) + 5);
@@ -79,7 +84,9 @@ export function applyFeedbackBoost(
 	}
 }
 
-export function mapL0Severity(severity: NonNullable<ReturnType<typeof matchL0Rule>>["severity"]): UrgencyLevel {
+export function mapL0Severity(
+	severity: NonNullable<ReturnType<typeof matchL0Rule>>["severity"],
+): UrgencyLevel {
 	return severity === "warn" ? "high" : severity;
 }
 
@@ -146,7 +153,12 @@ export class OrchestratorCore {
 	 * Returns zeros if no feedback exists or memory doesn't support it.
 	 */
 	getAgentStats(agentId: string, limit = 20): AgentStats {
-		const empty: AgentStats = { agentId, count: 0, avgRating: 0, positiveCount: 0 };
+		const empty: AgentStats = {
+			agentId,
+			count: 0,
+			avgRating: 0,
+			positiveCount: 0,
+		};
 		if (!this.config.memory.getFeedback) return empty;
 		const items = this.config.memory.getFeedback(agentId, limit);
 		if (items.length === 0) return empty;
@@ -187,7 +199,10 @@ export class OrchestratorCore {
 
 	// ─── Core: ask ────────────────────────────────────────────────────────
 
-	async ask(question: string, child: ChildProfile): Promise<OrchestratorResult> {
+	async ask(
+		question: string,
+		child: ChildProfile,
+	): Promise<OrchestratorResult> {
 		return this.runAsk(question, child, undefined);
 	}
 
@@ -221,8 +236,12 @@ export class OrchestratorCore {
 		sessionId: string | undefined,
 	): Promise<OrchestratorResult> {
 		const startedAt = Date.now();
-		const childWithStage: ChildProfile = { ...child, stage: child.stage ?? computeStage(child.birthDate) };
-		const activeSessionId = sessionId ?? this.openSession(childWithStage.id);
+		const childWithStage: ChildProfile = {
+			...child,
+			stage: child.stage ?? computeStage(child.birthDate),
+		};
+		const activeSessionId =
+			sessionId ?? this.openSession(childWithStage.id);
 
 		this.bus.publish({
 			type: "ask_started",
@@ -293,7 +312,10 @@ export class OrchestratorCore {
 			replyPromises.filter((p): p is Promise<AgentReply> => p !== null),
 		);
 		const replies: AgentReply[] = settled
-			.filter((r): r is PromiseFulfilledResult<AgentReply> => r.status === "fulfilled")
+			.filter(
+				(r): r is PromiseFulfilledResult<AgentReply> =>
+					r.status === "fulfilled",
+			)
 			.map((r) => r.value)
 			.filter((r) => r.confidence >= this.config.minConfidence);
 
@@ -351,7 +373,13 @@ export class OrchestratorCore {
 
 		// Topic match + stage bonus
 		const topicMatched = applyTopicMatch(this.agents, scores, topics);
-		applyStageBonus(this.agents, scores, topicMatched, this.config.alwaysInvoke, child);
+		applyStageBonus(
+			this.agents,
+			scores,
+			topicMatched,
+			this.config.alwaysInvoke,
+			child,
+		);
 		applyFeedbackBoost(scores, (agentId) => this.feedbackBoost(agentId));
 
 		// Sort by score desc, take top N
@@ -364,7 +392,11 @@ export class OrchestratorCore {
 
 	// ─── Helper functions (exposed for direct testing) ─────────────────
 
-	private logEpisode(childId: string, type: Episode["type"], content: Record<string, unknown>): void {
+	private logEpisode(
+		childId: string,
+		type: Episode["type"],
+		content: Record<string, unknown>,
+	): void {
 		try {
 			this.config.memory.addEpisode(childId, type, content);
 		} catch (err) {
@@ -395,8 +427,16 @@ export class OrchestratorCore {
 	 * Build the AgentContext for a given ask, including sessionId and
 	 * last N episodes from this child's history. Exposed for tests.
 	 */
-	buildContext(childId: string, sessionId: string, recentEpisodes = 3): AgentContext {
-		const episodes = this.config.memory.getEpisodes(childId, "qa", recentEpisodes);
+	buildContext(
+		childId: string,
+		sessionId: string,
+		recentEpisodes = 3,
+	): AgentContext {
+		const episodes = this.config.memory.getEpisodes(
+			childId,
+			"qa",
+			recentEpisodes,
+		);
 		return {
 			memory: this.config.memory,
 			sessionId,

@@ -2,13 +2,11 @@
  * ParentSupportAgent — parent burnout, self-care, mental health, isolation.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	SUPPORT_GUIDANCE,
 	getAllHotlines,
-	getSupportGuidance,
 	matchSupportIssue,
 	type SupportGuidance,
 } from "./knowledge.js";
@@ -21,11 +19,18 @@ function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 	return (asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
 }
 
-function detectIntent(question: string): "issue" | "self_care" | "crisis" | "general" {
+function detectIntent(
+	question: string,
+): "issue" | "self_care" | "crisis" | "general" {
 	const q = question.toLowerCase();
 	if (/(想死|自伤|崩溃|危机|crisis|suicide|自残)/i.test(q)) return "crisis";
-	if (/(自我关怀|自己|me.time|self.care|自私|休息|放松)/i.test(q)) return "self_care";
-	if (/(累|疲惫|焦虑|抑郁|压力|无助|孤立|孤独|内疚|burnout|anxiety|depress|isolat|guilt|exhausted|overwhelm|burned.out)/i.test(q))
+	if (/(自我关怀|自己|me.time|self.care|自私|休息|放松)/i.test(q))
+		return "self_care";
+	if (
+		/(累|疲惫|焦虑|抑郁|压力|无助|孤立|孤独|内疚|burnout|anxiety|depress|isolat|guilt|exhausted|overwhelm|burned.out)/i.test(
+			q,
+		)
+	)
 		return "issue";
 	return "general";
 }
@@ -43,7 +48,9 @@ function formatGuidance(guidance: SupportGuidance): string {
 	];
 	if (guidance.hotline && guidance.hotline.length > 0) {
 		lines.push("", "📞 心理援助热线：");
-		guidance.hotline.forEach((h) => lines.push(`- ${h.region}：${h.number}`));
+		guidance.hotline.forEach((h) => {
+			lines.push(`- ${h.region}：${h.number}`);
+		});
 	}
 	return lines.join("\n");
 }
@@ -76,7 +83,9 @@ function formatSelfCare(): string {
 
 function formatCrisis(): string {
 	const hotlines = getAllHotlines();
-	const unique = Array.from(new Map(hotlines.map((h) => [h.number, h])).values());
+	const unique = Array.from(
+		new Map(hotlines.map((h) => [h.number, h])).values(),
+	);
 	const lines = [
 		"🚨 你现在感到很难受，请立即寻求帮助：",
 		"",
@@ -106,9 +115,13 @@ export class ParentSupportAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		void ageInMonths(child.birthDate);
-		const stage = child.stage ?? computeStage(child.birthDate);
+		const _stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectIntent(question);
 
 		switch (intent) {
@@ -151,17 +164,17 @@ export class ParentSupportAgent implements Agent {
 					content: `${formatGuidance(issue)}\n\n${PARENT_SUPPORT_DISCLAIMER}`,
 					confidence: 0.85,
 					urgency: issue.urgency,
-					redFlag: issue.urgency === "high"
-						? {
-								severity: "high",
-								ruleId: issue.id,
-								description: issue.name,
-								action: issue.whenToSeekHelp,
-							}
-						: undefined,
+					redFlag:
+						issue.urgency === "high"
+							? {
+									severity: "high",
+									ruleId: issue.id,
+									description: issue.name,
+									action: issue.whenToSeekHelp,
+								}
+							: undefined,
 				};
 			}
-			case "general":
 			default:
 				return {
 					agentId: this.id,
@@ -179,10 +192,10 @@ export function createParentSupportAgent(): ParentSupportAgent {
 }
 
 export {
-	SUPPORT_GUIDANCE,
 	getAllHotlines,
 	getSupportGuidance,
 	matchSupportIssue,
+	SUPPORT_GUIDANCE,
 	type SupportGuidance,
 	type SupportTopic,
 } from "./knowledge.js";

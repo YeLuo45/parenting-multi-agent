@@ -8,20 +8,16 @@
  * testing of state transitions without rendering. The two approaches
  * mirror each other — both compute from the same AppState shape.
  */
-import { type FormEvent, type ReactElement } from "react";
-import type { AppState, ChatMessage, Action } from "./view.js";
+import type { FormEvent, ReactElement } from "react";
+import { LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeSwitcher } from "./theme.js";
-import { useI18n, LanguageSwitcher } from "./i18n.js";
+import type { Action, AppState, ChatMessage } from "./view.js";
 
 /** Header: app title + agent count + theme switcher + language switcher. */
 export function Header({ state }: { state: AppState }): ReactElement {
 	const { t } = useI18n();
 	return (
-		<header
-			className="app-header"
-			data-testid="app-header"
-			role="banner"
-		>
+		<header className="app-header" data-testid="app-header">
 			<h1 data-testid="app-title">
 				{t("app.title")} ({state.agents.length} agents)
 			</h1>
@@ -47,27 +43,36 @@ export function ChildrenPanel({
 	dispatch: (a: Action) => void;
 }): ReactElement {
 	const { t } = useI18n();
-	const list = state.children.length === 0 ? (
-		<p data-testid="no-children">{t("children.empty")}</p>
-	) : (
-		<ul data-testid="children-list" role="list">
-			{state.children.map((c) => {
-				const isSelected = c.id === state.selectedChildId;
-				return (
-					<li
-						key={c.id}
-						data-testid={`child-${c.id}`}
-						className={isSelected ? "child selected" : "child"}
-						role="listitem"
-						aria-selected={isSelected}
-						onClick={() => dispatch({ type: "selectChild", childId: c.id })}
-					>
-						{c.name} ({c.stage})
-					</li>
-				);
-			})}
-		</ul>
-	);
+	const list =
+		state.children.length === 0 ? (
+			<p data-testid="no-children">{t("children.empty")}</p>
+		) : (
+			<ul data-testid="children-list">
+				{state.children.map((c) => {
+					const isSelected = c.id === state.selectedChildId;
+					return (
+						<li key={c.id}>
+							<button
+								type="button"
+								data-testid={`child-${c.id}`}
+								className={
+									isSelected ? "child selected" : "child"
+								}
+								aria-pressed={isSelected}
+								onClick={() =>
+									dispatch({
+										type: "selectChild",
+										childId: c.id,
+									})
+								}
+							>
+								{c.name} ({c.stage})
+							</button>
+						</li>
+					);
+				})}
+			</ul>
+		);
 	return (
 		<aside
 			className="children-panel"
@@ -81,31 +86,64 @@ export function ChildrenPanel({
 }
 
 /** MessageBubble: one chat message (user or agent). */
-export function MessageBubble({ message }: { message: ChatMessage }): ReactElement {
+export function MessageBubble({
+	message,
+	onFeedback,
+}: {
+	message: ChatMessage;
+	onFeedback?: (messageId: string, feedback: "up" | "down") => void;
+}): ReactElement {
 	const className = `message ${message.role === "user" ? "user-msg" : "agent-msg"}`;
+	const canRate =
+		message.role === "agent" && !!message.agentId && !!onFeedback;
 	return (
-		<div
+		<article
 			className={className}
 			data-testid={`message-${message.id}`}
 			data-role={message.role}
-			role="article"
 		>
 			<strong>{message.author}:</strong>
 			<p>{message.content}</p>
-		</div>
+			{canRate ? (
+				<fieldset
+					className="feedback-controls"
+					aria-label="Agent feedback"
+				>
+					<legend className="sr-only">Agent feedback</legend>
+					<button
+						type="button"
+						data-testid={`feedback-up-${message.id}`}
+						aria-pressed={message.feedback === "up"}
+						onClick={() => onFeedback(message.id, "up")}
+					>
+						👍
+					</button>
+					<button
+						type="button"
+						data-testid={`feedback-down-${message.id}`}
+						aria-pressed={message.feedback === "down"}
+						onClick={() => onFeedback(message.id, "down")}
+					>
+						👎
+					</button>
+				</fieldset>
+			) : null}
+		</article>
 	);
 }
 
 /** Messages: list of MessageBubbles, or empty-state placeholder. */
-export function Messages({ state }: { state: AppState }): ReactElement {
+export function Messages({
+	state,
+	onFeedback,
+}: {
+	state: AppState;
+	onFeedback?: (messageId: string, feedback: "up" | "down") => void;
+}): ReactElement {
 	const { t } = useI18n();
 	if (state.messages.length === 0) {
 		return (
-			<div
-				className="messages"
-				data-testid="messages"
-				aria-live="polite"
-			>
+			<div className="messages" data-testid="messages" aria-live="polite">
 				<p>{t("chat.empty")}</p>
 			</div>
 		);
@@ -113,7 +151,7 @@ export function Messages({ state }: { state: AppState }): ReactElement {
 	return (
 		<div className="messages" data-testid="messages" aria-live="polite">
 			{state.messages.map((m) => (
-				<MessageBubble key={m.id} message={m} />
+				<MessageBubble key={m.id} message={m} onFeedback={onFeedback} />
 			))}
 		</div>
 	);
@@ -130,7 +168,10 @@ export function Composer({
 	onAsk: () => Promise<void> | void;
 }): ReactElement {
 	const { t } = useI18n();
-	const canAsk = !!state.selectedChildId && !state.pending && state.question.trim().length > 0;
+	const canAsk =
+		!!state.selectedChildId &&
+		!state.pending &&
+		state.question.trim().length > 0;
 	const placeholder = state.selectedChildId
 		? t("chat.placeholder.ask")
 		: t("chat.placeholder.selectChild");
@@ -155,14 +196,12 @@ export function Composer({
 				value={state.question}
 				placeholder={placeholder}
 				disabled={!state.selectedChildId || state.pending}
-				onChange={(e) => dispatch({ type: "setQuestion", question: e.target.value })}
+				onChange={(e) =>
+					dispatch({ type: "setQuestion", question: e.target.value })
+				}
 				rows={3}
 			/>
-			<button
-				type="submit"
-				data-testid="ask-button"
-				disabled={!canAsk}
-			>
+			<button type="submit" data-testid="ask-button" disabled={!canAsk}>
 				{state.pending ? t("chat.asking") : t("chat.ask")}
 			</button>
 			<button
@@ -173,11 +212,7 @@ export function Composer({
 				{t("chat.reset")}
 			</button>
 			{state.error ? (
-				<div
-					className="error"
-					data-testid="error-banner"
-					role="alert"
-				>
+				<div className="error" data-testid="error-banner" role="alert">
 					{state.error}
 				</div>
 			) : (
@@ -192,10 +227,12 @@ export function ChatPanel({
 	state,
 	dispatch,
 	onAsk,
+	onFeedback,
 }: {
 	state: AppState;
 	dispatch: (a: Action) => void;
 	onAsk: () => Promise<void> | void;
+	onFeedback?: (messageId: string, feedback: "up" | "down") => void;
 }): ReactElement {
 	const { t } = useI18n();
 	return (
@@ -205,7 +242,7 @@ export function ChatPanel({
 			aria-label="Chat"
 		>
 			<h2>{t("chat.title")}</h2>
-			<Messages state={state} />
+			<Messages state={state} onFeedback={onFeedback} />
 			<Composer state={state} dispatch={dispatch} onAsk={onAsk} />
 		</section>
 	);
@@ -216,20 +253,26 @@ export function AppBody({
 	state,
 	dispatch,
 	onAsk,
+	onFeedback,
 }: {
 	state: AppState;
 	dispatch: (a: Action) => void;
 	onAsk: () => Promise<void> | void;
+	onFeedback?: (messageId: string, feedback: "up" | "down") => void;
 }): ReactElement {
 	return (
-		<div
+		<main
 			className="app-body"
 			data-testid="app-body"
 			data-layout="3-column"
-			role="main"
 		>
 			<ChildrenPanel state={state} dispatch={dispatch} />
-			<ChatPanel state={state} dispatch={dispatch} onAsk={onAsk} />
-		</div>
+			<ChatPanel
+				state={state}
+				dispatch={dispatch}
+				onAsk={onAsk}
+				onFeedback={onFeedback}
+			/>
+		</main>
 	);
 }

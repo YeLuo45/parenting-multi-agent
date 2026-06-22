@@ -3,11 +3,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-	LAYOUT,
 	appBodyGridStyle,
 	appContainerInlineStyle,
 	centeredContainerStyle,
 	headerInlineStyle,
+	LAYOUT,
 	resolveBreakpoint,
 	responsiveColumns,
 } from "../src/index.js";

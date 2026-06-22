@@ -3,9 +3,9 @@
  * teens and young adults. Rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
-import { getTipsForStage, matchTopic, type CareerTip } from "./knowledge.js";
+import { type CareerTip, getTipsForStage, matchTopic } from "./knowledge.js";
 
 export const CAREER_DISCLAIMER =
 	"⚠️ 职业发展因地区、行业、个人情况差异很大。以上为通用建议框架，请结合当地就业市场和专业咨询。";
@@ -24,7 +24,11 @@ export class CareerAgent implements Agent {
 	readonly topics = ["education"] as const;
 	readonly stages = ["teen", "young_adult"] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const topic = matchTopic(question);
 
@@ -44,7 +48,9 @@ export class CareerAgent implements Agent {
 
 		const allTips = getTipsForStage(stage);
 		if (allTips.length > 0) {
-			const summary = allTips.map((t) => `- ${t.summary}（${t.ageRange}）`).join("\n");
+			const summary = allTips
+				.map((t) => `- ${t.summary}（${t.ageRange}）`)
+				.join("\n");
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -69,8 +75,8 @@ export function createCareerAgent(): CareerAgent {
 }
 
 export {
+	type CareerTip,
+	type CareerTopic,
 	getTipsForStage,
 	matchTopic,
-	type CareerTopic,
-	type CareerTip,
 } from "./knowledge.js";

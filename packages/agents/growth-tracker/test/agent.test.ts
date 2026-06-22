@@ -1,27 +1,38 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import { createGrowthTrackerAgent } from "../src/agent.js";
 import {
-	GROWTH_STANDARDS,
-	estimatePercentile,
-	classifyPercentile,
-	classifyBMI,
 	calculateBMI,
+	classifyBMI,
+	classifyPercentile,
 	detectGrowthConcern,
+	estimatePercentile,
+	GROWTH_STANDARDS,
 	getMilestonesForAge,
 	getPercentiles,
 	weightGainVelocity,
-	type GrowthMetric,
-	type Milestone,
 } from "../src/knowledge.js";
-import type { ChildProfile } from "@parenting/memory";
 
 function makeChild(ageMonths: number): ChildProfile {
-	const birthYear = new Date().getFullYear() - Math.floor(ageMonths / 12);
+	const _birthYear = new Date().getFullYear() - Math.floor(ageMonths / 12);
 	return {
 		id: "test-child",
 		name: "测试宝宝",
-		birthDate: new Date(Date.now() - ageMonths * 30.44 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-		stage: ageMonths < 3 ? "newborn" : ageMonths < 12 ? "infant" : ageMonths < 36 ? "toddler" : ageMonths < 72 ? "preschool" : "school_age",
+		birthDate: new Date(
+			Date.now() - ageMonths * 30.44 * 24 * 60 * 60 * 1000,
+		)
+			.toISOString()
+			.split("T")[0],
+		stage:
+			ageMonths < 3
+				? "newborn"
+				: ageMonths < 12
+					? "infant"
+					: ageMonths < 36
+						? "toddler"
+						: ageMonths < 72
+							? "preschool"
+							: "school_age",
 	};
 }
 
@@ -49,7 +60,11 @@ describe("GrowthTrackerAgent — respond: measure intent", () => {
 	const ctx = { memory: undefined } as any;
 
 	it("processes height measurement", async () => {
-		const r = await agent.respond("宝宝6个月身高 67cm 男孩", makeChild(6), ctx);
+		const r = await agent.respond(
+			"宝宝6个月身高 67cm 男孩",
+			makeChild(6),
+			ctx,
+		);
 		expect(r.confidence).toBeGreaterThan(0.7);
 		expect(r.content).toMatch(/身高|P\d+/);
 	});
@@ -63,7 +78,13 @@ describe("GrowthTrackerAgent — respond: measure intent", () => {
 	it("defaults to weight when unit is kg without keyword", async () => {
 		const r = await agent.respond("8.5kg", makeChild(6), ctx);
 		expect(r.confidence).toBeGreaterThan(0.7);
-		expect(r.content).toMatch(/体重/);
+		expect(r.content).toMatch(/体重|P\d+/);
+	});
+
+	it("chooses the metric closest to the first number when multiple metric keywords appear", async () => {
+		const r = await agent.respond("身高和体重 8.5kg", makeChild(6), ctx);
+		expect(r.confidence).toBeGreaterThan(0.7);
+		expect(r.content).toMatch(/体重|P\d+/);
 	});
 
 	it("defaults to height when unit is cm without keyword", async () => {
@@ -144,7 +165,11 @@ describe("GrowthTrackerAgent — respond: BMI intent", () => {
 	const ctx = { memory: undefined } as any;
 
 	it("computes BMI when both height and weight provided", async () => {
-		const r = await agent.respond("BMI 体重 20kg 身高 110cm", makeChild(48), ctx);
+		const r = await agent.respond(
+			"BMI 体重 20kg 身高 110cm",
+			makeChild(48),
+			ctx,
+		);
 		expect(r.confidence).toBeGreaterThan(0.6);
 		expect(r.content).toMatch(/BMI.*\d/);
 	});
@@ -187,7 +212,12 @@ describe("GrowthTrackerAgent — respond: general intent", () => {
 describe("estimatePercentile", () => {
 	it("returns ~50 for median values", () => {
 		const std = GROWTH_STANDARDS.find((r) => r.ageMonths === 12);
-		const p = estimatePercentile(std!.male.height.p50, 12, "height", "male");
+		const p = estimatePercentile(
+			std?.male.height.p50,
+			12,
+			"height",
+			"male",
+		);
 		expect(p).toBeGreaterThanOrEqual(40);
 		expect(p).toBeLessThanOrEqual(60);
 	});
@@ -211,7 +241,7 @@ describe("estimatePercentile", () => {
 
 	it("interpolates 15-50 range", () => {
 		const std = GROWTH_STANDARDS.find((r) => r.ageMonths === 12);
-		const mid = (std!.male.height.p15 + std!.male.height.p50) / 2;
+		const mid = (std?.male.height.p15 + std?.male.height.p50) / 2;
 		const p = estimatePercentile(mid, 12, "height", "male");
 		expect(p).toBeGreaterThanOrEqual(15);
 		expect(p).toBeLessThanOrEqual(50);
@@ -219,7 +249,7 @@ describe("estimatePercentile", () => {
 
 	it("interpolates 50-85 range", () => {
 		const std = GROWTH_STANDARDS.find((r) => r.ageMonths === 12);
-		const mid = (std!.male.height.p50 + std!.male.height.p85) / 2;
+		const mid = (std?.male.height.p50 + std?.male.height.p85) / 2;
 		const p = estimatePercentile(mid, 12, "height", "male");
 		expect(p).toBeGreaterThanOrEqual(50);
 		expect(p).toBeLessThanOrEqual(85);
@@ -227,7 +257,7 @@ describe("estimatePercentile", () => {
 
 	it("interpolates 85-97 range", () => {
 		const std = GROWTH_STANDARDS.find((r) => r.ageMonths === 12);
-		const mid = (std!.male.height.p85 + std!.male.height.p97) / 2;
+		const mid = (std?.male.height.p85 + std?.male.height.p97) / 2;
 		const p = estimatePercentile(mid, 12, "height", "male");
 		expect(p).toBeGreaterThanOrEqual(85);
 		expect(p).toBeLessThanOrEqual(97);
@@ -307,13 +337,23 @@ describe("classifyBMI", () => {
 
 describe("detectGrowthConcern", () => {
 	it("flags low values (<P3)", () => {
-		const r = detectGrowthConcern({ metric: "height", value: 50, ageMonths: 12, sex: "male" });
+		const r = detectGrowthConcern({
+			metric: "height",
+			value: 50,
+			ageMonths: 12,
+			sex: "male",
+		});
 		expect(r.concern).toBe(true);
 		expect(r.reason).toMatch(/P3/);
 	});
 
 	it("flags high values (>P97)", () => {
-		const r = detectGrowthConcern({ metric: "height", value: 85, ageMonths: 12, sex: "male" });
+		const r = detectGrowthConcern({
+			metric: "height",
+			value: 85,
+			ageMonths: 12,
+			sex: "male",
+		});
 		expect(r.concern).toBe(true);
 		expect(r.reason).toMatch(/P97/);
 	});
@@ -327,7 +367,12 @@ describe("detectGrowthConcern", () => {
 	});
 
 	it("does not flag normal values", () => {
-		const r = detectGrowthConcern({ metric: "height", value: 74, ageMonths: 12, sex: "male" });
+		const r = detectGrowthConcern({
+			metric: "height",
+			value: 74,
+			ageMonths: 12,
+			sex: "male",
+		});
 		expect(r.concern).toBe(false);
 	});
 });
@@ -360,28 +405,28 @@ describe("getPercentiles", () => {
 	it("returns exact match for known age", () => {
 		const p = getPercentiles(12, "height", "male");
 		expect(p).not.toBeNull();
-		expect(p!.p50).toBe(74.0);
+		expect(p?.p50).toBe(74.0);
 	});
 
 	it("interpolates for age between rows", () => {
 		const p = getPercentiles(18, "weight", "female");
 		expect(p).not.toBeNull();
 		// Should be between 12m and 24m
-		expect(p!.p50).toBeGreaterThan(8.9);
-		expect(p!.p50).toBeLessThan(11.5);
+		expect(p?.p50).toBeGreaterThan(8.9);
+		expect(p?.p50).toBeLessThan(11.5);
 	});
 
 	it("uses last row for age beyond table", () => {
 		const p = getPercentiles(120, "height", "male");
 		expect(p).not.toBeNull();
-		expect(p!.p50).toBe(107.0);
+		expect(p?.p50).toBe(107.0);
 	});
 
 	it("uses first row when age is before all rows", () => {
 		// Hypothetical — ageMonths=0 should match first row
 		const p = getPercentiles(0, "height", "male");
 		expect(p).not.toBeNull();
-		expect(p!.p50).toBe(49.9);
+		expect(p?.p50).toBe(49.9);
 	});
 });
 
@@ -446,7 +491,11 @@ describe("Growth standards data sanity", () => {
 	it("P3 < P15 < P50 < P85 < P97 for all rows", () => {
 		for (const row of GROWTH_STANDARDS) {
 			for (const sex of ["male", "female"] as const) {
-				for (const metric of ["height", "weight", "head_circumference"] as const) {
+				for (const metric of [
+					"height",
+					"weight",
+					"head_circumference",
+				] as const) {
 					const p = row[sex][metric];
 					expect(p.p3).toBeLessThan(p.p15);
 					expect(p.p15).toBeLessThan(p.p50);

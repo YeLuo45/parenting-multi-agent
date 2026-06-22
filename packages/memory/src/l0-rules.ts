@@ -18,10 +18,8 @@ export interface L0Rule {
 export const L0_RULES: L0Rule[] = [
 	{
 		id: "R001_infant_fever",
-		pattern: new RegExp(
-			"(3\\s*个?月(?!以上)|\\b0-3\\s*个?月\\b|\\bunder\\s*3\\s*months?\\b|\\b(?:[0-9]|0-1)\\s*months?\\s*(?:old\\b)?).*?(?:发烧|fever|38|39|40|41|42)",
-			"i",
-		),
+		pattern:
+			/(3\s*个?月(?!以上)|\b0-3\s*个?月\b|\bunder\s*3\s*months?\b|\b(?:[0-9]|0-1)\s*months?\s*(?:old\b)?).*?(?:发烧|fever|38|39|40|41|42)/i,
 		severity: "emergency",
 		description: "Fever in infant under 3 months is a medical emergency",
 		action: "Recommend immediate ER visit; do not wait for pediatrician office hours",
@@ -35,16 +33,19 @@ export const L0_RULES: L0Rule[] = [
 	},
 	{
 		id: "R003_breathing_difficulty",
-		pattern: /(呼吸困难|breathing.{0,20}difficulty|嘴唇发紫|lips.{0,10}blue|无法呼吸|can't.breathe)/i,
+		pattern:
+			/(呼吸困难|breathing.{0,20}difficulty|嘴唇发紫|lips.{0,10}blue|无法呼吸|can't.breathe)/i,
 		severity: "emergency",
-		description: "Breathing difficulty is always a medical emergency in children",
+		description:
+			"Breathing difficulty is always a medical emergency in children",
 		action: "Recommend calling emergency services immediately",
 	},
 	{
 		id: "R004_unconscious",
 		pattern: /(昏迷|unconscious|无意识|意识丧失|loss.of.consciousness)/i,
 		severity: "emergency",
-		description: "Loss of consciousness requires immediate medical evaluation",
+		description:
+			"Loss of consciousness requires immediate medical evaluation",
 		action: "Recommend calling emergency services immediately",
 	},
 	{
@@ -63,9 +64,11 @@ export const L0_RULES: L0Rule[] = [
 	},
 	{
 		id: "R011_psychosis",
-		pattern: /(幻听|听到.{0,10}声音|看到.{0,10}不存在|幻觉|hallucination|psychosis)/i,
+		pattern:
+			/(幻听|听到.{0,10}声音|看到.{0,10}不存在|幻觉|hallucination|psychosis)/i,
 		severity: "emergency",
-		description: "Psychotic symptoms in children require urgent psychiatric evaluation",
+		description:
+			"Psychotic symptoms in children require urgent psychiatric evaluation",
 		action: "Recommend immediate psychiatric evaluation",
 	},
 	{
@@ -79,7 +82,8 @@ export const L0_RULES: L0Rule[] = [
 		id: "R021_ingestion",
 		pattern: /(误食|吞了|吃了.{0,10}药|ingestion|poison)/i,
 		severity: "warn",
-		description: "Possible poisoning/ingestion requires poison control consultation",
+		description:
+			"Possible poisoning/ingestion requires poison control consultation",
 		action: "Call poison control hotline immediately",
 	},
 ];
@@ -90,11 +94,18 @@ export const L0_RULES: L0Rule[] = [
  */
 export function matchL0Rule(text: string): L0Rule | null {
 	let best: L0Rule | null = null;
-	const severityOrder: Record<L0RuleSeverity, number> = { info: 0, warn: 1, emergency: 2 };
+	const severityOrder: Record<L0RuleSeverity, number> = {
+		info: 0,
+		warn: 1,
+		emergency: 2,
+	};
 
 	for (const rule of L0_RULES) {
 		if (rule.pattern.test(text)) {
-			if (!best || severityOrder[rule.severity] > severityOrder[best.severity]) {
+			if (
+				!best ||
+				severityOrder[rule.severity] > severityOrder[best.severity]
+			) {
 				best = rule;
 			}
 		}

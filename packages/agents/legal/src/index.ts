@@ -1,10 +1,10 @@
-export { LegalAgent, createLegalAgent, LEGAL_DISCLAIMER } from "./agent.js";
+export { createLegalAgent, LEGAL_DISCLAIMER, LegalAgent } from "./agent.js";
 export {
-	LEGAL_TIPS,
 	getTipsForStage,
-	matchTopic,
-	type LegalTopic,
+	LEGAL_TIPS,
 	type LegalTip,
+	type LegalTopic,
+	matchTopic,
 } from "./knowledge.js";
 
 export const LEGAL_VERSION = "0.1.0";

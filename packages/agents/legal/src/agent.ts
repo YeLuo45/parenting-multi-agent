@@ -3,9 +3,9 @@
  * Rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
-import { getTipsForStage, matchTopic, type LegalTip } from "./knowledge.js";
+import { getTipsForStage, type LegalTip, matchTopic } from "./knowledge.js";
 
 export const LEGAL_DISCLAIMER =
 	"⚠️ 本智能体提供通用法律信息，不构成法律意见。具体案件请咨询当地持牌律师。";
@@ -32,7 +32,11 @@ export class LegalAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const topic = matchTopic(question);
 
@@ -78,7 +82,7 @@ export function createLegalAgent(): LegalAgent {
 
 export {
 	getTipsForStage,
-	matchTopic,
-	type LegalTopic,
 	type LegalTip,
+	type LegalTopic,
+	matchTopic,
 } from "./knowledge.js";

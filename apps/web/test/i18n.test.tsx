@@ -1,22 +1,22 @@
 /**
  * Tests for i18n infrastructure (zh-CN + en).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, cleanup, within, act } from "@testing-library/react";
+
+import { act, cleanup, render, within } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	DEFAULT_LOCALE,
 	I18nProvider,
 	LanguageSwitcher,
-	useI18n,
-	LOCALES,
 	LOCALE_LABELS,
-	DEFAULT_LOCALE,
+	LOCALES,
 	MESSAGES,
-	readStoredLocale,
-	writeStoredLocale,
-	translate,
-	type Locale,
 	type MessageKey,
+	readStoredLocale,
+	translate,
+	useI18n,
+	writeStoredLocale,
 } from "../src/index.js";
 
 let testContainer: HTMLDivElement;
@@ -29,7 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
-	if (testContainer && testContainer.parentNode) {
+	if (testContainer?.parentNode) {
 		testContainer.parentNode.removeChild(testContainer);
 	}
 });
@@ -45,7 +45,7 @@ describe("LOCALES and labels", () => {
 
 	it("each locale has a label", () => {
 		expect(LOCALE_LABELS["zh-CN"]).toBeTruthy();
-		expect(LOCALE_LABELS["en"]).toBeTruthy();
+		expect(LOCALE_LABELS.en).toBeTruthy();
 	});
 });
 
@@ -59,20 +59,22 @@ describe("MESSAGES dictionary", () => {
 
 	it("has same keys across locales", () => {
 		const zhKeys = Object.keys(MESSAGES["zh-CN"]);
-		const enKeys = Object.keys(MESSAGES["en"]);
+		const enKeys = Object.keys(MESSAGES.en);
 		expect(zhKeys.sort()).toEqual(enKeys.sort());
 	});
 
 	it("zh-CN and en have different content for at least one key", () => {
 		const sampleKey: MessageKey = "chat.empty";
-		expect(MESSAGES["zh-CN"][sampleKey]).not.toBe(MESSAGES["en"][sampleKey]);
+		expect(MESSAGES["zh-CN"][sampleKey]).not.toBe(MESSAGES.en[sampleKey]);
 	});
 });
 
 describe("translate", () => {
 	it("returns the localized string for valid key", () => {
-		expect(translate("zh-CN", "chat.empty")).toBe(MESSAGES["zh-CN"]["chat.empty"]);
-		expect(translate("en", "chat.empty")).toBe(MESSAGES["en"]["chat.empty"]);
+		expect(translate("zh-CN", "chat.empty")).toBe(
+			MESSAGES["zh-CN"]["chat.empty"],
+		);
+		expect(translate("en", "chat.empty")).toBe(MESSAGES.en["chat.empty"]);
 	});
 
 	it("returns the key itself when missing in messages", () => {
@@ -154,7 +156,9 @@ describe("LanguageSwitcher", () => {
 			</I18nProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("locale-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"locale-select",
+		) as HTMLSelectElement;
 		const options = Array.from(select.options).map((o) => o.value);
 		expect(options).toEqual(LOCALES);
 	});
@@ -166,7 +170,9 @@ describe("LanguageSwitcher", () => {
 			</I18nProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("locale-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"locale-select",
+		) as HTMLSelectElement;
 		expect(select.value).toBe("zh-CN");
 	});
 
@@ -193,7 +199,9 @@ describe("LanguageSwitcher", () => {
 			</I18nProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("locale-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"locale-select",
+		) as HTMLSelectElement;
 		expect(select.value).toBe("en");
 	});
 
@@ -215,7 +223,9 @@ describe("LanguageSwitcher", () => {
 			</I18nProvider>,
 			{ container: testContainer },
 		);
-		const select = within(testContainer).getByTestId("locale-select") as HTMLSelectElement;
+		const select = within(testContainer).getByTestId(
+			"locale-select",
+		) as HTMLSelectElement;
 		expect(select.value).toBe("en");
 	});
 
@@ -236,7 +246,9 @@ describe("LanguageSwitcher", () => {
 			</I18nProvider>,
 			{ container: testContainer },
 		);
-		expect(within(testContainer).getByRole("group", { name: "Language" })).toBeInTheDocument();
+		expect(
+			within(testContainer).getByRole("group", { name: "Language" }),
+		).toBeInTheDocument();
 	});
 });
 
@@ -257,7 +269,9 @@ describe("useI18n hook", () => {
 		}
 		render(<Probe />, { container: testContainer });
 		expect(captured?.locale).toBe(DEFAULT_LOCALE);
-		expect(within(testContainer).getByTestId("probe").textContent).toBe("zh-CN");
+		expect(within(testContainer).getByTestId("probe").textContent).toBe(
+			"zh-CN",
+		);
 	});
 
 	it("translates messages via t()", () => {
@@ -267,7 +281,9 @@ describe("useI18n hook", () => {
 			return <div data-testid="probe">{captured.t("chat.empty")}</div>;
 		}
 		render(<Probe />, { container: testContainer });
-		expect(within(testContainer).getByTestId("probe").textContent).toBe(MESSAGES["zh-CN"]["chat.empty"]);
+		expect(within(testContainer).getByTestId("probe").textContent).toBe(
+			MESSAGES["zh-CN"]["chat.empty"],
+		);
 	});
 
 	it("setLocale updates state in fallback", () => {
@@ -278,7 +294,9 @@ describe("useI18n hook", () => {
 		}
 		render(<Probe />, { container: testContainer });
 		act(() => captured?.setLocale("en"));
-		expect(within(testContainer).getByTestId("probe").textContent).toBe("en");
+		expect(within(testContainer).getByTestId("probe").textContent).toBe(
+			"en",
+		);
 	});
 });
 

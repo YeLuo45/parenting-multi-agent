@@ -1,18 +1,25 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import {
+	detectInterests,
+	detectLearningStyle,
 	EducatorAgent,
 	getEduStage,
-	detectLearningStyle,
-	detectInterests,
 	suggestActivities,
 } from "../src/index.js";
-import type { ChildProfile } from "@parenting/memory";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "TestChild", stage?: ChildProfile["stage"]): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "TestChild",
+	stage?: ChildProfile["stage"],
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -163,24 +170,36 @@ describe("EducatorAgent", () => {
 
 	describe("stage queries", () => {
 		it("returns elementary stage for 8-year-old", async () => {
-			const reply = await agent.respond("8岁孩子学什么", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"8岁孩子学什么",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("小学");
 			expect(reply.content).toContain("语文");
 		});
 
 		it("returns preschool stage for 4-year-old", async () => {
-			const reply = await agent.respond("4岁孩子应该学什么", makeChild(365 * 4, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"4岁孩子应该学什么",
+				makeChild(365 * 4, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("学前");
 		});
 
 		it("returns college stage for 20-year-old", async () => {
-			const reply = await agent.respond("大学阶段怎么规划", makeChild(365 * 20, "c", "Kid", "young_adult"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"大学阶段怎么规划",
+				makeChild(365 * 20, "c", "Kid", "young_adult"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("大学");
 		});
 
@@ -188,9 +207,13 @@ describe("EducatorAgent", () => {
 			// age 0-3 month might not be in EDU_STAGES (monthsRange.min=0)
 			// Actually early_childhood covers 0-36 months. 0 months should work.
 			// Use a very old age (700 months = 58 years) — no edu stage
-			const reply = await agent.respond("孩子学什么", makeChild(365 * 60, "c", "Kid", "young_adult"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子学什么",
+				makeChild(365 * 60, "c", "Kid", "young_adult"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// 60 years old — getEduStage returns null
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -198,25 +221,37 @@ describe("EducatorAgent", () => {
 
 	describe("learning style queries", () => {
 		it("detects and returns visual style", async () => {
-			const reply = await agent.respond("孩子是视觉型学习者", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子是视觉型学习者",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("视觉");
 		});
 
 		it("asks for more info when style unclear", async () => {
-			const reply = await agent.respond("孩子学习风格", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子学习风格",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
 
 		it("detects auditory style and returns formatLearningStyle output", async () => {
 			// '听觉' in style pattern → style intent
 			// '孩子喜欢听故事' has '听' in auditory pattern → detects auditory
-			const reply = await agent.respond("孩子是听觉型喜欢听故事", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子是听觉型喜欢听故事",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// Should reach formatLearningStyle (lines 73-86)
 			expect(reply.content).toMatch(/听觉|学习策略/);
 		});
@@ -224,24 +259,36 @@ describe("EducatorAgent", () => {
 
 	describe("interest queries", () => {
 		it("returns STEM activities for programming interest", async () => {
-			const reply = await agent.respond("孩子对编程感兴趣", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子对编程感兴趣",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("理工科");
 		});
 
 		it("returns arts activities for painting interest", async () => {
-			const reply = await agent.respond("孩子喜欢画画", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子喜欢画画",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("艺术");
 		});
 
 		it("returns intro when interest intent but no interest match (covers branch 156-158)", async () => {
 			// '兴趣班' matches interest keyword but no specific interest detected
-			const reply = await agent.respond("孩子要上兴趣班", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子要上兴趣班",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// Now formatInterests is called with [] → returns "未识别到具体兴趣"
 			expect(reply.content).toContain("未识别到具体兴趣");
 		});
@@ -249,18 +296,26 @@ describe("EducatorAgent", () => {
 
 	describe("activity queries", () => {
 		it("suggests activities for 5-year-old", async () => {
-			const reply = await agent.respond("5岁孩子玩什么好", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"5岁孩子玩什么好",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("活动");
 		});
 
 		it("uses default interests when none detected (covers branch 169 fallback)", async () => {
 			// '做什么' matches activity keyword but no specific interest
 			// → falls back to ['stem', 'arts']
-			const reply = await agent.respond("5岁孩子做什么好", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"5岁孩子做什么好",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/STEM|arts|艺术/);
 		});
 
@@ -268,9 +323,13 @@ describe("EducatorAgent", () => {
 			// '怎么玩积木' matches activity + stem interest
 			// detectInterests("怎么玩积木") = ["stem"]
 			// detectIntent: activity (怎么玩)
-			const reply = await agent.respond("5岁孩子怎么玩积木", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"5岁孩子怎么玩积木",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// Should have STEM activities (not just the default fallback)
 			expect(reply.content).toMatch(/STEM|乐高|积木/);
 		});
@@ -278,24 +337,36 @@ describe("EducatorAgent", () => {
 
 	describe("subject queries", () => {
 		it("returns elementary subjects for 8-year-old math question", async () => {
-			const reply = await agent.respond("8岁孩子数学怎么学", makeChild(365 * 8, "c", "Kid", "school_age"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"8岁孩子数学怎么学",
+				makeChild(365 * 8, "c", "Kid", "school_age"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("语文");
 		});
 
 		it("returns preschool-appropriate message for 3-year-old subject question", async () => {
-			const reply = await agent.respond("3岁孩子数学怎么学", makeChild(365 * 3, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"3岁孩子数学怎么学",
+				makeChild(365 * 3, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/学前|游戏/);
 		});
 
 		it("returns intro when subject intent but no edu stage (covers branch 145-149)", async () => {
 			// 60 year old — getEduStage returns null
-			const reply = await agent.respond("60岁老人数学", makeChild(365 * 60, "c", "Kid", "young_adult"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"60岁老人数学",
+				makeChild(365 * 60, "c", "Kid", "young_adult"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			// subject case fallback has confidence 0.7
 			expect(reply.content).toMatch(/学龄前|还没有正式学校/);
 		});
@@ -303,9 +374,13 @@ describe("EducatorAgent", () => {
 
 	describe("general queries", () => {
 		it("introduces itself for vague questions", async () => {
-			const reply = await agent.respond("你好", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"你好",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("教育规划师");
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -316,9 +391,13 @@ describe("EducatorAgent", () => {
 			const { createEducatorAgent } = await import("../src/index.js");
 			const a = createEducatorAgent();
 			expect(a.id).toBe("educator");
-			const reply = await a.respond("孩子学什么", makeChild(365 * 5, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await a.respond(
+				"孩子学什么",
+				makeChild(365 * 5, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.agentId).toBe("educator");
 		});
 

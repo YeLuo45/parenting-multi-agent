@@ -1,10 +1,14 @@
-export { SchoolReadinessAgent, createSchoolReadinessAgent, SCHOOL_READINESS_DISCLAIMER } from "./agent.js";
 export {
-	READINESS_TIPS,
+	createSchoolReadinessAgent,
+	SCHOOL_READINESS_DISCLAIMER,
+	SchoolReadinessAgent,
+} from "./agent.js";
+export {
 	getTipsForStage,
 	matchTopic,
-	type ReadinessTopic,
+	READINESS_TIPS,
 	type ReadinessTip,
+	type ReadinessTopic,
 } from "./knowledge.js";
 
 export const SCHOOL_READINESS_VERSION = "0.1.0";

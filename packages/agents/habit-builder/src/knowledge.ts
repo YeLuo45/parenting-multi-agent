@@ -4,7 +4,13 @@
  * Phase 2 batch 2: deterministic rule-based engine. No LLM call.
  */
 
-export type HabitDomain = "sleep" | "nutrition" | "hygiene" | "screen" | "chores" | "school";
+export type HabitDomain =
+	| "sleep"
+	| "nutrition"
+	| "hygiene"
+	| "screen"
+	| "chores"
+	| "school";
 export type HabitCue = "time" | "location" | "preceding_action" | "emotion";
 
 export interface HabitStep {
@@ -40,11 +46,21 @@ export const HABITS: Habit[] = [
 		ageMonthsMin: 6,
 		ageMonthsMax: 216,
 		steps: [
-			{ order: 1, cue: "time", action: "关掉电视/电子屏幕", durationMinutes: 30 },
+			{
+				order: 1,
+				cue: "time",
+				action: "关掉电视/电子屏幕",
+				durationMinutes: 30,
+			},
 			{ order: 2, action: "洗澡或擦澡", durationMinutes: 10 },
 			{ order: 3, action: "换睡衣、刷牙", durationMinutes: 5 },
 			{ order: 4, action: "亲子阅读/讲故事", durationMinutes: 15 },
-			{ order: 5, cue: "preceding_action", action: "关灯/调暗灯光", durationMinutes: 5 },
+			{
+				order: 5,
+				cue: "preceding_action",
+				action: "关灯/调暗灯光",
+				durationMinutes: 5,
+			},
 			{ order: 6, action: "拥抱/道晚安", durationMinutes: 3 },
 		],
 		frequencyPerDay: 1,
@@ -55,12 +71,23 @@ export const HABITS: Habit[] = [
 		id: "habit-brushing-teeth",
 		domain: "hygiene",
 		title: "刷牙习惯",
-		description: "AAP 推荐 6 月龄起开始口腔护理，2 岁起使用豌豆大小含氟牙膏",
+		description:
+			"AAP 推荐 6 月龄起开始口腔护理，2 岁起使用豌豆大小含氟牙膏",
 		ageMonthsMin: 6,
 		ageMonthsMax: 216,
 		steps: [
-			{ order: 1, cue: "time", action: "早饭后刷牙 (2 分钟)", durationMinutes: 2 },
-			{ order: 2, cue: "time", action: "睡前刷牙 (2 分钟)", durationMinutes: 2 },
+			{
+				order: 1,
+				cue: "time",
+				action: "早饭后刷牙 (2 分钟)",
+				durationMinutes: 2,
+			},
+			{
+				order: 2,
+				cue: "time",
+				action: "睡前刷牙 (2 分钟)",
+				durationMinutes: 2,
+			},
 		],
 		frequencyPerDay: 2,
 		difficulty: "medium",
@@ -74,9 +101,18 @@ export const HABITS: Habit[] = [
 		ageMonthsMin: 18,
 		ageMonthsMax: 216,
 		steps: [
-			{ order: 1, cue: "preceding_action", action: "打开水龙头", durationMinutes: 1 },
+			{
+				order: 1,
+				cue: "preceding_action",
+				action: "打开水龙头",
+				durationMinutes: 1,
+			},
 			{ order: 2, action: "打湿双手，涂抹肥皂", durationMinutes: 1 },
-			{ order: 3, action: "搓洗手心、手背、指缝 20 秒", durationMinutes: 1 },
+			{
+				order: 3,
+				action: "搓洗手心、手背、指缝 20 秒",
+				durationMinutes: 1,
+			},
 			{ order: 4, action: "冲洗干净", durationMinutes: 1 },
 			{ order: 5, action: "用干净毛巾擦干", durationMinutes: 1 },
 		],
@@ -92,10 +128,24 @@ export const HABITS: Habit[] = [
 		ageMonthsMin: 6,
 		ageMonthsMax: 72,
 		steps: [
-			{ order: 1, cue: "time", action: "餐前介绍今天的蔬菜", durationMinutes: 1 },
-			{ order: 2, action: "让孩子观察、触摸、闻味道", durationMinutes: 2 },
+			{
+				order: 1,
+				cue: "time",
+				action: "餐前介绍今天的蔬菜",
+				durationMinutes: 1,
+			},
+			{
+				order: 2,
+				action: "让孩子观察、触摸、闻味道",
+				durationMinutes: 2,
+			},
 			{ order: 3, action: "小口尝试（不强求吞咽）", durationMinutes: 3 },
-			{ order: 4, reward: "表扬/贴纸", action: "无论吃多少都鼓励", durationMinutes: 1 },
+			{
+				order: 4,
+				reward: "表扬/贴纸",
+				action: "无论吃多少都鼓励",
+				durationMinutes: 1,
+			},
 		],
 		frequencyPerDay: 1,
 		difficulty: "hard",
@@ -105,14 +155,29 @@ export const HABITS: Habit[] = [
 		id: "habit-screen-limit",
 		domain: "screen",
 		title: "屏幕时间管理",
-		description: "AAP 推荐：2-5 岁每天屏幕时间 ≤ 1 小时高质量节目；6 岁以上一致限制",
+		description:
+			"AAP 推荐：2-5 岁每天屏幕时间 ≤ 1 小时高质量节目；6 岁以上一致限制",
 		ageMonthsMin: 24,
 		ageMonthsMax: 216,
 		steps: [
-			{ order: 1, cue: "time", action: "设置屏幕时间窗口 (如 19:00-19:30)", durationMinutes: 30 },
-			{ order: 2, action: "选择共同观看的高质量内容", durationMinutes: 5 },
+			{
+				order: 1,
+				cue: "time",
+				action: "设置屏幕时间窗口 (如 19:00-19:30)",
+				durationMinutes: 30,
+			},
+			{
+				order: 2,
+				action: "选择共同观看的高质量内容",
+				durationMinutes: 5,
+			},
 			{ order: 3, action: "观看期间讨论内容", durationMinutes: 20 },
-			{ order: 4, cue: "preceding_action", action: "到时间关闭设备并转移活动", durationMinutes: 5 },
+			{
+				order: 4,
+				cue: "preceding_action",
+				action: "到时间关闭设备并转移活动",
+				durationMinutes: 5,
+			},
 		],
 		frequencyPerDay: 1,
 		difficulty: "hard",
@@ -126,9 +191,19 @@ export const HABITS: Habit[] = [
 		ageMonthsMin: 6,
 		ageMonthsMax: 108,
 		steps: [
-			{ order: 1, cue: "time", action: "选择 2-3 本绘本", durationMinutes: 2 },
+			{
+				order: 1,
+				cue: "time",
+				action: "选择 2-3 本绘本",
+				durationMinutes: 2,
+			},
 			{ order: 2, action: "亲子共读，孩子可翻页", durationMinutes: 13 },
-			{ order: 3, reward: "拥抱/鼓掌", action: "结束后表扬", durationMinutes: 1 },
+			{
+				order: 3,
+				reward: "拥抱/鼓掌",
+				action: "结束后表扬",
+				durationMinutes: 1,
+			},
 		],
 		frequencyPerDay: 1,
 		difficulty: "easy",
@@ -142,9 +217,19 @@ export const HABITS: Habit[] = [
 		ageMonthsMin: 24,
 		ageMonthsMax: 108,
 		steps: [
-			{ order: 1, cue: "preceding_action", action: "玩完后唱'收拾歌'", durationMinutes: 1 },
+			{
+				order: 1,
+				cue: "preceding_action",
+				action: "玩完后唱'收拾歌'",
+				durationMinutes: 1,
+			},
 			{ order: 2, action: "按类别把玩具放回箱子", durationMinutes: 5 },
-			{ order: 3, reward: "贴纸/小奖励", action: "完成后表扬", durationMinutes: 1 },
+			{
+				order: 3,
+				reward: "贴纸/小奖励",
+				action: "完成后表扬",
+				durationMinutes: 1,
+			},
 		],
 		frequencyPerDay: 1,
 		difficulty: "medium",
@@ -158,7 +243,12 @@ export const HABITS: Habit[] = [
 		ageMonthsMin: 36,
 		ageMonthsMax: 144,
 		steps: [
-			{ order: 1, cue: "time", action: "起床 (固定时间)", durationMinutes: 1 },
+			{
+				order: 1,
+				cue: "time",
+				action: "起床 (固定时间)",
+				durationMinutes: 1,
+			},
 			{ order: 2, action: "穿衣", durationMinutes: 5 },
 			{ order: 3, action: "刷牙洗脸", durationMinutes: 5 },
 			{ order: 4, action: "吃早餐", durationMinutes: 15 },
@@ -171,9 +261,15 @@ export const HABITS: Habit[] = [
 ];
 
 /** Get habits for a given age and (optional) domain filter. */
-export function getHabitsForAge(ageMonths: number, domain?: HabitDomain): Habit[] {
+export function getHabitsForAge(
+	ageMonths: number,
+	domain?: HabitDomain,
+): Habit[] {
 	return HABITS.filter(
-		(h) => ageMonths >= h.ageMonthsMin && ageMonths <= h.ageMonthsMax && (!domain || h.domain === domain),
+		(h) =>
+			ageMonths >= h.ageMonthsMin &&
+			ageMonths <= h.ageMonthsMax &&
+			(!domain || h.domain === domain),
 	);
 }
 
@@ -203,7 +299,9 @@ export function estimateFormationDays(habit: Habit): number {
 }
 
 /** Habit streak: consecutive successful completions. */
-export function streakLevel(streakDays: number): "new" | "building" | "established" | "automatic" {
+export function streakLevel(
+	streakDays: number,
+): "new" | "building" | "established" | "automatic" {
 	if (streakDays < 7) return "new";
 	if (streakDays < 30) return "building";
 	if (streakDays < 90) return "established";
@@ -211,9 +309,15 @@ export function streakLevel(streakDays: number): "new" | "building" | "establish
 }
 
 /** Habit loop visualizer: returns string of cue → routine → reward. */
-export function habitLoop(habit: Habit): { cue: string; routine: string[]; reward: string } {
+export function habitLoop(habit: Habit): {
+	cue: string;
+	routine: string[];
+	reward: string;
+} {
 	const cueStep = habit.steps.find((s) => s.cue);
-	const routine = habit.steps.filter((s) => !s.cue && !s.reward).map((s) => s.action);
+	const routine = habit.steps
+		.filter((s) => !s.cue && !s.reward)
+		.map((s) => s.action);
 	const rewardStep = habit.steps.find((s) => s.reward);
 	return {
 		cue: cueStep ? `${cueStep.cue}: ${cueStep.action}` : "无明确触发",
@@ -231,14 +335,38 @@ export interface ScreenTimeGuideline {
 }
 
 export const SCREEN_TIME_GUIDELINES: ScreenTimeGuideline[] = [
-	{ ageMonthsMin: 0, ageMonthsMax: 18, dailyLimitMinutes: 0, notes: "避免屏幕时间 (视频通话除外)" },
-	{ ageMonthsMin: 18, ageMonthsMax: 24, dailyLimitMinutes: 30, notes: "高质量节目 + 家长陪同" },
-	{ ageMonthsMin: 24, ageMonthsMax: 60, dailyLimitMinutes: 60, notes: "≤1 小时高质量节目" },
-	{ ageMonthsMin: 60, ageMonthsMax: 216, dailyLimitMinutes: 120, notes: "一致限制，不影响睡眠/运动/学习" },
+	{
+		ageMonthsMin: 0,
+		ageMonthsMax: 18,
+		dailyLimitMinutes: 0,
+		notes: "避免屏幕时间 (视频通话除外)",
+	},
+	{
+		ageMonthsMin: 18,
+		ageMonthsMax: 24,
+		dailyLimitMinutes: 30,
+		notes: "高质量节目 + 家长陪同",
+	},
+	{
+		ageMonthsMin: 24,
+		ageMonthsMax: 60,
+		dailyLimitMinutes: 60,
+		notes: "≤1 小时高质量节目",
+	},
+	{
+		ageMonthsMin: 60,
+		ageMonthsMax: 216,
+		dailyLimitMinutes: 120,
+		notes: "一致限制，不影响睡眠/运动/学习",
+	},
 ];
 
-export function screenTimeForAge(ageMonths: number): ScreenTimeGuideline | undefined {
-	return SCREEN_TIME_GUIDELINES.find((g) => ageMonths >= g.ageMonthsMin && ageMonths <= g.ageMonthsMax);
+export function screenTimeForAge(
+	ageMonths: number,
+): ScreenTimeGuideline | undefined {
+	return SCREEN_TIME_GUIDELINES.find(
+		(g) => ageMonths >= g.ageMonthsMin && ageMonths <= g.ageMonthsMax,
+	);
 }
 
 /** Sleep hours needed by age (AAP). */
@@ -254,10 +382,24 @@ export const SLEEP_HOURS_GUIDELINES: SleepHoursGuideline[] = [
 	{ ageMonthsMin: 4, ageMonthsMax: 11, hoursPerDay: 12, includesNap: true },
 	{ ageMonthsMin: 12, ageMonthsMax: 24, hoursPerDay: 11, includesNap: true },
 	{ ageMonthsMin: 24, ageMonthsMax: 60, hoursPerDay: 11, includesNap: false },
-	{ ageMonthsMin: 60, ageMonthsMax: 144, hoursPerDay: 10, includesNap: false },
-	{ ageMonthsMin: 144, ageMonthsMax: 216, hoursPerDay: 9, includesNap: false },
+	{
+		ageMonthsMin: 60,
+		ageMonthsMax: 144,
+		hoursPerDay: 10,
+		includesNap: false,
+	},
+	{
+		ageMonthsMin: 144,
+		ageMonthsMax: 216,
+		hoursPerDay: 9,
+		includesNap: false,
+	},
 ];
 
-export function sleepHoursForAge(ageMonths: number): SleepHoursGuideline | undefined {
-	return SLEEP_HOURS_GUIDELINES.find((g) => ageMonths >= g.ageMonthsMin && ageMonths <= g.ageMonthsMax);
+export function sleepHoursForAge(
+	ageMonths: number,
+): SleepHoursGuideline | undefined {
+	return SLEEP_HOURS_GUIDELINES.find(
+		(g) => ageMonths >= g.ageMonthsMin && ageMonths <= g.ageMonthsMax,
+	);
 }

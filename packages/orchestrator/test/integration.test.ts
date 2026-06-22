@@ -2,19 +2,25 @@
  * Integration tests: 5 engines working together (Orchestrator + 3 agents + Memory).
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { OrchestratorCore } from "@parenting/orchestrator";
-import { MemoryLayer, computeStage } from "@parenting/memory";
+import { createEducatorAgent } from "@parenting/agent-educator";
 import { createPediatricianAgent } from "@parenting/agent-pediatrician";
 import { createPsychologistAgent } from "@parenting/agent-psychologist";
-import { createEducatorAgent } from "@parenting/agent-educator";
 import type { ChildProfile } from "@parenting/memory";
+import { computeStage, MemoryLayer } from "@parenting/memory";
+import { OrchestratorCore } from "@parenting/orchestrator";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "小明"): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "小明",
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -27,7 +33,11 @@ describe("Integration: 5 engines (Orchestrator + 3 agents + Memory)", () => {
 
 	beforeEach(() => {
 		memory = new MemoryLayer({ dbPath: ":memory:" });
-		orch = new OrchestratorCore({ memory, maxAgentsPerAsk: 3, minConfidence: 0.3 });
+		orch = new OrchestratorCore({
+			memory,
+			maxAgentsPerAsk: 3,
+			minConfidence: 0.3,
+		});
 		orch.registerAgent(createPediatricianAgent());
 		orch.registerAgent(createPsychologistAgent());
 		orch.registerAgent(createEducatorAgent());
@@ -52,14 +62,18 @@ describe("Integration: 5 engines (Orchestrator + 3 agents + Memory)", () => {
 			const result = await orch.ask("宝宝咳嗽怎么办", child);
 			expect(result.emergencyEscalation).toBe(false);
 			expect(result.replies.length).toBeGreaterThan(0);
-			expect(result.replies.some((r) => r.agentId === "pediatrician")).toBe(true);
+			expect(
+				result.replies.some((r) => r.agentId === "pediatrician"),
+			).toBe(true);
 		});
 
 		it("routes vaccine question to pediatrician", async () => {
 			const child = makeChild(90);
 			memory.upsertChild(child);
 			const result = await orch.ask("宝宝疫苗接种时间", child);
-			expect(result.replies.some((r) => r.agentId === "pediatrician")).toBe(true);
+			expect(
+				result.replies.some((r) => r.agentId === "pediatrician"),
+			).toBe(true);
 		});
 	});
 
@@ -68,14 +82,18 @@ describe("Integration: 5 engines (Orchestrator + 3 agents + Memory)", () => {
 			const child = makeChild(365 * 2);
 			memory.upsertChild(child);
 			const result = await orch.ask("2岁宝宝总发脾气", child);
-			expect(result.replies.some((r) => r.agentId === "psychologist")).toBe(true);
+			expect(
+				result.replies.some((r) => r.agentId === "psychologist"),
+			).toBe(true);
 		});
 
 		it("routes biting question to psychologist", async () => {
 			const child = makeChild(365 * 1.5);
 			memory.upsertChild(child);
 			const result = await orch.ask("宝宝在幼儿园咬人", child);
-			expect(result.replies.some((r) => r.agentId === "psychologist")).toBe(true);
+			expect(
+				result.replies.some((r) => r.agentId === "psychologist"),
+			).toBe(true);
 		});
 	});
 
@@ -84,14 +102,18 @@ describe("Integration: 5 engines (Orchestrator + 3 agents + Memory)", () => {
 			const child = makeChild(365 * 4);
 			memory.upsertChild(child);
 			const result = await orch.ask("4岁孩子学什么", child);
-			expect(result.replies.some((r) => r.agentId === "educator")).toBe(true);
+			expect(result.replies.some((r) => r.agentId === "educator")).toBe(
+				true,
+			);
 		});
 
 		it("routes interest question to educator", async () => {
 			const child = makeChild(365 * 7);
 			memory.upsertChild(child);
 			const result = await orch.ask("孩子喜欢编程", child);
-			expect(result.replies.some((r) => r.agentId === "educator")).toBe(true);
+			expect(result.replies.some((r) => r.agentId === "educator")).toBe(
+				true,
+			);
 		});
 	});
 
@@ -148,7 +170,10 @@ describe("Integration: 5 engines (Orchestrator + 3 agents + Memory)", () => {
 		it("Scenario: New parent with 3-month-old asks about night waking", async () => {
 			const child = makeChild(90);
 			memory.upsertChild(child);
-			const result = await orch.ask("我家宝宝3个月最近总是夜醒哭闹怎么办", child);
+			const result = await orch.ask(
+				"我家宝宝3个月最近总是夜醒哭闹怎么办",
+				child,
+			);
 			// Should NOT be emergency (no fever)
 			expect(result.emergencyEscalation).toBe(false);
 			// Should get pediatrician + psychologist
@@ -160,13 +185,18 @@ describe("Integration: 5 engines (Orchestrator + 3 agents + Memory)", () => {
 			const child = makeChild(365 * 4);
 			memory.upsertChild(child);
 			const result = await orch.ask("4岁孩子在幼儿园总发脾气", child);
-			expect(result.replies.some((r) => r.agentId === "psychologist")).toBe(true);
+			expect(
+				result.replies.some((r) => r.agentId === "psychologist"),
+			).toBe(true);
 		});
 
 		it("Scenario: 13-year-old refusing school, family stress", async () => {
 			const child = makeChild(365 * 13);
 			memory.upsertChild(child);
-			const result = await orch.ask("孩子13岁不肯上学，爸爸妈妈天天吵架", child);
+			const result = await orch.ask(
+				"孩子13岁不肯上学，爸爸妈妈天天吵架",
+				child,
+			);
 			// should get psychologist + possibly educator
 			const agentIds = result.replies.map((r) => r.agentId);
 			expect(agentIds).toContain("psychologist");

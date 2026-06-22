@@ -11,7 +11,7 @@
  * corpus. This handles both English and Han-script text consistently.
  */
 
-import { scoreEntry, tokenize, type KnowledgeEntry } from "./knowledge.js";
+import { type KnowledgeEntry, scoreEntry, tokenize } from "./knowledge.js";
 
 /** A document's TF-IDF weight vector (sparse map). */
 export type Vector = Map<string, number>;
@@ -75,7 +75,10 @@ export function vectorize(tokens: string[], idf: Map<string, number>): Vector {
 }
 
 /** Build a TF-IDF index over the given entries. */
-export function buildTfIdfIndex(entries: KnowledgeEntry[], options: TfIdfOptions = {}): TfIdfIndex {
+export function buildTfIdfIndex(
+	entries: KnowledgeEntry[],
+	options: TfIdfOptions = {},
+): TfIdfIndex {
 	const smoothing = options.smoothing ?? DEFAULT_SMOOTHING;
 	const docCount = entries.length;
 	const docFreq = new Map<string, number>();
@@ -160,8 +163,10 @@ export function searchByRelevance(
 		/* v8 ignore next 2 */
 		const dVec = index.docVectors.get(entry.id);
 		const vectorScore = dVec ? cosineSimilarity(qVec, dVec) : 0;
-		const combined = keywordWeight * keywordScore + (1 - keywordWeight) * vectorScore;
-		if (combined > 0) results.push({ entry, keywordScore, vectorScore, combined });
+		const combined =
+			keywordWeight * keywordScore + (1 - keywordWeight) * vectorScore;
+		if (combined > 0)
+			results.push({ entry, keywordScore, vectorScore, combined });
 	}
 	results.sort((a, b) => b.combined - a.combined);
 	return results.slice(0, topN);

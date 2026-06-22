@@ -5,22 +5,22 @@
  */
 
 export {
-	PsychologistAgent,
 	createPsychologistAgent,
 	PSYCHOLOGIST_DISCLAIMER,
+	PsychologistAgent,
 } from "./agent.js";
 
 export {
-	EMOTION_PATTERNS,
 	BEHAVIOR_PROBLEMS,
-	ERIKSON_STAGES,
-	detectEmotions,
-	matchBehaviorProblem,
-	getEriksonStage,
 	type BehaviorProblem,
+	detectEmotions,
+	EMOTION_PATTERNS,
 	type Emotion,
 	type EmotionPattern,
+	ERIKSON_STAGES,
 	type EriksonStage,
+	getEriksonStage,
+	matchBehaviorProblem,
 } from "./knowledge.js";
 
 export const PSYCHOLOGIST_VERSION = "0.1.0";

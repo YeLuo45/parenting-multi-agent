@@ -1,10 +1,14 @@
-export { SiblingAgent, createSiblingAgent, SIBLING_DISCLAIMER } from "./agent.js";
 export {
-	SIBLING_TIPS,
+	createSiblingAgent,
+	SIBLING_DISCLAIMER,
+	SiblingAgent,
+} from "./agent.js";
+export {
 	getTipsForStage,
 	matchTopic,
-	type SiblingTopic,
+	SIBLING_TIPS,
 	type SiblingTip,
+	type SiblingTopic,
 } from "./knowledge.js";
 
 export const SIBLING_VERSION = "0.1.0";

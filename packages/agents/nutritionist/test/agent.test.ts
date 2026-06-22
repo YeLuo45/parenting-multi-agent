@@ -1,22 +1,29 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
 import {
-	NutritionistAgent,
 	createNutritionistAgent,
+	detectAllergens,
+	findRecipesWithAllergen,
 	getFoodsForAge,
 	getNextFood,
 	getNutritionNeeds,
 	getPickyEatingGuidance,
 	getRecipesForAge,
-	findRecipesWithAllergen,
-	detectAllergens,
+	NutritionistAgent,
 } from "../src/index.js";
-import type { ChildProfile } from "@parenting/memory";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
 const daysAgo = (n: number): string =>
-	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
-const makeChild = (ageDays: number, id = "c1", name = "TestChild", stage?: ChildProfile["stage"]): ChildProfile => ({
+const makeChild = (
+	ageDays: number,
+	id = "c1",
+	name = "TestChild",
+	stage?: ChildProfile["stage"],
+): ChildProfile => ({
 	id,
 	name,
 	birthDate: daysAgo(ageDays),
@@ -150,96 +157,144 @@ describe("NutritionistAgent", () => {
 
 	describe("food introduction queries", () => {
 		it("returns food schedule for 7-month-old", async () => {
-			const reply = await agent.respond("宝宝辅食", makeChild(210, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝辅食",
+				makeChild(210, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("米糊");
 		});
 
 		it("returns completion message for 24-month-old", async () => {
-			const reply = await agent.respond("宝宝辅食", makeChild(365 * 2, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝辅食",
+				makeChild(365 * 2, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/已完成|虾蟹/);
 		});
 	});
 
 	describe("allergy queries", () => {
 		it("returns advice for 鸡蛋 allergy", async () => {
-			const reply = await agent.respond("宝宝对鸡蛋过敏怎么办", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝对鸡蛋过敏怎么办",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("鸡蛋");
 		});
 
 		it("asks for more info when no allergen detected", async () => {
-			const reply = await agent.respond("宝宝过敏了", makeChild(365, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝过敏了",
+				makeChild(365, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.confidence).toBeLessThan(0.6);
 		});
 	});
 
 	describe("recipe queries", () => {
 		it("returns recipes for 8-month-old", async () => {
-			const reply = await agent.respond("宝宝食谱", makeChild(240, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝食谱",
+				makeChild(240, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/胡萝卜|苹果|辅食/);
 		});
 
 		it("returns no recipes for newborn", async () => {
-			const reply = await agent.respond("宝宝食谱", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝食谱",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("暂无");
 		});
 	});
 
 	describe("picky eating queries", () => {
 		it("returns guidance for 2-year-old picky eating", async () => {
-			const reply = await agent.respond("孩子挑食怎么办", makeChild(365 * 2, "c", "Kid", "toddler"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子挑食怎么办",
+				makeChild(365 * 2, "c", "Kid", "toddler"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("挑食");
 		});
 
 		it("returns guidance for newborn (no specific stage data)", async () => {
-			const reply = await agent.respond("孩子挑食", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"孩子挑食",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("儿科医生");
 		});
 	});
 
 	describe("nutrition queries", () => {
 		it("returns calorie info for 3-month-old", async () => {
-			const reply = await agent.respond("宝宝每天需要多少奶量", makeChild(90, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝每天需要多少奶量",
+				makeChild(90, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toMatch(/\d+\s*kcal|\d+\s*oz/);
 		});
 
 		it("includes nutrition notes for newborn needs", async () => {
-			const reply = await agent.respond("宝宝每天需要多少奶量", makeChild(15, "c", "Kid", "newborn"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝每天需要多少奶量",
+				makeChild(15, "c", "Kid", "newborn"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("纯母乳/配方奶");
 		});
 
 		it("returns nutrition info for older child", async () => {
-			const reply = await agent.respond("宝宝需要多少蛋白质", makeChild(365 * 4, "c", "Kid", "preschool"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"宝宝需要多少蛋白质",
+				makeChild(365 * 4, "c", "Kid", "preschool"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("蛋白质");
 		});
 	});
 
 	describe("general queries", () => {
 		it("introduces itself for vague questions", async () => {
-			const reply = await agent.respond("你好", makeChild(90, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await agent.respond(
+				"你好",
+				makeChild(90, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.content).toContain("营养师");
 			expect(reply.confidence).toBeLessThan(0.5);
 		});
@@ -249,9 +304,13 @@ describe("NutritionistAgent", () => {
 		it("createNutritionistAgent returns a working agent", async () => {
 			const a = createNutritionistAgent();
 			expect(a.id).toBe("nutritionist");
-			const reply = await a.respond("宝宝辅食", makeChild(210, "c", "Kid", "infant"), {
-				memory: null as unknown as import("@parenting/memory").MemoryLayer,
-			});
+			const reply = await a.respond(
+				"宝宝辅食",
+				makeChild(210, "c", "Kid", "infant"),
+				{
+					memory: null as unknown as import("@parenting/memory").MemoryLayer,
+				},
+			);
 			expect(reply.agentId).toBe("nutritionist");
 		});
 

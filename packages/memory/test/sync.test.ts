@@ -3,19 +3,21 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-	SyncEngine,
 	buildPushResult,
+	type DeltaEntry,
 	findRowDelta,
 	fullSync,
 	highestId,
 	lwwResolve,
 	mergeDeltas,
+	SyncEngine,
 	selectDeltasSince,
 	selectUnsyncedDeltas,
-	type DeltaEntry,
 } from "../src/index.js";
 
-function makeDelta(overrides: Partial<DeltaEntry> & Pick<DeltaEntry, "id">): DeltaEntry {
+function makeDelta(
+	overrides: Partial<DeltaEntry> & Pick<DeltaEntry, "id">,
+): DeltaEntry {
 	return {
 		id: overrides.id,
 		tableName: overrides.tableName ?? "children",
@@ -75,7 +77,13 @@ describe("selectUnsyncedDeltas", () => {
 
 describe("highestId", () => {
 	it("returns max id", () => {
-		expect(highestId([makeDelta({ id: 1 }), makeDelta({ id: 5 }), makeDelta({ id: 3 })])).toBe(5);
+		expect(
+			highestId([
+				makeDelta({ id: 1 }),
+				makeDelta({ id: 5 }),
+				makeDelta({ id: 3 }),
+			]),
+		).toBe(5);
 	});
 
 	it("returns 0 for empty list", () => {
@@ -89,26 +97,58 @@ describe("highestId", () => {
 
 describe("lwwResolve", () => {
 	it("remote wins when remote.createdAt is later", () => {
-		const local = makeDelta({ id: 1, createdAt: "2026-06-20T00:00:00Z", payload: { v: "local" } });
-		const remote = makeDelta({ id: 2, createdAt: "2026-06-20T01:00:00Z", payload: { v: "remote" } });
+		const local = makeDelta({
+			id: 1,
+			createdAt: "2026-06-20T00:00:00Z",
+			payload: { v: "local" },
+		});
+		const remote = makeDelta({
+			id: 2,
+			createdAt: "2026-06-20T01:00:00Z",
+			payload: { v: "remote" },
+		});
 		expect(lwwResolve(local, remote)).toBe(remote);
 	});
 
 	it("local wins when local.createdAt is later", () => {
-		const local = makeDelta({ id: 1, createdAt: "2026-06-20T02:00:00Z", payload: { v: "local" } });
-		const remote = makeDelta({ id: 2, createdAt: "2026-06-20T01:00:00Z", payload: { v: "remote" } });
+		const local = makeDelta({
+			id: 1,
+			createdAt: "2026-06-20T02:00:00Z",
+			payload: { v: "local" },
+		});
+		const remote = makeDelta({
+			id: 2,
+			createdAt: "2026-06-20T01:00:00Z",
+			payload: { v: "remote" },
+		});
 		expect(lwwResolve(local, remote)).toBe(local);
 	});
 
 	it("higher id wins when timestamps are equal", () => {
-		const local = makeDelta({ id: 1, createdAt: "t", payload: { v: "local" } });
-		const remote = makeDelta({ id: 2, createdAt: "t", payload: { v: "remote" } });
+		const local = makeDelta({
+			id: 1,
+			createdAt: "t",
+			payload: { v: "local" },
+		});
+		const remote = makeDelta({
+			id: 2,
+			createdAt: "t",
+			payload: { v: "remote" },
+		});
 		expect(lwwResolve(local, remote)).toBe(remote);
 	});
 
 	it("lower id wins when timestamps are equal and remote id is lower", () => {
-		const local = makeDelta({ id: 2, createdAt: "t", payload: { v: "local" } });
-		const remote = makeDelta({ id: 1, createdAt: "t", payload: { v: "remote" } });
+		const local = makeDelta({
+			id: 2,
+			createdAt: "t",
+			payload: { v: "local" },
+		});
+		const remote = makeDelta({
+			id: 1,
+			createdAt: "t",
+			payload: { v: "remote" },
+		});
 		expect(lwwResolve(local, remote)).toBe(local);
 	});
 });
@@ -182,8 +222,12 @@ describe("mergeDeltas", () => {
 	});
 
 	it("handles different rows at same id (rare)", () => {
-		const local = [makeDelta({ id: 1, tableName: "children", rowId: "alice" })];
-		const remote = [makeDelta({ id: 1, tableName: "facts", rowId: "fact-1" })];
+		const local = [
+			makeDelta({ id: 1, tableName: "children", rowId: "alice" }),
+		];
+		const remote = [
+			makeDelta({ id: 1, tableName: "facts", rowId: "fact-1" }),
+		];
 		const { result } = mergeDeltas(local, remote);
 		expect(result.applied).toBe(1);
 	});

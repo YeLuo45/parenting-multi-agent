@@ -20,7 +20,10 @@ export default defineConfig({
 	},
 	resolve: {
 		alias: {
-			"@parenting/memory": new URL("../memory/src/index.ts", import.meta.url).pathname,
+			"@parenting/memory": new URL(
+				"../memory/src/index.ts",
+				import.meta.url,
+			).pathname,
 		},
 	},
 });

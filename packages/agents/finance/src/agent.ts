@@ -2,21 +2,17 @@
  * FinanceAgent — education funds, insurance, school fees, budgeting.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	EDUCATION_FUND_PLANS,
-	INSURANCE_TYPES,
-	SCHOOL_FEES,
 	calculateFundValue,
+	type EducationFundPlan,
 	estimateTotalEducationCost,
 	getEssentialInsurance,
-	getInsurance,
 	getRecommendedPlan,
 	getSchoolFee,
-	type EducationFundPlan,
-	type InsuranceType,
+	INSURANCE_TYPES,
 	type SchoolFee,
 } from "./knowledge.js";
 
@@ -32,14 +28,17 @@ function detectIntent(
 	question: string,
 ): "fund" | "insurance" | "fees" | "total" | "general" {
 	const q = question.toLowerCase();
-	if (/(教育金|基金|储蓄|存款|定投|投资|saving|fund|invest)/i.test(q)) return "fund";
-	if (/(保险|insurance|重疾|意外险|医疗险|医保|社保|保单)/i.test(q)) return "insurance";
+	if (/(教育金|基金|储蓄|存款|定投|投资|saving|fund|invest)/i.test(q))
+		return "fund";
+	if (/(保险|insurance|重疾|意外险|医疗险|医保|社保|保单)/i.test(q))
+		return "insurance";
 	if (/(总费用|总成本|总共|total|大学费用|留学费用)/i.test(q)) return "total";
-	if (/(学费|费用|多少钱|公立|私立|school.fee|tuition|支出)/i.test(q)) return "fees";
+	if (/(学费|费用|多少钱|公立|私立|school.fee|tuition|支出)/i.test(q))
+		return "fees";
 	return "general";
 }
 
-function formatFundPlan(plan: EducationFundPlan, ageMonths: number): string {
+function formatFundPlan(plan: EducationFundPlan, _ageMonths: number): string {
 	const value = Math.round(calculateFundValue(plan));
 	const lines = [
 		`💰 推荐教育金计划：${plan.name}`,
@@ -61,7 +60,9 @@ function formatFundPlan(plan: EducationFundPlan, ageMonths: number): string {
 
 function formatInsurance(): string {
 	const essentials = getEssentialInsurance();
-	const recommended = INSURANCE_TYPES.filter((i) => i.priority === "recommended");
+	const recommended = INSURANCE_TYPES.filter(
+		(i) => i.priority === "recommended",
+	);
 	const lines = [
 		"🛡️ 儿童保险优先级建议：",
 		"",
@@ -69,7 +70,9 @@ function formatInsurance(): string {
 		...essentials.map((i) => `- ${i.name}（${i.typicalCost}）：${i.notes}`),
 		"",
 		"【推荐】",
-		...recommended.map((i) => `- ${i.name}（${i.typicalCost}）：${i.notes}`),
+		...recommended.map(
+			(i) => `- ${i.name}（${i.typicalCost}）：${i.notes}`,
+		),
 		"",
 		"建议：先办理少儿医保 → 意外险 → 重疾险，按预算选择。",
 	];
@@ -92,7 +95,8 @@ function formatFees(fee: SchoolFee): string {
 
 function formatTotal(tier: "public" | "private" | "study_abroad"): string {
 	const total = estimateTotalEducationCost(tier);
-	const tierName = tier === "public" ? "公立" : tier === "private" ? "私立" : "留学";
+	const tierName =
+		tier === "public" ? "公立" : tier === "private" ? "私立" : "留学";
 	return [
 		`📊 ${tierName}路径教育总成本估算（出生到大学）：`,
 		"",
@@ -117,7 +121,11 @@ export class FinanceAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectIntent(question);
@@ -160,11 +168,12 @@ export class FinanceAgent implements Agent {
 				};
 			}
 			case "total": {
-				const tier: "public" | "private" | "study_abroad" = /留学|abroad/i.test(question)
-					? "study_abroad"
-					: /私立|private/i.test(question)
-						? "private"
-						: "public";
+				const tier: "public" | "private" | "study_abroad" =
+					/留学|abroad/i.test(question)
+						? "study_abroad"
+						: /私立|private/i.test(question)
+							? "private"
+							: "public";
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -173,7 +182,6 @@ export class FinanceAgent implements Agent {
 					urgency: "info",
 				};
 			}
-			case "general":
 			default:
 				return {
 					agentId: this.id,
@@ -191,17 +199,17 @@ export function createFinanceAgent(): FinanceAgent {
 }
 
 export {
-	EDUCATION_FUND_PLANS,
-	INSURANCE_TYPES,
-	SCHOOL_FEES,
 	calculateFundValue,
+	EDUCATION_FUND_PLANS,
+	type EducationFundPlan,
 	estimateTotalEducationCost,
+	type FinanceTopic,
 	getEssentialInsurance,
 	getInsurance,
 	getRecommendedPlan,
 	getSchoolFee,
-	type EducationFundPlan,
-	type FinanceTopic,
+	INSURANCE_TYPES,
 	type InsuranceType,
+	SCHOOL_FEES,
 	type SchoolFee,
 } from "./knowledge.js";

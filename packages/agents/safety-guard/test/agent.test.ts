@@ -1,26 +1,42 @@
+import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
-import { createSafetyGuardAgent, detectCategory, detectFirstAidTopic } from "../src/agent.js";
 import {
-	HAZARDS,
+	createSafetyGuardAgent,
+	detectCategory,
+	detectFirstAidTopic,
+} from "../src/agent.js";
+import {
 	FIRST_AID_GUIDES,
-	getHazardsForAge,
-	getHazardsByCategory,
-	getHazardById,
+	type FirstAidTopic,
+	getAllFirstAidTopics,
 	getCriticalHazards,
 	getFirstAidGuide,
-	getAllFirstAidTopics,
+	getHazardById,
+	getHazardsByCategory,
+	getHazardsForAge,
+	HAZARDS,
 	triageSeverity,
-	type Hazard,
-	type FirstAidTopic,
 } from "../src/knowledge.js";
-import type { ChildProfile } from "@parenting/memory";
 
 function makeChild(ageMonths: number): ChildProfile {
 	return {
 		id: "test-child",
 		name: "测试宝宝",
-		birthDate: new Date(Date.now() - ageMonths * 30.44 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-		stage: ageMonths < 3 ? "newborn" : ageMonths < 12 ? "infant" : ageMonths < 36 ? "toddler" : ageMonths < 72 ? "preschool" : "school_age",
+		birthDate: new Date(
+			Date.now() - ageMonths * 30.44 * 24 * 60 * 60 * 1000,
+		)
+			.toISOString()
+			.split("T")[0],
+		stage:
+			ageMonths < 3
+				? "newborn"
+				: ageMonths < 12
+					? "infant"
+					: ageMonths < 36
+						? "toddler"
+						: ageMonths < 72
+							? "preschool"
+							: "school_age",
 	};
 }
 
@@ -185,7 +201,9 @@ describe("SafetyGuardAgent — first aid topic coverage", () => {
 
 	it("covers no-topic first aid fallback (null guide)", async () => {
 		// simulate unknown topic
-		const unknown = "完全无匹配的急救问题" as unknown as Parameters<typeof agent.respond>[0];
+		const unknown = "完全无匹配的急救问题" as unknown as Parameters<
+			typeof agent.respond
+		>[0];
 		const r = await agent.respond(unknown, makeChild(120), ctx);
 		// ensure intent fallback is reached without crash
 		expect(r.agentId).toBe("safety-guard");
@@ -193,28 +211,45 @@ describe("SafetyGuardAgent — first aid topic coverage", () => {
 });
 
 describe("detectCategory", () => {
-	it("matches choking", () => expect(detectCategory("宝宝呛到")).toBe("choking"));
-	it("matches poisoning", () => expect(detectCategory("误食清洁剂")).toBe("poisoning"));
+	it("matches choking", () =>
+		expect(detectCategory("宝宝呛到")).toBe("choking"));
+	it("matches poisoning", () =>
+		expect(detectCategory("误食清洁剂")).toBe("poisoning"));
 	it("matches burn", () => expect(detectCategory("热水烫伤")).toBe("burn"));
-	it("matches drowning", () => expect(detectCategory("浴缸溺水")).toBe("drowning"));
-	it("matches fall", () => expect(detectCategory("从楼梯摔下来")).toBe("fall"));
-	it("matches strangulation", () => expect(detectCategory("窗帘绳缠绕")).toBe("strangulation"));
-	it("matches electrical", () => expect(detectCategory("触电插座")).toBe("electrical"));
-	it("matches vehicle", () => expect(detectCategory("安全座椅")).toBe("vehicle"));
-	it("matches firearm", () => expect(detectCategory("家中枪支")).toBe("firearm"));
-	it("returns undefined for unknown", () => expect(detectCategory("无关问题")).toBeUndefined());
+	it("matches drowning", () =>
+		expect(detectCategory("浴缸溺水")).toBe("drowning"));
+	it("matches fall", () =>
+		expect(detectCategory("从楼梯摔下来")).toBe("fall"));
+	it("matches strangulation", () =>
+		expect(detectCategory("窗帘绳缠绕")).toBe("strangulation"));
+	it("matches electrical", () =>
+		expect(detectCategory("触电插座")).toBe("electrical"));
+	it("matches vehicle", () =>
+		expect(detectCategory("安全座椅")).toBe("vehicle"));
+	it("matches firearm", () =>
+		expect(detectCategory("家中枪支")).toBe("firearm"));
+	it("returns undefined for unknown", () =>
+		expect(detectCategory("无关问题")).toBeUndefined());
 });
 
 describe("detectFirstAidTopic", () => {
-	it("matches choking", () => expect(detectFirstAidTopic("海姆立克急救")).toBe("choking"));
-	it("matches cpr", () => expect(detectFirstAidTopic("心肺复苏怎么做")).toBe("cpr"));
-	it("matches bleeding", () => expect(detectFirstAidTopic("流血止血")).toBe("bleeding"));
+	it("matches choking", () =>
+		expect(detectFirstAidTopic("海姆立克急救")).toBe("choking"));
+	it("matches cpr", () =>
+		expect(detectFirstAidTopic("心肺复苏怎么做")).toBe("cpr"));
+	it("matches bleeding", () =>
+		expect(detectFirstAidTopic("流血止血")).toBe("bleeding"));
 	it("matches burn", () => expect(detectFirstAidTopic("烫伤")).toBe("burn"));
-	it("matches fever", () => expect(detectFirstAidTopic("宝宝高烧")).toBe("fever"));
-	it("matches head injury", () => expect(detectFirstAidTopic("头部撞到")).toBe("head_injury"));
-	it("matches allergen", () => expect(detectFirstAidTopic("过敏反应")).toBe("allergen"));
-	it("matches drowning", () => expect(detectFirstAidTopic("落水")).toBe("drowning"));
-	it("matches poisoning", () => expect(detectFirstAidTopic("误食药物")).toBe("poisoning"));
+	it("matches fever", () =>
+		expect(detectFirstAidTopic("宝宝高烧")).toBe("fever"));
+	it("matches head injury", () =>
+		expect(detectFirstAidTopic("头部撞到")).toBe("head_injury"));
+	it("matches allergen", () =>
+		expect(detectFirstAidTopic("过敏反应")).toBe("allergen"));
+	it("matches drowning", () =>
+		expect(detectFirstAidTopic("落水")).toBe("drowning"));
+	it("matches poisoning", () =>
+		expect(detectFirstAidTopic("误食药物")).toBe("poisoning"));
 	it("returns undefined for unknown", () =>
 		expect(detectFirstAidTopic("完全无关问题")).toBeUndefined());
 });
@@ -246,7 +281,11 @@ describe("SafetyGuardAgent — triage intent", () => {
 	const ctx = { memory: undefined } as any;
 
 	it("flags emergency for unconsciousness", async () => {
-		const r = await agent.respond("宝宝失去意识了严重吗", makeChild(36), ctx);
+		const r = await agent.respond(
+			"宝宝失去意识了严重吗",
+			makeChild(36),
+			ctx,
+		);
 		expect(r.urgency).toBe("high");
 		expect(r.content).toMatch(/紧急/);
 	});
@@ -262,7 +301,11 @@ describe("SafetyGuardAgent — triage intent", () => {
 	});
 
 	it("returns routine for general query", async () => {
-		const r = await agent.respond("宝宝有点不舒服严重吗", makeChild(36), ctx);
+		const r = await agent.respond(
+			"宝宝有点不舒服严重吗",
+			makeChild(36),
+			ctx,
+		);
 		expect(r.content).toMatch(/常规|观察/);
 	});
 });
@@ -290,7 +333,11 @@ describe("SafetyGuardAgent — triage all branches", () => {
 
 	it("flags urgent triage with urgent advice", async () => {
 		// 摸不到脉搏 → triage urgent (avoids first_aid conflict)
-		const r = await agent.respond("宝宝摸不到脉搏严重吗", makeChild(60), ctx);
+		const r = await agent.respond(
+			"宝宝摸不到脉搏严重吗",
+			makeChild(60),
+			ctx,
+		);
 		expect(r.content).toMatch(/较紧急|就医/);
 	});
 });
@@ -323,7 +370,17 @@ describe("SafetyGuardAgent — hazard intent more categories", () => {
 describe("formatFirstAid edge case", () => {
 	it("returns fallback when no guide found (verified by getFirstAidGuide returning undefined for empty topic)", () => {
 		// All current FirstAidTopics have guides. Verify getFirstAidGuide works for all topics
-		const allTopics: FirstAidTopic[] = ["choking", "cpr", "bleeding", "burn", "fever", "head_injury", "allergen", "drowning", "poisoning"];
+		const allTopics: FirstAidTopic[] = [
+			"choking",
+			"cpr",
+			"bleeding",
+			"burn",
+			"fever",
+			"head_injury",
+			"allergen",
+			"drowning",
+			"poisoning",
+		];
 		for (const topic of allTopics) {
 			const guide = getFirstAidGuide(topic);
 			expect(guide).toBeDefined();
@@ -401,13 +458,13 @@ describe("getFirstAidGuide", () => {
 	it("returns choking guide", () => {
 		const guide = getFirstAidGuide("choking");
 		expect(guide).toBeDefined();
-		expect(guide!.urgency).toBe("emergency");
+		expect(guide?.urgency).toBe("emergency");
 	});
 
 	it("returns infant-specific guide", () => {
 		const guide = getFirstAidGuide("cpr", true);
 		expect(guide).toBeDefined();
-		expect(guide!.forInfant).toBe(true);
+		expect(guide?.forInfant).toBe(true);
 	});
 
 	it("returns undefined for non-existent topic", () => {

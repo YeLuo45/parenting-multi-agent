@@ -1,12 +1,11 @@
 export {
-	SleepCoachAgent,
 	createSleepCoachAgent,
 	SLEEP_COACH_DISCLAIMER,
+	SleepCoachAgent,
 } from "./agent.js";
 
 export {
 	BEDTIME_ROUTINE_STEPS,
-	SLEEP_REGRESSIONS,
 	getNapSchedule,
 	getNightWakingCauses,
 	getSleepMethod,
@@ -14,6 +13,7 @@ export {
 	getSleepRegression,
 	type NapSchedule,
 	type NightWakingCause,
+	SLEEP_REGRESSIONS,
 	type SleepMethod,
 	type SleepRegression,
 	type SleepTrainingMethod,

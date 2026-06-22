@@ -2,7 +2,13 @@
  * Sleep coach knowledge base — sleep training, regressions, schedule.
  */
 
-export type SleepMethod = "cry_it_out" | "fading" | "pick_up_put_down" | "chair" | "fading_chair" | "scheduled_wake";
+export type SleepMethod =
+	| "cry_it_out"
+	| "fading"
+	| "pick_up_put_down"
+	| "chair"
+	| "fading_chair"
+	| "scheduled_wake";
 
 export interface SleepTrainingMethod {
 	id: SleepMethod;
@@ -86,7 +92,9 @@ export const SLEEP_METHODS: SleepTrainingMethod[] = [
 ];
 
 /** Get sleep methods appropriate for given age. */
-export function getSleepMethodsForAge(ageMonths: number): SleepTrainingMethod[] {
+export function getSleepMethodsForAge(
+	ageMonths: number,
+): SleepTrainingMethod[] {
 	return SLEEP_METHODS.filter((m) => m.minAgeMonths <= ageMonths);
 }
 
@@ -138,11 +146,7 @@ export const SLEEP_REGRESSIONS: SleepRegression[] = [
 		commonAgeRange: "12-18 月",
 		duration: "2-4 周",
 		cause: "学步期 + 分离焦虑高峰",
-		advice: [
-			"白天多陪伴",
-			"晚间增加安抚时间",
-			"保持规律",
-		],
+		advice: ["白天多陪伴", "晚间增加安抚时间", "保持规律"],
 	},
 	{
 		ageMonths: 18,
@@ -150,11 +154,7 @@ export const SLEEP_REGRESSIONS: SleepRegression[] = [
 		commonAgeRange: "18 月-2 岁",
 		duration: "2-6 周",
 		cause: "语言爆发 + 自主意识 + 噩梦开始",
-		advice: [
-			"白天教孩子表达情绪",
-			"噩梦时简短安慰，不强化",
-			"保持作息",
-		],
+		advice: ["白天教孩子表达情绪", "噩梦时简短安慰，不强化", "保持作息"],
 	},
 	{
 		ageMonths: 24,
@@ -162,11 +162,7 @@ export const SLEEP_REGRESSIONS: SleepRegression[] = [
 		commonAgeRange: "2-3 岁",
 		duration: "2-6 周",
 		cause: "想象力和语言爆发 + 怕黑",
-		advice: [
-			"提供夜灯",
-			"白天讨论害怕的东西",
-			"避免恐怖内容",
-		],
+		advice: ["提供夜灯", "白天讨论害怕的东西", "避免恐怖内容"],
 	},
 ];
 
@@ -195,13 +191,53 @@ export interface NapSchedule {
 }
 
 export const NAP_SCHEDULES: NapSchedule[] = [
-	{ ageMonths: 0, totalNaps: 0, napDurations: [], nightSleep: "不规律", notes: "新生儿期：按需睡眠" },
-	{ ageMonths: 3, totalNaps: 4, napDurations: ["短小睡 30-45 分钟"], nightSleep: "9-11 小时" },
-	{ ageMonths: 6, totalNaps: 3, napDurations: ["上午 9:00-9:45", "中午 12:30-13:30", "下午 15:30-16:00"], nightSleep: "10-12 小时" },
-	{ ageMonths: 9, totalNaps: 2, napDurations: ["上午 9:30-10:30", "下午 13:30-15:00"], nightSleep: "11-12 小时" },
-	{ ageMonths: 12, totalNaps: 2, napDurations: ["上午 10:00-11:00", "下午 13:30-15:00"], nightSleep: "11-12 小时" },
-	{ ageMonths: 18, totalNaps: 1, napDurations: ["下午 13:00-15:00"], nightSleep: "11-12 小时" },
-	{ ageMonths: 36, totalNaps: 1, napDurations: ["下午 13:00-14:30"], nightSleep: "10-11 小时" },
+	{
+		ageMonths: 0,
+		totalNaps: 0,
+		napDurations: [],
+		nightSleep: "不规律",
+		notes: "新生儿期：按需睡眠",
+	},
+	{
+		ageMonths: 3,
+		totalNaps: 4,
+		napDurations: ["短小睡 30-45 分钟"],
+		nightSleep: "9-11 小时",
+	},
+	{
+		ageMonths: 6,
+		totalNaps: 3,
+		napDurations: [
+			"上午 9:00-9:45",
+			"中午 12:30-13:30",
+			"下午 15:30-16:00",
+		],
+		nightSleep: "10-12 小时",
+	},
+	{
+		ageMonths: 9,
+		totalNaps: 2,
+		napDurations: ["上午 9:30-10:30", "下午 13:30-15:00"],
+		nightSleep: "11-12 小时",
+	},
+	{
+		ageMonths: 12,
+		totalNaps: 2,
+		napDurations: ["上午 10:00-11:00", "下午 13:30-15:00"],
+		nightSleep: "11-12 小时",
+	},
+	{
+		ageMonths: 18,
+		totalNaps: 1,
+		napDurations: ["下午 13:00-15:00"],
+		nightSleep: "11-12 小时",
+	},
+	{
+		ageMonths: 36,
+		totalNaps: 1,
+		napDurations: ["下午 13:00-14:30"],
+		nightSleep: "10-11 小时",
+	},
 	{ ageMonths: 60, totalNaps: 0, napDurations: [], nightSleep: "10-11 小时" },
 ];
 
@@ -236,19 +272,71 @@ export interface NightWakingCause {
 }
 
 export const NIGHT_WAKING_CAUSES: NightWakingCause[] = [
-	{ ageMonthsMin: 0, ageMonthsMax: 6, cause: "饿了（胃容量小）", advice: "按需哺乳/喂奶" },
-	{ ageMonthsMin: 3, ageMonthsMax: 12, cause: "昼夜颠倒", advice: "增加白天光照，夜间保持安静黑暗" },
-	{ ageMonthsMin: 4, ageMonthsMax: 8, cause: "4 月睡眠倒退", advice: "保持规律作息，熬过 2-4 周" },
-	{ ageMonthsMin: 6, ageMonthsMax: 12, cause: "分离焦虑开始", advice: "白天增加陪伴，夜间多安抚" },
-	{ ageMonthsMin: 6, ageMonthsMax: 24, cause: "出牙痛", advice: "白天给牙胶，睡前咨询医生用药" },
-	{ ageMonthsMin: 6, ageMonthsMax: 12, cause: "8-10 月睡眠倒退", advice: "大运动发展期，白天充分放电" },
-	{ ageMonthsMin: 12, ageMonthsMax: 18, cause: "12 月分离焦虑高峰", advice: "白天多陪伴" },
-	{ ageMonthsMin: 12, ageMonthsMax: 36, cause: "噩梦/夜惊", advice: "简短安慰，不强化恐惧" },
-	{ ageMonthsMin: 18, ageMonthsMax: 60, cause: "夜醒习惯（依赖奶/抱）", advice: "考虑睡眠训练" },
-	{ ageMonthsMin: 24, ageMonthsMax: 60, cause: "怕黑/想象丰富", advice: "夜灯 + 白天讨论害怕的东西" },
+	{
+		ageMonthsMin: 0,
+		ageMonthsMax: 6,
+		cause: "饿了（胃容量小）",
+		advice: "按需哺乳/喂奶",
+	},
+	{
+		ageMonthsMin: 3,
+		ageMonthsMax: 12,
+		cause: "昼夜颠倒",
+		advice: "增加白天光照，夜间保持安静黑暗",
+	},
+	{
+		ageMonthsMin: 4,
+		ageMonthsMax: 8,
+		cause: "4 月睡眠倒退",
+		advice: "保持规律作息，熬过 2-4 周",
+	},
+	{
+		ageMonthsMin: 6,
+		ageMonthsMax: 12,
+		cause: "分离焦虑开始",
+		advice: "白天增加陪伴，夜间多安抚",
+	},
+	{
+		ageMonthsMin: 6,
+		ageMonthsMax: 24,
+		cause: "出牙痛",
+		advice: "白天给牙胶，睡前咨询医生用药",
+	},
+	{
+		ageMonthsMin: 6,
+		ageMonthsMax: 12,
+		cause: "8-10 月睡眠倒退",
+		advice: "大运动发展期，白天充分放电",
+	},
+	{
+		ageMonthsMin: 12,
+		ageMonthsMax: 18,
+		cause: "12 月分离焦虑高峰",
+		advice: "白天多陪伴",
+	},
+	{
+		ageMonthsMin: 12,
+		ageMonthsMax: 36,
+		cause: "噩梦/夜惊",
+		advice: "简短安慰，不强化恐惧",
+	},
+	{
+		ageMonthsMin: 18,
+		ageMonthsMax: 60,
+		cause: "夜醒习惯（依赖奶/抱）",
+		advice: "考虑睡眠训练",
+	},
+	{
+		ageMonthsMin: 24,
+		ageMonthsMax: 60,
+		cause: "怕黑/想象丰富",
+		advice: "夜灯 + 白天讨论害怕的东西",
+	},
 ];
 
 /** Get possible night-waking causes for given age. */
 export function getNightWakingCauses(ageMonths: number): NightWakingCause[] {
-	return NIGHT_WAKING_CAUSES.filter((c) => ageMonths >= c.ageMonthsMin && ageMonths <= c.ageMonthsMax);
+	return NIGHT_WAKING_CAUSES.filter(
+		(c) => ageMonths >= c.ageMonthsMin && ageMonths <= c.ageMonthsMax,
+	);
 }

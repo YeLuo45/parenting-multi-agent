@@ -5,31 +5,31 @@
  */
 
 export {
-	HabitBuilderAgent,
 	createHabitBuilderAgent,
 	HABIT_DISCLAIMER,
+	HabitBuilderAgent,
 } from "./agent.js";
 
 export {
-	HABITS,
-	HABIT_FORMATION_AVG_DAYS,
-	SCREEN_TIME_GUIDELINES,
-	SLEEP_HOURS_GUIDELINES,
-	getHabitsForAge,
-	getHabitsByDomain,
 	getHabitById,
-	habitStepCount,
-	habitTotalDuration,
-	habitLoop,
-	streakLevel,
-	screenTimeForAge,
-	sleepHoursForAge,
+	getHabitsByDomain,
+	getHabitsForAge,
+	HABIT_FORMATION_AVG_DAYS,
+	HABITS,
 	type Habit,
+	type HabitCue,
 	type HabitDomain,
 	type HabitStep,
-	type HabitCue,
+	habitLoop,
+	habitStepCount,
+	habitTotalDuration,
+	SCREEN_TIME_GUIDELINES,
 	type ScreenTimeGuideline,
+	SLEEP_HOURS_GUIDELINES,
 	type SleepHoursGuideline,
+	screenTimeForAge,
+	sleepHoursForAge,
+	streakLevel,
 } from "./knowledge.js";
 
 export const HABIT_BUILDER_VERSION = "0.1.0";

@@ -4,20 +4,19 @@
  * Phase 2 batch 2: rule-based + table lookup. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import type { ChildProfile } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	GROWTH_STANDARDS,
-	estimatePercentile,
-	classifyPercentile,
-	classifyBMI,
 	calculateBMI,
+	classifyBMI,
+	classifyPercentile,
 	detectGrowthConcern,
-	getMilestonesForAge,
-	weightGainVelocity,
+	estimatePercentile,
+	GROWTH_STANDARDS,
 	type GrowthMetric,
 	type GrowthSex,
+	getMilestonesForAge,
 } from "./knowledge.js";
 
 export const GROWTH_DISCLAIMER =
@@ -25,7 +24,10 @@ export const GROWTH_DISCLAIMER =
 
 function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 	const birth = new Date(birthDate);
-	return Math.max(0, (asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+	return Math.max(
+		0,
+		(asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44),
+	);
 }
 
 interface ParsedMeasurement {
@@ -36,9 +38,13 @@ interface ParsedMeasurement {
 
 function parseMeasurement(question: string): ParsedMeasurement | null {
 	const q = question.toLowerCase();
-	const sex: GrowthSex = /(男|boy|male|儿子|男孩|男宝宝)/i.test(q) ? "male" : "female";
+	const sex: GrowthSex = /(男|boy|male|儿子|男孩|男宝宝)/i.test(q)
+		? "male"
+		: "female";
 
-	const numMatch = question.match(/(\d+(?:\.\d+)?)\s*(cm|厘米|kg|公斤|斤|千克)/i);
+	const numMatch = question.match(
+		/(\d+(?:\.\d+)?)\s*(cm|厘米|kg|公斤|斤|千克)/i,
+	);
 	if (!numMatch) return null;
 	const value = parseFloat(numMatch[1]);
 	const unit = numMatch[2].toLowerCase();
@@ -51,13 +57,19 @@ function parseMeasurement(question: string): ParsedMeasurement | null {
 	const headIdx = q.search(/(头围|head.circumference|头)/i);
 
 	const candidates: Array<{ metric: GrowthMetric; idx: number }> = [];
-	if (weightIdx >= 0 && weightIdx < firstNumIdx + 5) candidates.push({ metric: "weight", idx: weightIdx });
-	if (heightIdx >= 0 && heightIdx < firstNumIdx + 5) candidates.push({ metric: "height", idx: heightIdx });
-	if (headIdx >= 0 && headIdx < firstNumIdx + 5) candidates.push({ metric: "head_circumference", idx: headIdx });
+	if (weightIdx >= 0 && weightIdx < firstNumIdx + 5)
+		candidates.push({ metric: "weight", idx: weightIdx });
+	if (heightIdx >= 0 && heightIdx < firstNumIdx + 5)
+		candidates.push({ metric: "height", idx: heightIdx });
+	if (headIdx >= 0 && headIdx < firstNumIdx + 5)
+		candidates.push({ metric: "head_circumference", idx: headIdx });
 
 	if (candidates.length > 0) {
 		// Pick metric closest to the first number
-		candidates.sort((a, b) => Math.abs(firstNumIdx - a.idx) - Math.abs(firstNumIdx - b.idx));
+		candidates.sort(
+			(a, b) =>
+				Math.abs(firstNumIdx - a.idx) - Math.abs(firstNumIdx - b.idx),
+		);
 		const chosen = candidates[0].metric;
 		if (chosen === "weight") {
 			const kg = unit === "斤" ? value / 2 : value;
@@ -76,19 +88,35 @@ function parseMeasurement(question: string): ParsedMeasurement | null {
 	return { metric: "height", value, sex };
 }
 
-function detectIntent(question: string): "measure" | "milestone" | "bmi" | "velocity" | "general" {
+function detectIntent(
+	question: string,
+): "measure" | "milestone" | "bmi" | "velocity" | "general" {
 	const q = question.toLowerCase();
-	if (/(里程碑|milestone|发育|发展|会不会|能不能|是否|should|can)/i.test(q)) return "milestone";
-	if (/(bmi|体质指数|肥胖|超重|underweight|overweight|obese)/i.test(q)) return "bmi";
-	if (/(体重增长|增长速度|增重|gain|velocity|g\/day|克.*天)/i.test(q)) return "velocity";
+	if (/(里程碑|milestone|发育|发展|会不会|能不能|是否|should|can)/i.test(q))
+		return "milestone";
+	if (/(bmi|体质指数|肥胖|超重|underweight|overweight|obese)/i.test(q))
+		return "bmi";
+	if (/(体重增长|增长速度|增重|gain|velocity|g\/day|克.*天)/i.test(q))
+		return "velocity";
 	// Measure: any number with units, OR any of the metric keywords
-	if (/(\d+(?:\.\d+)?\s*(cm|厘米|kg|公斤|斤|千克))/i.test(q)) return "measure";
+	if (/(\d+(?:\.\d+)?\s*(cm|厘米|kg|公斤|斤|千克))/i.test(q))
+		return "measure";
 	if (/(身高|体重|头围|height|weight|head|高|重)/i.test(q)) return "measure";
 	return "general";
 }
 
-function formatPercentile(metric: GrowthMetric, value: number, percentile: number, ageMonths: number, sex: GrowthSex): string {
-	const label = { height: "身高", weight: "体重", head_circumference: "头围" }[metric];
+function formatPercentile(
+	metric: GrowthMetric,
+	value: number,
+	percentile: number,
+	ageMonths: number,
+	sex: GrowthSex,
+): string {
+	const label = {
+		height: "身高",
+		weight: "体重",
+		head_circumference: "头围",
+	}[metric];
 	const unit = metric === "weight" ? "kg" : "cm";
 	const classification = classifyPercentile(percentile);
 	const classLabel = {
@@ -102,9 +130,23 @@ function formatPercentile(metric: GrowthMetric, value: number, percentile: numbe
 	return `${label} ${value} ${unit} → P${percentile}（${sexLabel}孩 ${Math.floor(ageMonths)} 月龄，${classLabel}）`;
 }
 
-function formatMeasurement(parsed: ParsedMeasurement, ageMonths: number): string {
-	const p = estimatePercentile(parsed.value, ageMonths, parsed.metric, parsed.sex);
-	const line = formatPercentile(parsed.metric, parsed.value, p, ageMonths, parsed.sex);
+function formatMeasurement(
+	parsed: ParsedMeasurement,
+	ageMonths: number,
+): string {
+	const p = estimatePercentile(
+		parsed.value,
+		ageMonths,
+		parsed.metric,
+		parsed.sex,
+	);
+	const line = formatPercentile(
+		parsed.metric,
+		parsed.value,
+		p,
+		ageMonths,
+		parsed.sex,
+	);
 	const concern = detectGrowthConcern({
 		metric: parsed.metric,
 		value: parsed.value,
@@ -161,14 +203,28 @@ function formatMilestones(ageMonths: number): string {
 	return lines.join("\n");
 }
 
-function formatBMI(weightKg: number, heightCm: number, ageMonths: number): string {
+function formatBMI(
+	weightKg: number,
+	heightCm: number,
+	ageMonths: number,
+): string {
 	const bmi = calculateBMI(weightKg, heightCm);
 	const cls = classifyBMI(bmi, ageMonths);
-	const clsLabel = { underweight: "偏瘦", normal: "正常", overweight: "超重", obese: "肥胖" }[cls];
+	const clsLabel = {
+		underweight: "偏瘦",
+		normal: "正常",
+		overweight: "超重",
+		obese: "肥胖",
+	}[cls];
 	return `📊 BMI = ${bmi} (${clsLabel})\n计算：${weightKg}kg ÷ (${heightCm / 100}m)²`;
 }
 
-function formatVelocity(current: number, previous: number, currentAgeDays: number, previousAgeDays: number): string {
+function formatVelocity(
+	current: number,
+	previous: number,
+	currentAgeDays: number,
+	previousAgeDays: number,
+): string {
 	// Caller guarantees deltaDays > 0 and all args defined, so v is always a number.
 	const deltaDays = currentAgeDays - previousAgeDays;
 	const deltaWeight = current - previous;
@@ -197,7 +253,11 @@ export class GrowthTrackerAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const ageMonths = ageInMonths(child.birthDate);
 		const intent = detectIntent(question);
 
@@ -256,7 +316,9 @@ export class GrowthTrackerAgent implements Agent {
 
 		if (intent === "velocity") {
 			// Try to extract two weights
-			const numbers = [...question.matchAll(/(\d+(?:\.\d+)?)/g)].map((m) => parseFloat(m[1]));
+			const numbers = [...question.matchAll(/(\d+(?:\.\d+)?)/g)].map(
+				(m) => parseFloat(m[1]),
+			);
 			if (numbers.length < 2) {
 				return {
 					agentId: this.id,
@@ -290,17 +352,17 @@ export function createGrowthTrackerAgent(): GrowthTrackerAgent {
 }
 
 export {
-	GROWTH_STANDARDS,
-	estimatePercentile,
-	classifyPercentile,
-	classifyBMI,
 	calculateBMI,
+	classifyBMI,
+	classifyPercentile,
 	detectGrowthConcern,
-	getMilestonesForAge,
-	weightGainVelocity,
-	getPercentiles,
+	estimatePercentile,
+	GROWTH_STANDARDS,
 	type GrowthMetric,
 	type GrowthSex,
 	type GrowthStandardRow,
+	getMilestonesForAge,
+	getPercentiles,
 	type Milestone,
+	weightGainVelocity,
 } from "./knowledge.js";

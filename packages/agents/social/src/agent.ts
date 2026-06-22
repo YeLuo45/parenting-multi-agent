@@ -4,9 +4,9 @@
  * Phase 3 direction 5: rule-based + keyword matching. No LLM call.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
-import { getTipsForStage, matchTopic, type SocialTopic, type SocialTip } from "./knowledge.js";
+import { getTipsForStage, matchTopic, type SocialTip } from "./knowledge.js";
 
 export const SOCIAL_DISCLAIMER =
 	"⚠️ 每个孩子的社交发展节奏不同，以上建议仅供参考。如社交困难严重影响孩子生活，建议咨询儿童心理咨询师。";
@@ -34,7 +34,11 @@ export class SocialAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const topic = matchTopic(question);
 
@@ -55,7 +59,9 @@ export class SocialAgent implements Agent {
 		// General fallback
 		const allTips = getTipsForStage(stage);
 		if (allTips.length > 0) {
-			const summary = allTips.map((t) => `- ${t.summary}（${t.ageRange}）`).join("\n");
+			const summary = allTips
+				.map((t) => `- ${t.summary}（${t.ageRange}）`)
+				.join("\n");
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -82,6 +88,6 @@ export function createSocialAgent(): SocialAgent {
 export {
 	getTipsForStage,
 	matchTopic,
-	type SocialTopic,
 	type SocialTip,
+	type SocialTopic,
 } from "./knowledge.js";

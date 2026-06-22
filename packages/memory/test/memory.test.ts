@@ -1,9 +1,18 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { MemoryLayer, computeStage, genId, L0_RULES, matchL0Rule } from "../src/index.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChildProfile, ChildStage } from "../src/index.js";
+import {
+	computeStage,
+	genId,
+	L0_RULES,
+	MemoryLayer,
+	matchL0Rule,
+} from "../src/index.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
-const daysAgo = (n: number): string => new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+const daysAgo = (n: number): string =>
+	new Date(TODAY.getTime() - n * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.split("T")[0];
 
 describe("MemoryLayer", () => {
 	let memory: MemoryLayer;
@@ -14,6 +23,21 @@ describe("MemoryLayer", () => {
 
 	afterEach(() => {
 		memory.close();
+	});
+
+	describe("Schema migration", () => {
+		it("records the current schema version in SQLite metadata", () => {
+			expect(memory.getSchemaVersion()).toBe(1);
+			expect(memory.getSchemaMeta()).toMatchObject({ version: 1 });
+		});
+
+		it("returns version 0 when schema metadata is missing", () => {
+			memory.db
+				.prepare("DELETE FROM schema_meta WHERE key = 'schema'")
+				.run();
+			expect(memory.getSchemaMeta()).toEqual({ version: 0 });
+			expect(memory.getSchemaVersion()).toBe(0);
+		});
 	});
 
 	describe("L1: Children (Index)", () => {
@@ -30,8 +54,16 @@ describe("MemoryLayer", () => {
 		});
 
 		it("updates an existing child", () => {
-			memory.upsertChild({ id: "c1", name: "小明", birthDate: daysAgo(90) });
-			const updated = memory.upsertChild({ id: "c1", name: "小明 (大名叫张明)", birthDate: daysAgo(90) });
+			memory.upsertChild({
+				id: "c1",
+				name: "小明",
+				birthDate: daysAgo(90),
+			});
+			const updated = memory.upsertChild({
+				id: "c1",
+				name: "小明 (大名叫张明)",
+				birthDate: daysAgo(90),
+			});
 			expect(updated.name).toBe("小明 (大名叫张明)");
 			const fetched = memory.getChild("c1");
 			expect(fetched?.name).toBe("小明 (大名叫张明)");
@@ -67,9 +99,15 @@ describe("MemoryLayer", () => {
 				birthDate: daysAgo(30),
 				metadata: { allergies: ["peanut"], bloodType: "O+" },
 			});
-			expect(child.metadata).toEqual({ allergies: ["peanut"], bloodType: "O+" });
+			expect(child.metadata).toEqual({
+				allergies: ["peanut"],
+				bloodType: "O+",
+			});
 			const fetched = memory.getChild("c1");
-			expect(fetched?.metadata).toEqual({ allergies: ["peanut"], bloodType: "O+" });
+			expect(fetched?.metadata).toEqual({
+				allergies: ["peanut"],
+				bloodType: "O+",
+			});
 		});
 
 		it("upsertChild with no metadata works", () => {
@@ -85,15 +123,28 @@ describe("MemoryLayer", () => {
 
 		it("uses :memory: when no options provided", () => {
 			const m = new MemoryLayer();
-			m.upsertChild({ id: "c1", name: "Default", birthDate: daysAgo(30) });
+			m.upsertChild({
+				id: "c1",
+				name: "Default",
+				birthDate: daysAgo(30),
+			});
 			const fetched = m.getChild("c1");
 			expect(fetched?.name).toBe("Default");
 			m.close();
 		});
 
 		it("listChildren handles null metadata correctly", () => {
-			memory.upsertChild({ id: "c1", name: "NoMeta", birthDate: daysAgo(30) });
-			memory.upsertChild({ id: "c2", name: "WithMeta", birthDate: daysAgo(60), metadata: { k: "v" } });
+			memory.upsertChild({
+				id: "c1",
+				name: "NoMeta",
+				birthDate: daysAgo(30),
+			});
+			memory.upsertChild({
+				id: "c2",
+				name: "WithMeta",
+				birthDate: daysAgo(60),
+				metadata: { k: "v" },
+			});
 			const list = memory.listChildren();
 			expect(list.length).toBe(2);
 			const noMeta = list.find((c) => c.id === "c1");
@@ -109,12 +160,18 @@ describe("MemoryLayer", () => {
 		});
 
 		it("adds and retrieves a fact", () => {
-			const fact = memory.addFact("c1", "vaccine", "BCG", { date: daysAgo(60), site: "left arm" });
+			const fact = memory.addFact("c1", "vaccine", "BCG", {
+				date: daysAgo(60),
+				site: "left arm",
+			});
 			expect(fact.id).toMatch(/^fact_/);
 			expect(fact.category).toBe("vaccine");
 			const facts = memory.getFacts("c1");
 			expect(facts.length).toBe(1);
-			expect(facts[0].value).toEqual({ date: daysAgo(60), site: "left arm" });
+			expect(facts[0].value).toEqual({
+				date: daysAgo(60),
+				site: "left arm",
+			});
 		});
 
 		it("filters facts by category", () => {
@@ -128,16 +185,22 @@ describe("MemoryLayer", () => {
 		});
 
 		it("deletes a fact", () => {
-			const f = memory.addFact("c1", "medical", "allergy", { type: "peanut" });
+			const f = memory.addFact("c1", "medical", "allergy", {
+				type: "peanut",
+			});
 			expect(memory.deleteFact(f.id)).toBe(true);
 			expect(memory.deleteFact(f.id)).toBe(false);
 		});
 
 		it("returns facts in reverse-chronological order", async () => {
-			const f1 = memory.addFact("c1", "medical", "visit-1", { date: daysAgo(10) });
+			const f1 = memory.addFact("c1", "medical", "visit-1", {
+				date: daysAgo(10),
+			});
 			// small delay to ensure different createdAt
 			await new Promise((r) => setTimeout(r, 5));
-			const f2 = memory.addFact("c1", "medical", "visit-2", { date: daysAgo(5) });
+			const f2 = memory.addFact("c1", "medical", "visit-2", {
+				date: daysAgo(5),
+			});
 			const facts = memory.getFacts("c1");
 			expect(facts[0].id).toBe(f2.id);
 			expect(facts[1].id).toBe(f1.id);
@@ -158,7 +221,9 @@ describe("MemoryLayer", () => {
 			expect(ep.type).toBe("qa");
 			const eps = memory.getEpisodes("c1", "qa");
 			expect(eps.length).toBe(1);
-			expect(eps[0].content).toMatchObject({ question: expect.any(String) });
+			expect(eps[0].content).toMatchObject({
+				question: expect.any(String),
+			});
 		});
 
 		it("filters episodes by type", () => {
@@ -223,7 +288,9 @@ describe("MemoryLayer", () => {
 			await new Promise((r) => setTimeout(r, 10));
 			const updated = memory.updateSession(sess.id, { topic: "b" });
 			expect(updated?.context).toEqual({ topic: "b" });
-			expect(new Date(updated!.lastActive).getTime()).toBeGreaterThan(new Date(sess.startedAt).getTime());
+			expect(new Date(updated?.lastActive).getTime()).toBeGreaterThan(
+				new Date(sess.startedAt).getTime(),
+			);
 		});
 
 		it("returns null when updating non-existent session", () => {
@@ -258,14 +325,18 @@ describe("MemoryLayer", () => {
 		it("getSession handles null context", () => {
 			const sess = memory.startSession("c1", { x: 1 });
 			// null out the context
-			memory.db.prepare(`UPDATE sessions SET context = NULL WHERE id = ?`).run(sess.id);
+			memory.db
+				.prepare(`UPDATE sessions SET context = NULL WHERE id = ?`)
+				.run(sess.id);
 			const fetched = memory.getSession(sess.id);
 			expect(fetched?.context).toEqual({});
 		});
 
 		it("getActiveSession handles null context", () => {
 			const sess = memory.startSession("c1", { x: 1 });
-			memory.db.prepare(`UPDATE sessions SET context = NULL WHERE id = ?`).run(sess.id);
+			memory.db
+				.prepare(`UPDATE sessions SET context = NULL WHERE id = ?`)
+				.run(sess.id);
 			const active = memory.getActiveSession("c1");
 			expect(active?.context).toEqual({});
 		});
@@ -278,7 +349,11 @@ describe("MemoryLayer", () => {
 
 		it("records a delta on every child write", () => {
 			const beforeCount = memory.getDeltaLog().length;
-			memory.upsertChild({ id: "c1", name: "A renamed", birthDate: daysAgo(90) });
+			memory.upsertChild({
+				id: "c1",
+				name: "A renamed",
+				birthDate: daysAgo(90),
+			});
 			const afterCount = memory.getDeltaLog().length;
 			expect(afterCount - beforeCount).toBe(1);
 		});
@@ -348,14 +423,22 @@ describe("MemoryLayer", () => {
 
 		it("getUnsyncedDeltas with limit caps results", () => {
 			for (let i = 0; i < 5; i++) {
-				memory.upsertChild({ id: `bulk-${i}`, name: `Bulk ${i}`, birthDate: daysAgo(100) });
+				memory.upsertChild({
+					id: `bulk-${i}`,
+					name: `Bulk ${i}`,
+					birthDate: daysAgo(100),
+				});
 			}
 			const capped = memory.getUnsyncedDeltas(3);
 			expect(capped.length).toBe(3);
 		});
 
 		it("records delete delta when child is removed", () => {
-			memory.upsertChild({ id: "c-del", name: "Del", birthDate: daysAgo(100) });
+			memory.upsertChild({
+				id: "c-del",
+				name: "Del",
+				birthDate: daysAgo(100),
+			});
 			const before = memory.getDeltaLog().length;
 			memory.deleteChild("c-del");
 			const after = memory.getDeltaLog().length;
@@ -366,7 +449,11 @@ describe("MemoryLayer", () => {
 		});
 
 		it("getDeltaStats returns correct summary", () => {
-			memory.upsertChild({ id: "s1", name: "S1", birthDate: daysAgo(100) });
+			memory.upsertChild({
+				id: "s1",
+				name: "S1",
+				birthDate: daysAgo(100),
+			});
 			memory.addFact("s1", "vaccine", "bcg", "done");
 			memory.addEpisode("s1", "qa", { question: "Q1" });
 			const stats = memory.getDeltaStats();
@@ -382,9 +469,21 @@ describe("MemoryLayer", () => {
 		});
 
 		it("markDeltaSynced marks only up to given id", () => {
-			memory.upsertChild({ id: "m1", name: "M1", birthDate: daysAgo(100) });
-			memory.upsertChild({ id: "m2", name: "M2", birthDate: daysAgo(80) });
-			memory.upsertChild({ id: "m3", name: "M3", birthDate: daysAgo(60) });
+			memory.upsertChild({
+				id: "m1",
+				name: "M1",
+				birthDate: daysAgo(100),
+			});
+			memory.upsertChild({
+				id: "m2",
+				name: "M2",
+				birthDate: daysAgo(80),
+			});
+			memory.upsertChild({
+				id: "m3",
+				name: "M3",
+				birthDate: daysAgo(60),
+			});
 			const all = memory.getDeltaLog();
 			// Mark only first entry
 			const count = memory.markDeltaSynced(all[0].id);
@@ -480,7 +579,11 @@ describe("MemoryLayer", () => {
 		it("data survives DB reopen (file-based)", () => {
 			const path = `/tmp/test_memory_${Date.now()}.sqlite`;
 			const m1 = new MemoryLayer({ dbPath: path });
-			m1.upsertChild({ id: "c1", name: "持久化测试", birthDate: daysAgo(30) });
+			m1.upsertChild({
+				id: "c1",
+				name: "持久化测试",
+				birthDate: daysAgo(30),
+			});
 			m1.close();
 
 			const m2 = new MemoryLayer({ dbPath: path });

@@ -5,27 +5,27 @@
  */
 
 export {
-	SafetyGuardAgent,
 	createSafetyGuardAgent,
 	SAFETY_DISCLAIMER,
+	SafetyGuardAgent,
 } from "./agent.js";
 
 export {
-	HAZARDS,
 	FIRST_AID_GUIDES,
-	getHazardsForAge,
-	getHazardsByCategory,
-	getHazardById,
+	type FirstAidGuide,
+	type FirstAidStep,
+	type FirstAidTopic,
+	getAllFirstAidTopics,
 	getCriticalHazards,
 	getFirstAidGuide,
-	getAllFirstAidTopics,
-	triageSeverity,
+	getHazardById,
+	getHazardsByCategory,
+	getHazardsForAge,
+	HAZARDS,
 	type Hazard,
 	type HazardCategory,
 	type HazardSeverity,
-	type FirstAidTopic,
-	type FirstAidGuide,
-	type FirstAidStep,
+	triageSeverity,
 } from "./knowledge.js";
 
 export const SAFETY_GUARD_VERSION = "0.1.0";

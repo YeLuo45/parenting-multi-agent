@@ -5,9 +5,15 @@
  * the resulting DOM tree. They complement the IR-based tests in
  * view.test.ts which assert on the same component shape without rendering.
  */
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
-import type { ReactElement } from "react";
+
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let testContainer: HTMLDivElement;
 
@@ -19,20 +25,27 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
-	if (testContainer && testContainer.parentNode) {
+	if (testContainer?.parentNode) {
 		testContainer.parentNode.removeChild(testContainer);
 	}
 });
+
 import {
-	Header,
-	ChildrenPanel,
-	ChatPanel,
-	Messages,
-	MessageBubble,
-	Composer,
 	AppBody,
+	ChatPanel,
+	ChildrenPanel,
+	Composer,
+	Header,
+	MessageBubble,
+	Messages,
 } from "../src/components.js";
-import { initialState, reducer, type Action, type AppState, type ChatMessage } from "../src/view.js";
+import {
+	type AppState,
+	type ChatMessage,
+	createParentingApp,
+	initialState,
+	reducer,
+} from "../src/view.js";
 
 function makeState(overrides: Partial<AppState> = {}): AppState {
 	return { ...initialState, agents: ["a1", "a2", "a3"], ...overrides };
@@ -44,6 +57,21 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+});
+
+describe("createParentingApp", () => {
+	it("renders the full app shell and initializes a default child", async () => {
+		const { App, stack } = createParentingApp();
+		try {
+			render(<App />);
+			expect(await screen.findByTestId("app-root")).toBeInTheDocument();
+			expect(
+				await screen.findByTestId("child-default"),
+			).toBeInTheDocument();
+		} finally {
+			stack.close();
+		}
+	});
 });
 
 describe("Header", () => {
@@ -58,7 +86,9 @@ describe("Header", () => {
 	it("updates the count from state", () => {
 		const state = makeState({ agents: ["a1", "a2", "a3", "a4", "a5"] });
 		render(<Header state={state} />);
-		expect(screen.getByTestId("app-title").textContent).toContain("5 agents");
+		expect(screen.getByTestId("app-title").textContent).toContain(
+			"5 agents",
+		);
 	});
 
 	it("has banner role for accessibility", () => {
@@ -71,16 +101,36 @@ describe("ChildrenPanel", () => {
 	const dispatch = vi.fn();
 
 	it("renders no-children placeholder when list is empty", () => {
-		render(<ChildrenPanel state={makeState({ children: [] })} dispatch={dispatch} />, { container: testContainer });
-		expect(within(testContainer).getByTestId("no-children")).toBeInTheDocument();
-		expect(within(testContainer).getByText("暂无孩子，请添加")).toBeInTheDocument();
+		render(
+			<ChildrenPanel
+				state={makeState({ children: [] })}
+				dispatch={dispatch}
+			/>,
+			{ container: testContainer },
+		);
+		expect(
+			within(testContainer).getByTestId("no-children"),
+		).toBeInTheDocument();
+		expect(
+			within(testContainer).getByText("暂无孩子，请添加"),
+		).toBeInTheDocument();
 	});
 
 	it("renders a list when children exist", () => {
 		const state = makeState({
 			children: [
-				{ id: "alice", name: "Alice", birthDate: "2024-01-01", stage: "toddler" },
-				{ id: "bob", name: "Bob", birthDate: "2020-01-01", stage: "school_age" },
+				{
+					id: "alice",
+					name: "Alice",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+				{
+					id: "bob",
+					name: "Bob",
+					birthDate: "2020-01-01",
+					stage: "school_age",
+				},
 			],
 		});
 		render(<ChildrenPanel state={state} dispatch={dispatch} />);
@@ -94,8 +144,18 @@ describe("ChildrenPanel", () => {
 		const state = makeState({
 			selectedChildId: "alice",
 			children: [
-				{ id: "alice", name: "Alice", birthDate: "2024-01-01", stage: "toddler" },
-				{ id: "bob", name: "Bob", birthDate: "2020-01-01", stage: "school_age" },
+				{
+					id: "alice",
+					name: "Alice",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+				{
+					id: "bob",
+					name: "Bob",
+					birthDate: "2020-01-01",
+					stage: "school_age",
+				},
 			],
 		});
 		render(<ChildrenPanel state={state} dispatch={dispatch} />);
@@ -103,23 +163,43 @@ describe("ChildrenPanel", () => {
 		expect(screen.getByTestId("child-bob")).not.toHaveClass("selected");
 	});
 
-	it("sets aria-selected on the selected child", () => {
+	it("sets aria-pressed on the selected child button", () => {
 		const state = makeState({
 			selectedChildId: "alice",
-			children: [{ id: "alice", name: "Alice", birthDate: "2024-01-01", stage: "toddler" }],
+			children: [
+				{
+					id: "alice",
+					name: "Alice",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+			],
 		});
 		render(<ChildrenPanel state={state} dispatch={dispatch} />);
-		expect(screen.getByTestId("child-alice")).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByTestId("child-alice")).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
 	});
 
 	it("dispatches selectChild on click", () => {
 		const dispatchSpy = vi.fn();
 		const state = makeState({
-			children: [{ id: "alice", name: "Alice", birthDate: "2024-01-01", stage: "toddler" }],
+			children: [
+				{
+					id: "alice",
+					name: "Alice",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+			],
 		});
 		render(<ChildrenPanel state={state} dispatch={dispatchSpy} />);
 		fireEvent.click(screen.getByTestId("child-alice"));
-		expect(dispatchSpy).toHaveBeenCalledWith({ type: "selectChild", childId: "alice" });
+		expect(dispatchSpy).toHaveBeenCalledWith({
+			type: "selectChild",
+			childId: "alice",
+		});
 	});
 
 	it("renders the panel with the correct ARIA label", () => {
@@ -145,11 +225,32 @@ describe("MessageBubble", () => {
 	});
 
 	it("renders agent message with agent-msg class", () => {
-		const agent: ChatMessage = { ...baseMessage, id: "m2", role: "agent", author: "儿科" };
+		const agent: ChatMessage = {
+			...baseMessage,
+			id: "m2",
+			role: "agent",
+			author: "儿科",
+		};
 		render(<MessageBubble message={agent} />);
 		const el = screen.getByTestId("message-m2");
 		expect(el).toHaveClass("agent-msg");
 		expect(el).toHaveAttribute("data-role", "agent");
+	});
+
+	it("renders thumbs feedback buttons for agent messages", () => {
+		const onFeedback = vi.fn();
+		const agent: ChatMessage = {
+			...baseMessage,
+			id: "m2",
+			role: "agent",
+			author: "儿科",
+			agentId: "pediatrician",
+		};
+		render(<MessageBubble message={agent} onFeedback={onFeedback} />);
+		fireEvent.click(screen.getByTestId("feedback-up-m2"));
+		fireEvent.click(screen.getByTestId("feedback-down-m2"));
+		expect(onFeedback).toHaveBeenCalledWith("m2", "up");
+		expect(onFeedback).toHaveBeenCalledWith("m2", "down");
 	});
 
 	it("renders the author and content", () => {
@@ -169,7 +270,13 @@ describe("Messages", () => {
 		const state = makeState({
 			messages: [
 				{ id: "a", role: "user", author: "p", content: "Q1", ts: 1 },
-				{ id: "b", role: "agent", author: "儿科", content: "A1", ts: 2 },
+				{
+					id: "b",
+					role: "agent",
+					author: "儿科",
+					content: "A1",
+					ts: 2,
+				},
 			],
 		});
 		render(<Messages state={state} />);
@@ -194,16 +301,29 @@ describe("Composer", () => {
 	});
 
 	it("renders the textarea with current question", () => {
-		render(<Composer state={makeState({ question: "宝宝发烧" })} dispatch={dispatch} onAsk={onAsk} />);
-		const textarea = screen.getByTestId("question-input") as HTMLTextAreaElement;
+		render(
+			<Composer
+				state={makeState({ question: "宝宝发烧" })}
+				dispatch={dispatch}
+				onAsk={onAsk}
+			/>,
+		);
+		const textarea = screen.getByTestId(
+			"question-input",
+		) as HTMLTextAreaElement;
 		expect(textarea.value).toBe("宝宝发烧");
 	});
 
 	it("dispatches setQuestion on textarea change", () => {
-		render(<Composer state={makeState()} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<Composer state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
+		);
 		const textarea = screen.getByTestId("question-input");
 		fireEvent.change(textarea, { target: { value: "新问题" } });
-		expect(dispatch).toHaveBeenCalledWith({ type: "setQuestion", question: "新问题" });
+		expect(dispatch).toHaveBeenCalledWith({
+			type: "setQuestion",
+			question: "新问题",
+		});
 	});
 
 	it("disables the textarea when no child is selected", () => {
@@ -265,7 +385,10 @@ describe("Composer", () => {
 	it("enables the ask button when child and question are set", () => {
 		render(
 			<Composer
-				state={makeState({ selectedChildId: "c1", question: "宝宝发烧" })}
+				state={makeState({
+					selectedChildId: "c1",
+					question: "宝宝发烧",
+				})}
 				dispatch={dispatch}
 				onAsk={onAsk}
 			/>,
@@ -276,7 +399,10 @@ describe("Composer", () => {
 	it("calls onAsk on form submit when valid", () => {
 		render(
 			<Composer
-				state={makeState({ selectedChildId: "c1", question: "宝宝发烧" })}
+				state={makeState({
+					selectedChildId: "c1",
+					question: "宝宝发烧",
+				})}
 				dispatch={dispatch}
 				onAsk={onAsk}
 			/>,
@@ -302,7 +428,11 @@ describe("Composer", () => {
 	it("shows 'Asking...' text when pending", () => {
 		render(
 			<Composer
-				state={makeState({ selectedChildId: "c1", question: "宝宝", pending: true })}
+				state={makeState({
+					selectedChildId: "c1",
+					question: "宝宝",
+					pending: true,
+				})}
 				dispatch={dispatch}
 				onAsk={onAsk}
 			/>,
@@ -312,7 +442,13 @@ describe("Composer", () => {
 	});
 
 	it("dispatches reset on reset button click", () => {
-		render(<Composer state={makeState({ question: "Q" })} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<Composer
+				state={makeState({ question: "Q" })}
+				dispatch={dispatch}
+				onAsk={onAsk}
+			/>,
+		);
 		fireEvent.click(screen.getByTestId("reset-button"));
 		expect(dispatch).toHaveBeenCalledWith({ type: "reset" });
 	});
@@ -331,7 +467,13 @@ describe("Composer", () => {
 	});
 
 	it("omits the error banner when state.error is null", () => {
-		render(<Composer state={makeState({ error: null })} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<Composer
+				state={makeState({ error: null })}
+				dispatch={dispatch}
+				onAsk={onAsk}
+			/>,
+		);
 		expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
 	});
 });
@@ -341,20 +483,26 @@ describe("ChatPanel", () => {
 	const onAsk = vi.fn();
 
 	it("renders the chat panel with title", () => {
-		render(<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
+		);
 		const panel = screen.getByTestId("chat-panel");
 		expect(panel).toBeInTheDocument();
 		expect(within(panel).getByText("对话")).toBeInTheDocument();
 	});
 
 	it("renders the messages and composer", () => {
-		render(<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
+		);
 		expect(screen.getByTestId("messages")).toBeInTheDocument();
 		expect(screen.getByTestId("composer")).toBeInTheDocument();
 	});
 
 	it("has correct ARIA label", () => {
-		render(<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<ChatPanel state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
+		);
 		expect(screen.getByLabelText("Chat")).toBeInTheDocument();
 	});
 });
@@ -364,14 +512,18 @@ describe("AppBody", () => {
 	const onAsk = vi.fn();
 
 	it("renders the children panel and chat panel side by side", () => {
-		render(<AppBody state={makeState()} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<AppBody state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
+		);
 		const body = screen.getByTestId("app-body");
 		expect(within(body).getByTestId("children-panel")).toBeInTheDocument();
 		expect(within(body).getByTestId("chat-panel")).toBeInTheDocument();
 	});
 
 	it("has the main role", () => {
-		render(<AppBody state={makeState()} dispatch={dispatch} onAsk={onAsk} />);
+		render(
+			<AppBody state={makeState()} dispatch={dispatch} onAsk={onAsk} />,
+		);
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 });
@@ -384,7 +536,9 @@ describe("reducer (sanity check for component tests)", () => {
 
 	it("selectChild clears messages and sets id", () => {
 		const state = makeState({
-			messages: [{ id: "m1", role: "user", author: "p", content: "q", ts: 1 }],
+			messages: [
+				{ id: "m1", role: "user", author: "p", content: "q", ts: 1 },
+			],
 		});
 		const next = reducer(state, { type: "selectChild", childId: "alice" });
 		expect(next.selectedChildId).toBe("alice");

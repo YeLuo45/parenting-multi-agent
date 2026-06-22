@@ -24,15 +24,51 @@ export interface EmotionPattern {
 }
 
 export const EMOTION_PATTERNS: EmotionPattern[] = [
-	{ emotion: "happy", patterns: [/(开心|高兴|快乐|happy|joy|excited|高兴|happy)/i], keywords: ["开心", "高兴", "快乐"] },
-	{ emotion: "sad", patterns: [/(伤心|难过|悲伤|想哭|sad|cry|unhappy|blue|沮丧)/i], keywords: ["伤心", "难过", "悲伤", "沮丧"] },
-	{ emotion: "angry", patterns: [/(生气|愤怒|发火|angry|mad|furious|rage)/i], keywords: ["生气", "愤怒", "发火"] },
-	{ emotion: "afraid", patterns: [/(害怕|怕|恐惧|afraid|scared|fear|phobia)/i], keywords: ["害怕", "怕", "恐惧"] },
-	{ emotion: "anxious", patterns: [/(焦虑|担心|紧张|anxious|anxiety|worried|nervous)/i], keywords: ["焦虑", "担心", "紧张"] },
-	{ emotion: "frustrated", patterns: [/(挫败|挫败感|沮丧|frustrat)/i], keywords: ["挫败", "挫败感"] },
-	{ emotion: "ashamed", patterns: [/(羞愧|丢脸|尴尬|ashamed|embarrassed)/i], keywords: ["羞愧", "丢脸"] },
-	{ emotion: "jealous", patterns: [/(嫉妒|吃醋|羡慕|jealous|envy)/i], keywords: ["嫉妒", "吃醋"] },
-	{ emotion: "calm", patterns: [/(平静|冷静|放松|calm|relaxed|peaceful)/i], keywords: ["平静", "冷静"] },
+	{
+		emotion: "happy",
+		patterns: [/(开心|高兴|快乐|happy|joy|excited|高兴|happy)/i],
+		keywords: ["开心", "高兴", "快乐"],
+	},
+	{
+		emotion: "sad",
+		patterns: [/(伤心|难过|悲伤|想哭|sad|cry|unhappy|blue|沮丧)/i],
+		keywords: ["伤心", "难过", "悲伤", "沮丧"],
+	},
+	{
+		emotion: "angry",
+		patterns: [/(生气|愤怒|发火|angry|mad|furious|rage)/i],
+		keywords: ["生气", "愤怒", "发火"],
+	},
+	{
+		emotion: "afraid",
+		patterns: [/(害怕|怕|恐惧|afraid|scared|fear|phobia)/i],
+		keywords: ["害怕", "怕", "恐惧"],
+	},
+	{
+		emotion: "anxious",
+		patterns: [/(焦虑|担心|紧张|anxious|anxiety|worried|nervous)/i],
+		keywords: ["焦虑", "担心", "紧张"],
+	},
+	{
+		emotion: "frustrated",
+		patterns: [/(挫败|挫败感|沮丧|frustrat)/i],
+		keywords: ["挫败", "挫败感"],
+	},
+	{
+		emotion: "ashamed",
+		patterns: [/(羞愧|丢脸|尴尬|ashamed|embarrassed)/i],
+		keywords: ["羞愧", "丢脸"],
+	},
+	{
+		emotion: "jealous",
+		patterns: [/(嫉妒|吃醋|羡慕|jealous|envy)/i],
+		keywords: ["嫉妒", "吃醋"],
+	},
+	{
+		emotion: "calm",
+		patterns: [/(平静|冷静|放松|calm|relaxed|peaceful)/i],
+		keywords: ["平静", "冷静"],
+	},
 ];
 
 /** Detect emotions in text. Returns multiple matches. */
@@ -76,7 +112,8 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 			"事后和孩子一起回顾，命名情绪",
 		],
 		urgency: "low",
-		professionalHelp: "如果 5 岁后仍频繁（每周 3+ 次）且强度大、影响日常，建议咨询儿童心理医生",
+		professionalHelp:
+			"如果 5 岁后仍频繁（每周 3+ 次）且强度大、影响日常，建议咨询儿童心理医生",
 	},
 	{
 		id: "B002_biting",
@@ -108,13 +145,16 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 			"奖励非攻击行为",
 		],
 		urgency: "medium",
-		professionalHelp: "5 岁后持续攻击行为、伤害动物、缺乏同理，建议专业评估",
+		professionalHelp:
+			"5 岁后持续攻击行为、伤害动物、缺乏同理，建议专业评估",
 	},
 	{
 		id: "B004_sleep_regression",
 		name: "睡眠倒退",
 		nameEn: "Sleep Regression",
-		patterns: [/(夜醒|夜啼|哄睡|不肯睡|睡眠倒退|sleep.regression|夜惊|nightmare)/i],
+		patterns: [
+			/(夜醒|夜啼|哄睡|不肯睡|睡眠倒退|sleep.regression|夜惊|nightmare)/i,
+		],
 		ageRange: { minMonths: 4, maxMonths: 60 },
 		strategies: [
 			"常见于 4 月、8-10 月、18 月、2 岁",
@@ -124,7 +164,8 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 			"白天充分放电（户外活动）",
 		],
 		urgency: "low",
-		professionalHelp: "持续超过 1 个月或伴随白天嗜睡/生长问题，建议咨询儿科",
+		professionalHelp:
+			"持续超过 1 个月或伴随白天嗜睡/生长问题，建议咨询儿科",
 	},
 	{
 		id: "B005_picky_eating",
@@ -140,13 +181,16 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 			"不把食物作为奖励或惩罚",
 		],
 		urgency: "low",
-		professionalHelp: "影响生长曲线、严重拒绝食物种类超过 20 种、伴有呕吐，可能需要 OT 评估",
+		professionalHelp:
+			"影响生长曲线、严重拒绝食物种类超过 20 种、伴有呕吐，可能需要 OT 评估",
 	},
 	{
 		id: "B006_separation_anxiety",
 		name: "分离焦虑",
 		nameEn: "Separation Anxiety",
-		patterns: [/(分离焦虑|怕妈妈离开|不肯分离|separation.anxiety|黏人|clingy)/i],
+		patterns: [
+			/(分离焦虑|怕妈妈离开|不肯分离|separation.anxiety|黏人|clingy)/i,
+		],
 		ageRange: { minMonths: 6, maxMonths: 36 },
 		strategies: [
 			"6-18 月常见，是健康依恋的表现",
@@ -156,13 +200,16 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 			"练习短暂分离（从几分钟开始）",
 		],
 		urgency: "low",
-		professionalHelp: "3 岁后仍强烈分离焦虑、影响日常活动（不能去幼儿园等），建议评估",
+		professionalHelp:
+			"3 岁后仍强烈分离焦虑、影响日常活动（不能去幼儿园等），建议评估",
 	},
 	{
 		id: "B007_sibling_rivalry",
 		name: "同胞竞争",
 		nameEn: "Sibling Rivalry",
-		patterns: [/(同胞|兄弟姐妹|抢|嫉妒|吃醋|sibling|rivalry|哥哥|姐姐|弟弟|妹妹|老大|老二|小的)/i],
+		patterns: [
+			/(同胞|兄弟姐妹|抢|嫉妒|吃醋|sibling|rivalry|哥哥|姐姐|弟弟|妹妹|老大|老二|小的)/i,
+		],
 		ageRange: { minMonths: 24, maxMonths: 144 },
 		strategies: [
 			"新弟妹出生后大孩出现退化是正常",
@@ -178,7 +225,9 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 		id: "B008_screen_addiction",
 		name: "屏幕成瘾",
 		nameEn: "Screen Addiction",
-		patterns: [/(手机|ipad|屏幕|看视频|玩手机|screen|phone|video|游戏|game)/i],
+		patterns: [
+			/(手机|ipad|屏幕|看视频|玩手机|screen|phone|video|游戏|game)/i,
+		],
 		ageRange: { minMonths: 18, maxMonths: 144 },
 		strategies: [
 			"2 岁前不建议屏幕（美国儿科学会）",
@@ -188,7 +237,8 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 			"约定屏幕时间（可视计时器）",
 		],
 		urgency: "medium",
-		professionalHelp: "严重影响睡眠/学习/社交、对屏幕极度抗拒替代活动，建议评估",
+		professionalHelp:
+			"严重影响睡眠/学习/社交、对屏幕极度抗拒替代活动，建议评估",
 	},
 	{
 		id: "B009_self_harm",
@@ -209,7 +259,10 @@ export const BEHAVIOR_PROBLEMS: BehaviorProblem[] = [
 ];
 
 /** Match a behavior problem from a question. */
-export function matchBehaviorProblem(text: string, ageMonths: number): BehaviorProblem | null {
+export function matchBehaviorProblem(
+	text: string,
+	ageMonths: number,
+): BehaviorProblem | null {
 	for (const p of BEHAVIOR_PROBLEMS) {
 		if (p.ageRange.minMonths > ageMonths) continue;
 		if (p.ageRange.maxMonths < ageMonths) continue;
@@ -235,14 +288,16 @@ export const ERIKSON_STAGES: EriksonStage[] = [
 		ageRange: "0-1 岁",
 		psychosocialCrisis: "Trust vs. Mistrust (信任 vs 不信任)",
 		virtue: "Hope (希望)",
-		parentGuidance: "及时回应基本需求，建立安全依恋。多肌肤接触、稳定照护者",
+		parentGuidance:
+			"及时回应基本需求，建立安全依恋。多肌肤接触、稳定照护者",
 	},
 	{
 		stage: "toddler",
 		ageRange: "1-3 岁",
 		psychosocialCrisis: "Autonomy vs. Shame/Doubt (自主 vs 羞怯怀疑)",
 		virtue: "Will (意志)",
-		parentGuidance: "提供安全环境下的选择（如选哪双鞋），允许探索。设定合理边界但不强制",
+		parentGuidance:
+			"提供安全环境下的选择（如选哪双鞋），允许探索。设定合理边界但不强制",
 	},
 	{
 		stage: "preschool",
@@ -261,9 +316,11 @@ export const ERIKSON_STAGES: EriksonStage[] = [
 	{
 		stage: "tween",
 		ageRange: "12-18 岁",
-		psychosocialCrisis: "Identity vs. Role Confusion (自我认同 vs 角色混乱)",
+		psychosocialCrisis:
+			"Identity vs. Role Confusion (自我认同 vs 角色混乱)",
 		virtue: "Fidelity (忠诚)",
-		parentGuidance: "尊重逐渐独立的需要，做顾问而非独裁者。讨论价值观、保持对话",
+		parentGuidance:
+			"尊重逐渐独立的需要，做顾问而非独裁者。讨论价值观、保持对话",
 	},
 	{
 		stage: "young_adult",

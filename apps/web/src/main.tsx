@@ -6,6 +6,7 @@
  * state + dispatch so the same code can be unit-tested without jsdom.
  */
 import { createRoot } from "react-dom/client";
+import { WEB_VERSION } from "./version.js";
 import { createParentingApp } from "./view.js";
 import "./styles.css";
 
@@ -25,4 +26,4 @@ if (typeof document !== "undefined") {
 	mount();
 }
 
-export const WEB_VERSION = "0.1.0";
+export { WEB_VERSION };

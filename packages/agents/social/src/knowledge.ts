@@ -4,7 +4,14 @@
  * Phase 3 direction 5: rule-based + keyword matching. No LLM call.
  */
 
-export type SocialTopic = "sharing" | "shyness" | "playdate" | "conflict" | "cooperation" | "friendship" | "peer_pressure";
+export type SocialTopic =
+	| "sharing"
+	| "shyness"
+	| "playdate"
+	| "conflict"
+	| "cooperation"
+	| "friendship"
+	| "peer_pressure";
 
 export interface SocialTip {
 	topic: SocialTopic;
@@ -106,10 +113,15 @@ export const SOCIAL_TIPS: SocialTip[] = [
 	},
 ];
 
-export function getTipsForStage(stage: string | undefined, topic?: SocialTopic): SocialTip[] {
+export function getTipsForStage(
+	stage: string | undefined,
+	topic?: SocialTopic,
+): SocialTip[] {
 	return SOCIAL_TIPS.filter(
 		(t) =>
-			(stage === undefined || t.stage.includes("any") || t.stage.includes(stage)) &&
+			(stage === undefined ||
+				t.stage.includes("any") ||
+				t.stage.includes(stage)) &&
 			(topic === undefined || t.topic === topic),
 	);
 }
@@ -117,9 +129,12 @@ export function getTipsForStage(stage: string | undefined, topic?: SocialTopic):
 export function matchTopic(text: string): SocialTopic | null {
 	const q = text.toLowerCase();
 	if (/(分享|轮流|turn.take|share)/i.test(q)) return "sharing";
-	if (/(害羞|shy|shyness|怕生|认生|社交恐惧|social.anxiety)/i.test(q)) return "shyness";
-	if (/(play.date|playdate|一起玩|小朋友来|邀请|约)/i.test(q)) return "playdate";
-	if (/(冲突|吵架|打架|争抢|conflict|fight|bully|霸凌)/i.test(q)) return "conflict";
+	if (/(害羞|shy|shyness|怕生|认生|社交恐惧|social.anxiety)/i.test(q))
+		return "shyness";
+	if (/(play.date|playdate|一起玩|小朋友来|邀请|约)/i.test(q))
+		return "playdate";
+	if (/(冲突|吵架|打架|争抢|conflict|fight|bully|霸凌)/i.test(q))
+		return "conflict";
 	if (/(合作|团队|team|cooperat|一起做)/i.test(q)) return "cooperation";
 	if (/(朋友|friend|交友|友谊|best.friend)/i.test(q)) return "friendship";
 	if (/(同伴压力|peer.pressure|从众|随大流)/i.test(q)) return "peer_pressure";

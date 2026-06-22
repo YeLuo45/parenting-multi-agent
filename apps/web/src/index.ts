@@ -1,50 +1,67 @@
 /**
  * parenting Web Dashboard — index of pure helpers and entry points.
  */
-export { createParentingApp, dispatchAsk, runAsk, newMessageId, defaultChild, initialState, reducer, renderView, listWebAgentIds } from "./view.js";
-export { createWebOrchestrator } from "./orchestrator.js";
-export { WebMemoryLayer, type MemoryLayerLike } from "./memory-web.js";
+
 export {
+	DEFAULT_LOCALE,
+	type I18nContextValue,
+	I18nProvider,
+	LanguageSwitcher,
+	LOCALE_LABELS,
+	LOCALES,
+	type Locale,
+	MESSAGES,
+	type MessageKey,
+	readStoredLocale,
+	translate,
+	useI18n,
+	writeStoredLocale,
+} from "./i18n.js";
+export {
+	appBodyGridStyle,
+	appContainerInlineStyle,
+	type BreakpointName,
+	centeredContainerStyle,
+	headerInlineStyle,
+	LAYOUT,
+	resolveBreakpoint,
+	responsiveColumns,
+} from "./layout.js";
+export { IndexedDbMemoryLayer } from "./memory-indexeddb.js";
+export { type MemoryLayerLike, WebMemoryLayer } from "./memory-web.js";
+export type { WebOrchestrator } from "./orchestrator.js";
+export {
+	createWebOrchestrator,
+	createWebOrchestratorWithPersistence,
+} from "./orchestrator.js";
+export {
+	applyTheme,
+	DEFAULT_THEME,
+	nextTheme,
+	readStoredTheme,
+	THEME_NAMES,
+	THEME_VARS,
+	THEMES,
+	type ThemeContextValue,
+	type ThemeMeta,
+	type ThemeName,
 	ThemeProvider,
 	ThemeSwitcher,
 	useTheme,
-	THEMES,
-	THEME_NAMES,
-	THEME_VARS,
-	DEFAULT_THEME,
-	applyTheme,
-	readStoredTheme,
 	writeStoredTheme,
-	nextTheme,
-	type ThemeName,
-	type ThemeMeta,
-	type ThemeContextValue,
 } from "./theme.js";
+export { WEB_VERSION } from "./version.js";
+export type { Action, AppState, ChatMessage, IRNode } from "./view.js";
 export {
-	I18nProvider,
-	LanguageSwitcher,
-	useI18n,
-	LOCALES,
-	LOCALE_LABELS,
-	DEFAULT_LOCALE,
-	MESSAGES,
-	readStoredLocale,
-	writeStoredLocale,
-	translate,
-	type Locale,
-	type MessageKey,
-	type I18nContextValue,
-} from "./i18n.js";
-export {
-	LAYOUT,
-	appBodyGridStyle,
-	appContainerInlineStyle,
-	centeredContainerStyle,
-	headerInlineStyle,
-	resolveBreakpoint,
-	responsiveColumns,
-	type BreakpointName,
-} from "./layout.js";
-export type { AppState, Action, ChatMessage, IRNode } from "./view.js";
-export type { WebOrchestrator } from "./orchestrator.js";
-export { WEB_VERSION } from "./main.js";
+	createParentingApp,
+	createParentingAppWithPersistence,
+	defaultChild,
+	dispatchAsk,
+	initialState,
+	listWebAgentIds,
+	newMessageId,
+	recordMessageFeedback,
+	reducer,
+	renderView,
+	runAsk,
+} from "./view.js";

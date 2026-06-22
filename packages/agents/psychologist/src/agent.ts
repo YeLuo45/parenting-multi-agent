@@ -4,19 +4,17 @@
  * Phase 1: rule-based + keyword matching (no LLM call).
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
+import { type ChildProfile, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	EMOTION_PATTERNS,
 	BEHAVIOR_PROBLEMS,
-	ERIKSON_STAGES,
-	detectEmotions,
-	matchBehaviorProblem,
-	getEriksonStage,
 	type BehaviorProblem,
+	detectEmotions,
 	type Emotion,
 	type EriksonStage,
+	getEriksonStage,
+	matchBehaviorProblem,
 } from "./knowledge.js";
 
 export const PSYCHOLOGIST_DISCLAIMER =
@@ -31,24 +29,37 @@ export function detectIntent(
 	question: string,
 ): "emotion" | "behavior" | "development" | "self_harm" | "family" | "general" {
 	const q = question.toLowerCase();
-	if (/(自残|自杀|想死|自伤|self.harm|suicide|不想活|想消失)/i.test(q)) return "self_harm";
+	if (/(自残|自杀|想死|自伤|self.harm|suicide|不想活|想消失)/i.test(q))
+		return "self_harm";
 	if (
 		/(发脾气|哭闹|tantrum|打人|咬人|咬|hit|biting|分离焦虑|挑食|偏食|睡眠倒退|夜醒|不肯睡|看手机|看视频|screen|黏人|同胞|兄弟姐妹|争宠|欺负|被欺负|抢|争|打架|欺负|被欺负|小弟弟|小姐姐|老大|老二|小的)/i.test(
 			q,
 		)
 	)
 		return "behavior";
-	if (/(情绪|害怕|怕|哭|伤心|生气|emotion|afraid|scared|anxious|焦虑|嫉妒|吃醋|jealous)/i.test(q)) return "emotion";
-	if (/(发育|发展|心理|发展心理学|erikson|依恋|attachment|青春期|叛逆|teen)/i.test(q)) return "development";
-	if (/(家庭|夫妻|婆媳|祖辈|离婚|family|grandparent|divorce|爸爸|妈妈|夫妻关系)/i.test(q)) return "family";
+	if (
+		/(情绪|害怕|怕|哭|伤心|生气|emotion|afraid|scared|anxious|焦虑|嫉妒|吃醋|jealous)/i.test(
+			q,
+		)
+	)
+		return "emotion";
+	if (
+		/(发育|发展|心理|发展心理学|erikson|依恋|attachment|青春期|叛逆|teen)/i.test(
+			q,
+		)
+	)
+		return "development";
+	if (
+		/(家庭|夫妻|婆媳|祖辈|离婚|family|grandparent|divorce|爸爸|妈妈|夫妻关系)/i.test(
+			q,
+		)
+	)
+		return "family";
 	return "general";
 }
 
 function formatStrategies(problem: BehaviorProblem): string {
-	const lines = [
-		`📋 ${problem.name} (${problem.nameEn}) 应对策略：`,
-		"",
-	];
+	const lines = [`📋 ${problem.name} (${problem.nameEn}) 应对策略：`, ""];
 	problem.strategies.forEach((s, i) => {
 		lines.push(`${i + 1}. ${s}`);
 	});
@@ -85,7 +96,11 @@ export class PsychologistAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectIntent(question);
@@ -123,7 +138,9 @@ export class PsychologistAgent implements Agent {
 					calm: "平静",
 					neutral: "中性",
 				};
-				const emotionList = emotions.map((e) => emotionNames[e]).join("、");
+				const emotionList = emotions
+					.map((e) => emotionNames[e])
+					.join("、");
 				const content = [
 					`识别到的情绪：${emotionList}`,
 					"",
@@ -176,7 +193,6 @@ export class PsychologistAgent implements Agent {
 					urgency: "info",
 				};
 			}
-			case "general":
 			default:
 				return this.introReply();
 		}
@@ -198,14 +214,14 @@ export function createPsychologistAgent(): PsychologistAgent {
 }
 
 export {
-	EMOTION_PATTERNS,
 	BEHAVIOR_PROBLEMS,
-	ERIKSON_STAGES,
-	detectEmotions,
-	matchBehaviorProblem,
-	getEriksonStage,
 	type BehaviorProblem,
+	detectEmotions,
+	EMOTION_PATTERNS,
 	type Emotion,
 	type EmotionPattern,
+	ERIKSON_STAGES,
 	type EriksonStage,
+	getEriksonStage,
+	matchBehaviorProblem,
 } from "./knowledge.js";

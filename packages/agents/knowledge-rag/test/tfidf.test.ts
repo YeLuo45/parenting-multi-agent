@@ -5,13 +5,15 @@ import { describe, expect, it } from "vitest";
 import {
 	buildTfIdfIndex,
 	cosineSimilarity,
+	type KnowledgeEntry,
 	searchByRelevance,
 	searchByVector,
 	vectorize,
-	type KnowledgeEntry,
 } from "../src/index.js";
 
-function makeEntry(overrides: Partial<KnowledgeEntry> & Pick<KnowledgeEntry, "id">): KnowledgeEntry {
+function makeEntry(
+	overrides: Partial<KnowledgeEntry> & Pick<KnowledgeEntry, "id">,
+): KnowledgeEntry {
 	return {
 		id: overrides.id,
 		topic: overrides.topic ?? "test",
@@ -28,7 +30,14 @@ const BREASTFEEDING: KnowledgeEntry = makeEntry({
 	id: "bf",
 	question: "How long to breastfeed?",
 	topic: "nutrition",
-	tags: ["breastfeeding", "nursing", "duration", "母乳", "喂养", "breastfeeding"],
+	tags: [
+		"breastfeeding",
+		"nursing",
+		"duration",
+		"母乳",
+		"喂养",
+		"breastfeeding",
+	],
 });
 
 const SCREEN: KnowledgeEntry = makeEntry({
@@ -59,7 +68,10 @@ describe("cosineSimilarity", () => {
 	});
 
 	it("returns 1 for identical vectors", () => {
-		const v = new Map([["a", 1], ["b", 2]]);
+		const v = new Map([
+			["a", 1],
+			["b", 2],
+		]);
 		expect(cosineSimilarity(v, v)).toBeCloseTo(1, 5);
 	});
 
@@ -70,8 +82,15 @@ describe("cosineSimilarity", () => {
 	});
 
 	it("computes non-trivial similarity", () => {
-		const a = new Map([["x", 3], ["y", 2]]);
-		const b = new Map([["x", 2], ["y", 1], ["z", 0.5]]);
+		const a = new Map([
+			["x", 3],
+			["y", 2],
+		]);
+		const b = new Map([
+			["x", 2],
+			["y", 1],
+			["z", 0.5],
+		]);
 		const sim = cosineSimilarity(a, b);
 		expect(sim).toBeGreaterThan(0);
 		expect(sim).toBeLessThan(1);
@@ -142,8 +161,12 @@ describe("buildTfIdfIndex", () => {
 	});
 
 	it("respects smoothing option", () => {
-		const a = buildTfIdfIndex([BREASTFEEDING, SCREEN, SLEEP], { smoothing: 0 });
-		const b = buildTfIdfIndex([BREASTFEEDING, SCREEN, SLEEP], { smoothing: 5 });
+		const a = buildTfIdfIndex([BREASTFEEDING, SCREEN, SLEEP], {
+			smoothing: 0,
+		});
+		const b = buildTfIdfIndex([BREASTFEEDING, SCREEN, SLEEP], {
+			smoothing: 5,
+		});
 		// Different smoothing affects IDF values.
 		const idfA = a.idf.get("breastfeeding") ?? 0;
 		const idfB = b.idf.get("breastfeeding") ?? 0;
@@ -215,7 +238,12 @@ describe("searchByRelevance", () => {
 	});
 
 	it("respects custom keywordWeight", () => {
-		const keywordHeavy = searchByRelevance(entries, "breastfeeding", 3, 0.9);
+		const keywordHeavy = searchByRelevance(
+			entries,
+			"breastfeeding",
+			3,
+			0.9,
+		);
 		const vectorHeavy = searchByRelevance(entries, "breastfeeding", 3, 0.1);
 		// Both should rank the breastfeeding entry first.
 		expect(keywordHeavy[0].entry.id).toBe("bf");
@@ -227,7 +255,9 @@ describe("searchByRelevance", () => {
 	it("returns results sorted by descending combined score", () => {
 		const results = searchByRelevance(entries, "sleep children screen", 3);
 		for (let i = 1; i < results.length; i++) {
-			expect(results[i - 1].combined).toBeGreaterThanOrEqual(results[i].combined);
+			expect(results[i - 1].combined).toBeGreaterThanOrEqual(
+				results[i].combined,
+			);
 		}
 	});
 
@@ -243,7 +273,11 @@ describe("searchByRelevance", () => {
 	});
 
 	it("combines scores for high-relevance query", () => {
-		const results = searchByRelevance(entries, "breastfeeding duration nursing", 3);
+		const results = searchByRelevance(
+			entries,
+			"breastfeeding duration nursing",
+			3,
+		);
 		expect(results[0].entry.id).toBe("bf");
 		expect(results[0].combined).toBeGreaterThan(0.5);
 	});

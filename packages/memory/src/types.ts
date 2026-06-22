@@ -20,7 +20,13 @@ export interface ChildProfile {
 	metadata?: Record<string, unknown>;
 }
 
-export type FactCategory = "vaccine" | "milestone" | "family" | "medical" | "education" | "preference";
+export type FactCategory =
+	| "vaccine"
+	| "milestone"
+	| "family"
+	| "medical"
+	| "education"
+	| "preference";
 
 export interface Fact {
 	id: string;
@@ -64,7 +70,10 @@ export interface DeltaEntry {
 /**
  * Compute child stage from birth date.
  */
-export function computeStage(birthDate: string, asOf: Date = new Date()): ChildStage {
+export function computeStage(
+	birthDate: string,
+	asOf: Date = new Date(),
+): ChildStage {
 	const birth = new Date(birthDate);
 	const ageMs = asOf.getTime() - birth.getTime();
 	const ageMonths = ageMs / (1000 * 60 * 60 * 24 * 30.44); // avg month

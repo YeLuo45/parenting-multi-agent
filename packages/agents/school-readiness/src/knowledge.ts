@@ -100,10 +100,15 @@ export const READINESS_TIPS: ReadinessTip[] = [
 	},
 ];
 
-export function getTipsForStage(stage: string | undefined, topic?: ReadinessTopic): ReadinessTip[] {
+export function getTipsForStage(
+	stage: string | undefined,
+	topic?: ReadinessTopic,
+): ReadinessTip[] {
 	return READINESS_TIPS.filter(
 		(t) =>
-			(stage === undefined || t.stage.includes("any") || t.stage.includes(stage)) &&
+			(stage === undefined ||
+				t.stage.includes("any") ||
+				t.stage.includes(stage)) &&
 			(topic === undefined || t.topic === topic),
 	);
 }
@@ -111,10 +116,14 @@ export function getTipsForStage(stage: string | undefined, topic?: ReadinessTopi
 export function matchTopic(text: string): ReadinessTopic | null {
 	const q = text.toLowerCase();
 	if (/(衔接|过渡|小学|transition|幼升小|幼小)/i.test(q)) return "transition";
-	if (/(入学|上幼儿园|school.ready|kindergarten|readiness)/i.test(q)) return "readiness";
-	if (/(识字|阅读|绘本|讲故事|读书|看图|phonic|自然拼读|literacy)/i.test(q)) return "literacy";
+	if (/(入学|上幼儿园|school.ready|kindergarten|readiness)/i.test(q))
+		return "readiness";
+	if (/(识字|阅读|绘本|讲故事|读书|看图|phonic|自然拼读|literacy)/i.test(q))
+		return "literacy";
 	if (/(数学|数数|加减|算术|计算|math)/i.test(q)) return "math";
-	if (/(社交|分享|轮流|举手|social.skill|school.social)/i.test(q)) return "social";
-	if (/(幼儿园|选择学校|kindergarten|preschool|选园)/i.test(q)) return "kindergarten";
+	if (/(社交|分享|轮流|举手|social.skill|school.social)/i.test(q))
+		return "social";
+	if (/(幼儿园|选择学校|kindergarten|preschool|选园)/i.test(q))
+		return "kindergarten";
 	return null;
 }

@@ -9,15 +9,15 @@
  */
 import type {
 	ChildProfile,
-	ChildStage,
+	DeltaEntry,
+	DeltaOp,
 	Episode,
 	EpisodeType,
 	Fact,
 	FactCategory,
 	Session,
-	DeltaEntry,
-	DeltaOp,
 } from "@parenting/memory";
+import type { Feedback } from "@parenting/orchestrator";
 import { computeWebStage, genWebId } from "./memory-helpers.js";
 
 /**
@@ -32,24 +32,45 @@ export interface MemoryLayerLike {
 	deleteChild(id: string): boolean;
 
 	// L2: Facts
-	addFact(childId: string, category: FactCategory, key: string, value: string | Record<string, unknown>): Fact;
+	addFact(
+		childId: string,
+		category: FactCategory,
+		key: string,
+		value: string | Record<string, unknown>,
+	): Fact;
 	getFacts(childId: string, category?: FactCategory): Fact[];
 	deleteFact(id: string): boolean;
 
 	// L3: Episodes
-	addEpisode(childId: string, type: EpisodeType, content: Record<string, unknown>): Episode;
+	addEpisode(
+		childId: string,
+		type: EpisodeType,
+		content: Record<string, unknown>,
+	): Episode;
 	getEpisodes(childId: string, type?: EpisodeType, limit?: number): Episode[];
 
 	// L4: Sessions
 	startSession(childId: string, context?: Record<string, unknown>): Session;
 	getSession(sessionId: string): Session | null;
-	updateSession(sessionId: string, context: Record<string, unknown>): Session | null;
+	updateSession(
+		sessionId: string,
+		context: Record<string, unknown>,
+	): Session | null;
 
 	// Delta log
 	getDeltaLog(since?: number, includeUnsynced?: boolean): DeltaEntry[];
 	markDeltaSynced(uptoId: number): number;
 	getUnsyncedDeltas(limit?: number): DeltaEntry[];
-	getDeltaStats(): { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> };
+	getDeltaStats(): {
+		total: number;
+		unsynced: number;
+		byTable: Record<string, number>;
+		byOp: Record<string, number>;
+	};
+
+	// Agent feedback
+	addFeedback?(feedback: Omit<Feedback, "id" | "createdAt">): Feedback;
+	getFeedback?(agentId: string, limit?: number): Feedback[];
 
 	// Lifecycle
 	close(): void;
@@ -61,6 +82,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 	private facts = new Map<string, Fact>();
 	private episodes = new Map<string, Episode>();
 	private sessions = new Map<string, Session>();
+	private feedback = new Map<string, Feedback>();
 	private deltas: DeltaEntry[] = [];
 	private nextDeltaId = 1;
 	private closed = false;
@@ -91,7 +113,12 @@ export class WebMemoryLayer implements MemoryLayerLike {
 
 	// ─── L2: Facts ───────────────────────────────────────────────────────
 
-	addFact(childId: string, category: FactCategory, key: string, value: string | Record<string, unknown>): Fact {
+	addFact(
+		childId: string,
+		category: FactCategory,
+		key: string,
+		value: string | Record<string, unknown>,
+	): Fact {
 		const fact: Fact = {
 			id: genWebId("fact"),
 			childId,
@@ -107,7 +134,9 @@ export class WebMemoryLayer implements MemoryLayerLike {
 
 	getFacts(childId: string, category?: FactCategory): Fact[] {
 		return Array.from(this.facts.values()).filter(
-			(f) => f.childId === childId && (category === undefined || f.category === category),
+			(f) =>
+				f.childId === childId &&
+				(category === undefined || f.category === category),
 		);
 	}
 
@@ -119,7 +148,11 @@ export class WebMemoryLayer implements MemoryLayerLike {
 
 	// ─── L3: Episodes ────────────────────────────────────────────────────
 
-	addEpisode(childId: string, type: EpisodeType, content: Record<string, unknown>): Episode {
+	addEpisode(
+		childId: string,
+		type: EpisodeType,
+		content: Record<string, unknown>,
+	): Episode {
 		const episode: Episode = {
 			id: genWebId("ep"),
 			childId,
@@ -132,9 +165,17 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		return episode;
 	}
 
-	getEpisodes(childId: string, type?: EpisodeType, limit?: number): Episode[] {
+	getEpisodes(
+		childId: string,
+		type?: EpisodeType,
+		limit?: number,
+	): Episode[] {
 		let results = Array.from(this.episodes.values())
-			.filter((e) => e.childId === childId && (type === undefined || e.type === type))
+			.filter(
+				(e) =>
+					e.childId === childId &&
+					(type === undefined || e.type === type),
+			)
 			.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 		if (limit !== undefined) results = results.slice(0, limit);
 		return results;
@@ -142,7 +183,10 @@ export class WebMemoryLayer implements MemoryLayerLike {
 
 	// ─── L4: Sessions ────────────────────────────────────────────────────
 
-	startSession(childId: string, context: Record<string, unknown> = {}): Session {
+	startSession(
+		childId: string,
+		context: Record<string, unknown> = {},
+	): Session {
 		const now = new Date().toISOString();
 		const session: Session = {
 			id: genWebId("sess"),
@@ -160,19 +204,50 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		return this.sessions.get(sessionId) ?? null;
 	}
 
-	updateSession(sessionId: string, context: Record<string, unknown>): Session | null {
+	updateSession(
+		sessionId: string,
+		context: Record<string, unknown>,
+	): Session | null {
 		const session = this.sessions.get(sessionId);
 		if (!session) return null;
 		session.context = context;
 		session.lastActive = new Date().toISOString();
 		this.sessions.set(sessionId, session);
-		this.recordDelta("sessions", sessionId, "update", { context, lastActive: session.lastActive });
+		this.recordDelta("sessions", sessionId, "update", {
+			context,
+			lastActive: session.lastActive,
+		});
 		return session;
+	}
+
+	// ─── Feedback ────────────────────────────────────────────────────────
+
+	addFeedback(feedback: Omit<Feedback, "id" | "createdAt">): Feedback {
+		const entry: Feedback = {
+			...feedback,
+			id: genWebId("fb"),
+			createdAt: new Date().toISOString(),
+		};
+		this.feedback.set(entry.id, entry);
+		this.recordDelta("feedback", entry.id, "insert", { ...entry });
+		return entry;
+	}
+
+	getFeedback(agentId: string, limit?: number): Feedback[] {
+		const results = Array.from(this.feedback.values())
+			.filter((entry) => entry.agentId === agentId)
+			.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+		return limit ? results.slice(0, limit) : results;
 	}
 
 	// ─── Delta Log ───────────────────────────────────────────────────────
 
-	private recordDelta(tableName: string, rowId: string, op: DeltaOp, payload: Record<string, unknown>): void {
+	private recordDelta(
+		tableName: string,
+		rowId: string,
+		op: DeltaOp,
+		payload: Record<string, unknown>,
+	): void {
 		this.deltas.push({
 			id: this.nextDeltaId++,
 			tableName,
@@ -185,8 +260,11 @@ export class WebMemoryLayer implements MemoryLayerLike {
 	}
 
 	getDeltaLog(since?: number, includeUnsynced: boolean = true): DeltaEntry[] {
-		let results = since ? this.deltas.filter((d) => d.id > since) : [...this.deltas];
-		if (!includeUnsynced) results = results.filter((d) => d.syncedAt !== null);
+		let results = since
+			? this.deltas.filter((d) => d.id > since)
+			: [...this.deltas];
+		if (!includeUnsynced)
+			results = results.filter((d) => d.syncedAt !== null);
 		return results;
 	}
 
@@ -207,7 +285,12 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		return limit ? results.slice(0, limit) : results;
 	}
 
-	getDeltaStats(): { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> } {
+	getDeltaStats(): {
+		total: number;
+		unsynced: number;
+		byTable: Record<string, number>;
+		byOp: Record<string, number>;
+	} {
 		const total = this.deltas.length;
 		const unsynced = this.deltas.filter((d) => d.syncedAt === null).length;
 		const byTable: Record<string, number> = {};
@@ -226,6 +309,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		this.facts.clear();
 		this.episodes.clear();
 		this.sessions.clear();
+		this.feedback.clear();
 		this.deltas = [];
 		this.closed = true;
 	}

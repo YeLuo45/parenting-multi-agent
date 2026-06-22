@@ -5,31 +5,27 @@
  * triage and basic info; real LLM integration in Phase 2.
  */
 
-import { computeStage, type ChildProfile } from "@parenting/memory";
-import type {
-	Agent,
-	AgentContext,
-	AgentReply,
-	UrgencyLevel,
-} from "@parenting/orchestrator";
+import type { ChildProfile } from "@parenting/memory";
+import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
-	VACCINE_SCHEDULE,
-	getVaccinesForAge,
-	getNextVaccine,
-	triageSymptom,
-	getMilestonesForAge,
 	calculateDose,
-	type VaccineInfo,
-	type TriageRule,
+	getMilestonesForAge,
+	getNextVaccine,
+	getVaccinesForAge,
 	type Milestone,
+	triageSymptom,
+	type VaccineInfo,
 } from "./knowledge.js";
 
 export const PEDIATRICIAN_DISCLAIMER =
 	"⚠️ 本回复仅供参考，不构成医疗建议。如有疑虑请及时就医或咨询儿科医生。";
 
 // Exported for testing
-export function formatMilestonesForTest(milestones: Milestone[], ageMonths: number): string {
+export function formatMilestonesForTest(
+	milestones: Milestone[],
+	ageMonths: number,
+): string {
 	const byDomain = new Map<string, Milestone[]>();
 	for (const m of milestones) {
 		const list = byDomain.get(m.domain) ?? [];
@@ -42,9 +38,12 @@ export function formatMilestonesForTest(milestones: Milestone[], ageMonths: numb
 		social: "社交",
 		cognitive: "认知",
 	};
-	const lines: string[] = [`${Math.floor(ageMonths)} 月龄宝宝典型发育里程碑：`];
+	const lines: string[] = [
+		`${Math.floor(ageMonths)} 月龄宝宝典型发育里程碑：`,
+	];
 	for (const [domain, list] of byDomain) {
-		const domainName = DOMAIN_NAMES[domain as Milestone["domain"]] ?? domain;
+		const domainName =
+			DOMAIN_NAMES[domain as Milestone["domain"]] ?? domain;
 		lines.push(`\n【${domainName}】`);
 		for (const m of list) lines.push(`- ${m.description}`);
 	}
@@ -56,29 +55,41 @@ function ageInMonths(birthDate: string, asOf: Date = new Date()): number {
 	return (asOf.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
 }
 
-function detectIntent(question: string): "vaccine" | "illness" | "milestone" | "medication" | "general" {
+function detectIntent(
+	question: string,
+): "vaccine" | "illness" | "milestone" | "medication" | "general" {
 	const q = question.toLowerCase();
 	if (/(疫苗|打针|vaccine|immuniz|接种)/i.test(q)) return "vaccine";
 	if (
-		/(发烧|fever|咳嗽|cough|感冒|腹泻|皮疹|呕吐|便秘|sick|ill|痛|呼吸困难|喘息)/i.test(q) &&
-		!/(药|medication|dose|剂量|吃多少|美林|泰诺林|布洛芬|对乙酰|退烧药|aceta|ibu)/i.test(q)
+		/(发烧|fever|咳嗽|cough|感冒|腹泻|皮疹|呕吐|便秘|sick|ill|痛|呼吸困难|喘息)/i.test(
+			q,
+		) &&
+		!/(药|medication|dose|剂量|吃多少|美林|泰诺林|布洛芬|对乙酰|退烧药|aceta|ibu)/i.test(
+			q,
+		)
 	)
 		return "illness";
-	if (/(发育|里程碑|发展|长牙|走路|说话|milestone|development)/i.test(q)) return "milestone";
+	if (/(发育|里程碑|发展|长牙|走路|说话|milestone|development)/i.test(q))
+		return "milestone";
 	if (
-		/(药|medication|剂量|dose|吃多少|美林|泰诺林|布洛芬|对乙酰|退烧药|aceta|ibu)/i.test(q)
+		/(药|medication|剂量|dose|吃多少|美林|泰诺林|布洛芬|对乙酰|退烧药|aceta|ibu)/i.test(
+			q,
+		)
 	)
 		return "medication";
 	return "general";
 }
 
 function formatVaccineList(vaccines: VaccineInfo[], ageMonths: number): string {
-	const lines = vaccines.map((v) => `- ${v.name} (${v.nameEn}) — ${v.recommendedAgeMonths} 月龄`);
+	const lines = vaccines.map(
+		(v) => `- ${v.name} (${v.nameEn}) — ${v.recommendedAgeMonths} 月龄`,
+	);
 	return `宝宝 ${Math.floor(ageMonths)} 个月，已经/应该接种的疫苗：\n${lines.join("\n")}`;
 }
 
 function formatMilestones(milestones: Milestone[], ageMonths: number): string {
-	if (milestones.length === 0) return `${Math.floor(ageMonths)} 月龄的发育里程碑数据库暂缺，建议咨询儿科医生。`;
+	if (milestones.length === 0)
+		return `${Math.floor(ageMonths)} 月龄的发育里程碑数据库暂缺，建议咨询儿科医生。`;
 	const byDomain = new Map<string, Milestone[]>();
 	for (const m of milestones) {
 		const list = byDomain.get(m.domain) ?? [];
@@ -91,7 +102,9 @@ function formatMilestones(milestones: Milestone[], ageMonths: number): string {
 		social: "社交",
 		cognitive: "认知",
 	};
-	const lines: string[] = [`${Math.floor(ageMonths)} 月龄宝宝典型发育里程碑：`];
+	const lines: string[] = [
+		`${Math.floor(ageMonths)} 月龄宝宝典型发育里程碑：`,
+	];
 	for (const [domain, list] of byDomain) {
 		lines.push(`\n【${DOMAIN_NAMES[domain as Milestone["domain"]]}】`);
 		for (const m of list) lines.push(`- ${m.description}`);
@@ -114,7 +127,11 @@ export class PediatricianAgent implements Agent {
 		"young_adult",
 	] as const;
 
-	async respond(question: string, child: ChildProfile, _context: AgentContext): Promise<AgentReply> {
+	async respond(
+		question: string,
+		child: ChildProfile,
+		_context: AgentContext,
+	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
 		const intent = detectIntent(question);
 
@@ -122,8 +139,12 @@ export class PediatricianAgent implements Agent {
 			case "vaccine": {
 				const past = getVaccinesForAge(months);
 				const next = getNextVaccine(months);
-				const content = [formatVaccineList(past, months), next ? `下一针：${next.name}（${next.nameEn}），建议月龄 ${next.recommendedAgeMonths} 个月` : "已完成所有基础疫苗计划"]
-					.join("\n\n");
+				const content = [
+					formatVaccineList(past, months),
+					next
+						? `下一针：${next.name}（${next.nameEn}），建议月龄 ${next.recommendedAgeMonths} 个月`
+						: "已完成所有基础疫苗计划",
+				].join("\n\n");
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -143,7 +164,8 @@ export class PediatricianAgent implements Agent {
 						urgency: "low",
 					};
 				}
-				const isRedFlag = rule.urgency === "emergency" || rule.urgency === "high";
+				const isRedFlag =
+					rule.urgency === "emergency" || rule.urgency === "high";
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -153,8 +175,11 @@ export class PediatricianAgent implements Agent {
 					redFlag: isRedFlag
 						? {
 								severity: rule.urgency,
-								ruleId: "TRIAGE_" + rule.symptom.source.slice(0, 10),
-								description: rule.redFlagDescription ?? "需要就医",
+								ruleId:
+									"TRIAGE_" +
+									rule.symptom.source.slice(0, 10),
+								description:
+									rule.redFlagDescription ?? "需要就医",
 								action: "建议尽快就医",
 							}
 						: undefined,
@@ -172,8 +197,13 @@ export class PediatricianAgent implements Agent {
 			}
 			case "medication": {
 				// Try to extract weight and drug
-				const weightMatch = question.match(/(\d+(?:\.\d+)?)\s*(kg|公斤)/i);
-				const drugMatch = /(acetaminophen|paracetamol|ibuprofen|布洛芬|对乙酰氨基酚|美林|泰诺林)/i.exec(question);
+				const weightMatch = question.match(
+					/(\d+(?:\.\d+)?)\s*(kg|公斤)/i,
+				);
+				const drugMatch =
+					/(acetaminophen|paracetamol|ibuprofen|布洛芬|对乙酰氨基酚|美林|泰诺林)/i.exec(
+						question,
+					);
 				if (!weightMatch) {
 					return {
 						agentId: this.id,
@@ -193,7 +223,9 @@ export class PediatricianAgent implements Agent {
 					};
 				}
 				const weight = parseFloat(weightMatch[1]);
-				const drugKey = /布洛芬|ibuprofen|美林/i.test(drugMatch[0]) ? "ibuprofen" : "acetaminophen";
+				const drugKey = /布洛芬|ibuprofen|美林/i.test(drugMatch[0])
+					? "ibuprofen"
+					: "acetaminophen";
 				const result = calculateDose(drugKey, weight, months);
 				if (!result.ok) {
 					return {
@@ -212,7 +244,6 @@ export class PediatricianAgent implements Agent {
 					urgency: "info",
 				};
 			}
-			case "general":
 			default: {
 				return {
 					agentId: this.id,
@@ -233,13 +264,13 @@ export function createPediatricianAgent(): PediatricianAgent {
 
 /** Re-export knowledge utilities for advanced users. */
 export {
-	VACCINE_SCHEDULE,
-	getVaccinesForAge,
-	getNextVaccine,
-	triageSymptom,
-	getMilestonesForAge,
 	calculateDose,
-	type VaccineInfo,
-	type TriageRule,
+	getMilestonesForAge,
+	getNextVaccine,
+	getVaccinesForAge,
 	type Milestone,
+	type TriageRule,
+	triageSymptom,
+	VACCINE_SCHEDULE,
+	type VaccineInfo,
 } from "./knowledge.js";

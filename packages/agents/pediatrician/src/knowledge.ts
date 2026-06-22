@@ -16,7 +16,12 @@ export interface VaccineInfo {
 }
 
 export const VACCINE_SCHEDULE: VaccineInfo[] = [
-	{ name: "卡介苗 (BCG)", nameEn: "BCG", recommendedAgeMonths: 0, notes: "出生时" },
+	{
+		name: "卡介苗 (BCG)",
+		nameEn: "BCG",
+		recommendedAgeMonths: 0,
+		notes: "出生时",
+	},
 	{ name: "乙肝疫苗 (第1剂)", nameEn: "HepB #1", recommendedAgeMonths: 0 },
 	{ name: "乙肝疫苗 (第2剂)", nameEn: "HepB #2", recommendedAgeMonths: 1 },
 	{ name: "脊灰疫苗 (第1剂)", nameEn: "IPV #1", recommendedAgeMonths: 2 },
@@ -32,8 +37,18 @@ export const VACCINE_SCHEDULE: VaccineInfo[] = [
 	{ name: "麻腮风 (第2剂)", nameEn: "MMR #2", recommendedAgeMonths: 18 },
 	{ name: "百白破 (加强)", nameEn: "DTaP booster", recommendedAgeMonths: 18 },
 	{ name: "水痘疫苗", nameEn: "Varicella", recommendedAgeMonths: 12 },
-	{ name: "流感疫苗 (年度)", nameEn: "Flu (annual)", recommendedAgeMonths: 6, notes: "每年接种" },
-	{ name: "HPV疫苗", nameEn: "HPV", recommendedAgeMonths: 108, notes: "9 岁起，3 剂" },
+	{
+		name: "流感疫苗 (年度)",
+		nameEn: "Flu (annual)",
+		recommendedAgeMonths: 6,
+		notes: "每年接种",
+	},
+	{
+		name: "HPV疫苗",
+		nameEn: "HPV",
+		recommendedAgeMonths: 108,
+		notes: "9 岁起，3 剂",
+	},
 ];
 
 /** Get vaccines due by given age in months. */
@@ -43,7 +58,9 @@ export function getVaccinesForAge(ageMonths: number): VaccineInfo[] {
 
 /** Get next upcoming vaccine for the given age. */
 export function getNextVaccine(ageMonths: number): VaccineInfo | null {
-	const upcoming = VACCINE_SCHEDULE.filter((v) => v.recommendedAgeMonths > ageMonths);
+	const upcoming = VACCINE_SCHEDULE.filter(
+		(v) => v.recommendedAgeMonths > ageMonths,
+	);
 	upcoming.sort((a, b) => a.recommendedAgeMonths - b.recommendedAgeMonths);
 	return upcoming[0] ?? null;
 }
@@ -117,10 +134,14 @@ export const TRIAGE_RULES: TriageRule[] = [
 ];
 
 /** Triage a question based on symptom + child age. */
-export function triageSymptom(text: string, ageMonths: number): TriageRule | null {
+export function triageSymptom(
+	text: string,
+	ageMonths: number,
+): TriageRule | null {
 	for (const rule of TRIAGE_RULES) {
 		if (!rule.symptom.test(text)) continue;
-		if (rule.ageMonthsMax !== undefined && ageMonths > rule.ageMonthsMax) continue;
+		if (rule.ageMonthsMax !== undefined && ageMonths > rule.ageMonthsMax)
+			continue;
 		return rule;
 	}
 	return null;
@@ -136,42 +157,164 @@ export interface Milestone {
 
 export const MILESTONES: Milestone[] = [
 	// 0-3 months
-	{ stage: "newborn", domain: "motor", description: "俯卧时能抬头", typicalAgeMonths: 1 },
-	{ stage: "newborn", domain: "social", description: "对声音有反应，会追视", typicalAgeMonths: 1 },
-	{ stage: "infant", domain: "motor", description: "抬头稳定", typicalAgeMonths: 3 },
-	{ stage: "infant", domain: "social", description: "会微笑（社交性微笑）", typicalAgeMonths: 2 },
-	{ stage: "infant", domain: "language", description: "会发出咿呀声", typicalAgeMonths: 4 },
+	{
+		stage: "newborn",
+		domain: "motor",
+		description: "俯卧时能抬头",
+		typicalAgeMonths: 1,
+	},
+	{
+		stage: "newborn",
+		domain: "social",
+		description: "对声音有反应，会追视",
+		typicalAgeMonths: 1,
+	},
+	{
+		stage: "infant",
+		domain: "motor",
+		description: "抬头稳定",
+		typicalAgeMonths: 3,
+	},
+	{
+		stage: "infant",
+		domain: "social",
+		description: "会微笑（社交性微笑）",
+		typicalAgeMonths: 2,
+	},
+	{
+		stage: "infant",
+		domain: "language",
+		description: "会发出咿呀声",
+		typicalAgeMonths: 4,
+	},
 	// 6-12 months
-	{ stage: "infant", domain: "motor", description: "会坐稳", typicalAgeMonths: 6 },
-	{ stage: "infant", domain: "motor", description: "开始爬行", typicalAgeMonths: 8 },
-	{ stage: "infant", domain: "language", description: "会叫 mama/dada（无意识）", typicalAgeMonths: 9 },
-	{ stage: "infant", domain: "social", description: "陌生人焦虑", typicalAgeMonths: 9 },
-	{ stage: "infant", domain: "motor", description: "扶站", typicalAgeMonths: 10 },
+	{
+		stage: "infant",
+		domain: "motor",
+		description: "会坐稳",
+		typicalAgeMonths: 6,
+	},
+	{
+		stage: "infant",
+		domain: "motor",
+		description: "开始爬行",
+		typicalAgeMonths: 8,
+	},
+	{
+		stage: "infant",
+		domain: "language",
+		description: "会叫 mama/dada（无意识）",
+		typicalAgeMonths: 9,
+	},
+	{
+		stage: "infant",
+		domain: "social",
+		description: "陌生人焦虑",
+		typicalAgeMonths: 9,
+	},
+	{
+		stage: "infant",
+		domain: "motor",
+		description: "扶站",
+		typicalAgeMonths: 10,
+	},
 	// 1-2 years
-	{ stage: "toddler", domain: "motor", description: "独立行走", typicalAgeMonths: 12 },
-	{ stage: "toddler", domain: "language", description: "会叫爸爸妈妈（有意识）", typicalAgeMonths: 12 },
-	{ stage: "toddler", domain: "language", description: "能说 10-50 个词", typicalAgeMonths: 18 },
-	{ stage: "toddler", domain: "social", description: "会指东西", typicalAgeMonths: 15 },
-	{ stage: "toddler", domain: "motor", description: "会跑", typicalAgeMonths: 24 },
+	{
+		stage: "toddler",
+		domain: "motor",
+		description: "独立行走",
+		typicalAgeMonths: 12,
+	},
+	{
+		stage: "toddler",
+		domain: "language",
+		description: "会叫爸爸妈妈（有意识）",
+		typicalAgeMonths: 12,
+	},
+	{
+		stage: "toddler",
+		domain: "language",
+		description: "能说 10-50 个词",
+		typicalAgeMonths: 18,
+	},
+	{
+		stage: "toddler",
+		domain: "social",
+		description: "会指东西",
+		typicalAgeMonths: 15,
+	},
+	{
+		stage: "toddler",
+		domain: "motor",
+		description: "会跑",
+		typicalAgeMonths: 24,
+	},
 	// 2-3 years
-	{ stage: "toddler", domain: "language", description: "能说短句", typicalAgeMonths: 30 },
-	{ stage: "toddler", domain: "social", description: "会自己穿简单衣服", typicalAgeMonths: 30 },
+	{
+		stage: "toddler",
+		domain: "language",
+		description: "能说短句",
+		typicalAgeMonths: 30,
+	},
+	{
+		stage: "toddler",
+		domain: "social",
+		description: "会自己穿简单衣服",
+		typicalAgeMonths: 30,
+	},
 	// 3-6 years
-	{ stage: "preschool", domain: "language", description: "能讲完整故事", typicalAgeMonths: 48 },
-	{ stage: "preschool", domain: "social", description: "能与其他小朋友合作", typicalAgeMonths: 48 },
-	{ stage: "preschool", domain: "motor", description: "会跳/单脚站", typicalAgeMonths: 60 },
+	{
+		stage: "preschool",
+		domain: "language",
+		description: "能讲完整故事",
+		typicalAgeMonths: 48,
+	},
+	{
+		stage: "preschool",
+		domain: "social",
+		description: "能与其他小朋友合作",
+		typicalAgeMonths: 48,
+	},
+	{
+		stage: "preschool",
+		domain: "motor",
+		description: "会跳/单脚站",
+		typicalAgeMonths: 60,
+	},
 	// 6-12 years (school_age)
-	{ stage: "school_age", domain: "cognitive", description: "能独立阅读", typicalAgeMonths: 84 },
-	{ stage: "school_age", domain: "social", description: "形成稳定友谊", typicalAgeMonths: 96 },
+	{
+		stage: "school_age",
+		domain: "cognitive",
+		description: "能独立阅读",
+		typicalAgeMonths: 84,
+	},
+	{
+		stage: "school_age",
+		domain: "social",
+		description: "形成稳定友谊",
+		typicalAgeMonths: 96,
+	},
 	// 12+ years
-	{ stage: "teen", domain: "cognitive", description: "抽象思维发展", typicalAgeMonths: 156 },
-	{ stage: "teen", domain: "social", description: "同伴关系重要性增加", typicalAgeMonths: 168 },
+	{
+		stage: "teen",
+		domain: "cognitive",
+		description: "抽象思维发展",
+		typicalAgeMonths: 156,
+	},
+	{
+		stage: "teen",
+		domain: "social",
+		description: "同伴关系重要性增加",
+		typicalAgeMonths: 168,
+	},
 ];
 
 /** Get milestones expected for given age (in months). */
 export function getMilestonesForAge(ageMonths: number): Milestone[] {
 	// ±3 months window
-	return MILESTONES.filter((m) => Math.abs(m.typicalAgeMonths - ageMonths) <= 3);
+	return MILESTONES.filter(
+		(m) => Math.abs(m.typicalAgeMonths - ageMonths) <= 3,
+	);
 }
 
 /** Medication dosing (basic, weight-based). */
@@ -184,12 +327,28 @@ export interface DoseInfo {
 }
 
 export const PEDIATRIC_DOSES: DoseInfo[] = [
-	{ drug: "acetaminophen", minAgeMonths: 2, dosePerKgMg: 10, maxDailyDoses: 4, intervalHours: 6 },
-	{ drug: "ibuprofen", minAgeMonths: 6, dosePerKgMg: 5, maxDailyDoses: 4, intervalHours: 6 },
+	{
+		drug: "acetaminophen",
+		minAgeMonths: 2,
+		dosePerKgMg: 10,
+		maxDailyDoses: 4,
+		intervalHours: 6,
+	},
+	{
+		drug: "ibuprofen",
+		minAgeMonths: 6,
+		dosePerKgMg: 5,
+		maxDailyDoses: 4,
+		intervalHours: 6,
+	},
 ];
 
 /** Calculate dose for a child weight. */
-export function calculateDose(drug: DoseInfo["drug"], weightKg: number, ageMonths: number): {
+export function calculateDose(
+	drug: DoseInfo["drug"],
+	weightKg: number,
+	ageMonths: number,
+): {
 	ok: boolean;
 	reason?: string;
 	singleDoseMg: number;
@@ -197,7 +356,11 @@ export function calculateDose(drug: DoseInfo["drug"], weightKg: number, ageMonth
 	const info = PEDIATRIC_DOSES.find((d) => d.drug === drug);
 	if (!info) return { ok: false, reason: "unknown drug", singleDoseMg: 0 };
 	if (ageMonths < info.minAgeMonths) {
-		return { ok: false, reason: `age too young (need ${info.minAgeMonths}+ months)`, singleDoseMg: 0 };
+		return {
+			ok: false,
+			reason: `age too young (need ${info.minAgeMonths}+ months)`,
+			singleDoseMg: 0,
+		};
 	}
 	return { ok: true, singleDoseMg: info.dosePerKgMg * weightKg };
 }
