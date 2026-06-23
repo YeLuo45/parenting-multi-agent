@@ -124,6 +124,12 @@ export class IndexedDbMemoryLayer extends WebMemoryLayer {
 		return episode;
 	}
 
+	override deleteEpisode(id: string): boolean {
+		const existed = super.deleteEpisode(id);
+		if (existed) this.enqueueDelete("episodes", id);
+		return existed;
+	}
+
 	override startSession(
 		childId: string,
 		context: Record<string, unknown> = {},
@@ -149,6 +155,12 @@ export class IndexedDbMemoryLayer extends WebMemoryLayer {
 		const entry = super.addFeedback(feedback);
 		this.enqueue("feedback", { id: entry.id, value: entry });
 		return entry;
+	}
+
+	override deleteFeedback(id: string): boolean {
+		const existed = super.deleteFeedback(id);
+		if (existed) this.enqueueDelete("feedback", id);
+		return existed;
 	}
 
 	/**

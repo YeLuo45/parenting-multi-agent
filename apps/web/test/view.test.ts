@@ -9,8 +9,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
 	type Action,
 	type AppState,
+	buildSetConvergenceAction,
+	buildWebConvergenceSnapshot,
 	createParentingApp,
 	createParentingAppWithPersistence,
+	createRuleFallbackProvider,
 	createWebOrchestrator,
 	defaultChild,
 	dispatchAsk,
@@ -18,6 +21,7 @@ import {
 	newMessageId,
 	recordMessageFeedback,
 	reducer,
+	registerWebLlmProviders,
 	renderView,
 	runAsk,
 	type WebOrchestrator,
@@ -330,6 +334,19 @@ describe("renderView", () => {
 		expect(dispatched).toContainEqual({ type: "reset" });
 	});
 
+	it("scenario prompt button dispatches setQuestion", () => {
+		const dispatched: Action[] = [];
+		const ir = renderView(makeState(), (a) => dispatched.push(a));
+		const scenario = findNode(ir, "data-testid", "scenario-bedtime-delay");
+		const onClick = scenario?.props?.onClick as () => void;
+		expect(typeof onClick).toBe("function");
+		onClick();
+		expect(dispatched).toContainEqual({
+			type: "setQuestion",
+			question: "孩子睡前反复要水、讲故事，不肯上床怎么办？",
+		});
+	});
+
 	it("selectChild on a list item dispatches selectChild", () => {
 		const dispatched: Action[] = [];
 		const ir = renderView(
@@ -632,5 +649,32 @@ describe("recordMessageFeedback", () => {
 			(a) => dispatched.push(a),
 		);
 		expect(dispatched).toEqual([]);
+	});
+});
+
+describe("unattended iteration visibility", () => {
+	it("setConvergence stores the seven-direction suite summary", () => {
+		const stack = createWebOrchestrator();
+		try {
+			stack.upsertChild({ id: "c1", name: "C1", birthDate: "2024-01-01", stage: "toddler" });
+			const convergence = buildWebConvergenceSnapshot(stack.memory);
+			const registry = registerWebLlmProviders([createRuleFallbackProvider()]);
+			const action = buildSetConvergenceAction(convergence, registry.status, 2);
+			const next = reducer(makeState(), action);
+			expect(next.iterationSuite.summary).toContain("7/7");
+			expect(next.providerConfig.statusText).toContain("rule-fallback");
+			expect(next.releaseGate.command).toBe("npm run release:gate");
+		} finally {
+			stack.close();
+		}
+	});
+
+	it("renders unattended evidence in the memory panel", () => {
+		const ir = renderView(makeState(), () => {});
+		const serialized = JSON.stringify(ir);
+		expect(serialized).toContain("7/7 unattended iteration directions ready");
+		expect(serialized).toContain("rule-fallback");
+		expect(serialized).toContain("scenario pack cases ready");
+		expect(serialized).toContain("npm run release:gate");
 	});
 });

@@ -55,6 +55,7 @@ export type { Action, AppState, ChatMessage, IRNode } from "./view.js";
 export {
 	createParentingApp,
 	createParentingAppWithPersistence,
+	buildSetConvergenceAction,
 	defaultChild,
 	dispatchAsk,
 	initialState,
@@ -65,3 +66,33 @@ export {
 	renderView,
 	runAsk,
 } from "./view.js";
+export {
+	buildE2eMainPathReport,
+	buildWebConvergenceSnapshot,
+	createRuleFallbackProvider,
+	createWebLlmProvider,
+	registerWebLlmProviders,
+} from "./web-convergence.js";
+export {
+	buildIterationSuite,
+	buildProviderConfigSnapshot,
+	buildReleaseGatePlan,
+	buildScenarioPack,
+} from "./web-iteration-suite.js";
+export type {
+	E2eMainPathReport,
+	E2eMainPathStep,
+	WebConvergenceSnapshot,
+	WebLlmCompletion,
+	WebLlmProvider,
+	WebLlmRegistry,
+} from "./web-convergence.js";
+export type {
+	IterationDirection,
+	IterationDirectionId,
+	IterationSuiteSnapshot,
+	ParentingScenario,
+	ProviderConfigSnapshot,
+	ReleaseGatePlan,
+	ReleaseGateStep,
+} from "./web-iteration-suite.js";

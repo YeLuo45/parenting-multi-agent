@@ -12,6 +12,7 @@ import type { FormEvent, ReactElement } from "react";
 import { LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeSwitcher } from "./theme.js";
 import type { Action, AppState, ChatMessage } from "./view.js";
+import { buildScenarioPack } from "./web-iteration-suite.js";
 
 /** Header: app title + agent count + theme switcher + language switcher. */
 export function Header({ state }: { state: AppState }): ReactElement {
@@ -249,8 +250,15 @@ export function ChatPanel({
 }
 
 /** MemoryPanel: visible browser persistence and sync health snapshot. */
-export function MemoryPanel({ state }: { state: AppState }): ReactElement {
+export function MemoryPanel({
+	state,
+	dispatch,
+}: {
+	state: AppState;
+	dispatch?: (a: Action) => void;
+}): ReactElement {
 	const stats = state.memoryStats;
+	const scenarios = buildScenarioPack();
 	const items: Array<[string, string, number]> = [
 		["children", "Children", stats.children],
 		["facts", "Facts", stats.facts],
@@ -266,6 +274,32 @@ export function MemoryPanel({ state }: { state: AppState }): ReactElement {
 			aria-label="Memory snapshot"
 		>
 			<h2>Memory</h2>
+			<p data-testid="iteration-suite-summary">
+				{state.iterationSuite.summary}
+			</p>
+			<p data-testid="provider-config-status">
+				{state.providerConfig.statusText}
+			</p>
+			<p data-testid="scenario-pack-summary">
+				{scenarios.length} scenario pack cases ready
+			</p>
+			<div className="scenario-pack" data-testid="scenario-pack-actions">
+				{scenarios.map((scenario) => (
+					<button
+						key={scenario.id}
+						type="button"
+						data-testid={`scenario-${scenario.id}`}
+						onClick={() =>
+							dispatch?.({ type: "setQuestion", question: scenario.prompt })
+						}
+					>
+						{scenario.title}
+					</button>
+				))}
+			</div>
+			<p data-testid="release-gate-command">
+				{state.releaseGate.command}
+			</p>
 			<dl>
 				{items.map(([key, label, value]) => (
 					<div className="memory-stat" key={key}>
@@ -303,7 +337,7 @@ export function AppBody({
 				onAsk={onAsk}
 				onFeedback={onFeedback}
 			/>
-			<MemoryPanel state={state} />
+			<MemoryPanel state={state} dispatch={dispatch} />
 		</main>
 	);
 }

@@ -552,6 +552,24 @@ describe("MemoryPanel", () => {
 			"0",
 		);
 	});
+
+	it("renders unattended suite evidence in the visible dashboard", () => {
+		render(<MemoryPanel state={makeState()} />);
+		expect(screen.getByTestId("iteration-suite-summary").textContent).toContain("7/7");
+		expect(screen.getByTestId("provider-config-status").textContent).toContain("rule-fallback");
+		expect(screen.getByTestId("scenario-pack-summary").textContent).toContain("7 scenario");
+		expect(screen.getByTestId("release-gate-command").textContent).toBe("npm run release:gate");
+	});
+
+	it("lets parents load a scenario prompt into the composer", () => {
+		const dispatch = vi.fn();
+		render(<MemoryPanel state={makeState()} dispatch={dispatch} />);
+		fireEvent.click(screen.getByTestId("scenario-bedtime-delay"));
+		expect(dispatch).toHaveBeenCalledWith({
+			type: "setQuestion",
+			question: "孩子睡前反复要水、讲故事，不肯上床怎么办？",
+		});
+	});
 });
 
 describe("AppBody", () => {

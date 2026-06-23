@@ -19,6 +19,24 @@ import {
 	type WebOrchestrator,
 } from "./orchestrator.js";
 import { ThemeProvider } from "./theme.js";
+import {
+	buildE2eMainPathReport,
+	buildWebConvergenceSnapshot,
+	createRuleFallbackProvider,
+	registerWebLlmProviders,
+	type E2eMainPathReport,
+	type WebConvergenceSnapshot,
+	type WebLlmRegistry,
+} from "./web-convergence.js";
+import {
+	buildIterationSuite,
+	buildProviderConfigSnapshot,
+	buildReleaseGatePlan,
+	buildScenarioPack,
+	type IterationSuiteSnapshot,
+	type ProviderConfigSnapshot,
+	type ReleaseGatePlan,
+} from "./web-iteration-suite.js";
 
 export interface ChatMessage {
 	id: string;
@@ -46,6 +64,12 @@ export interface AppState {
 	pending: boolean;
 	agents: string[];
 	memoryStats: MemoryStats;
+	convergence: WebConvergenceSnapshot | null;
+	llmStatus: WebLlmRegistry["status"];
+	e2eReport: E2eMainPathReport;
+	iterationSuite: IterationSuiteSnapshot;
+	providerConfig: ProviderConfigSnapshot;
+	releaseGate: ReleaseGatePlan;
 	busy: boolean;
 	error: string | null;
 }
@@ -59,6 +83,15 @@ export type Action =
 	| { type: "askError"; error: string }
 	| { type: "feedbackDone"; messageId: string; feedback: "up" | "down" }
 	| { type: "setMemoryStats"; memoryStats: MemoryStats }
+	| {
+			type: "setConvergence";
+			convergence: WebConvergenceSnapshot;
+			llmStatus: WebLlmRegistry["status"];
+			e2eReport: E2eMainPathReport;
+			iterationSuite: IterationSuiteSnapshot;
+			providerConfig: ProviderConfigSnapshot;
+			releaseGate: ReleaseGatePlan;
+	  }
 	| { type: "reset" };
 
 export const initialState: AppState = {
@@ -76,6 +109,34 @@ export const initialState: AppState = {
 		feedback: 0,
 		unsyncedDeltas: 0,
 	},
+	convergence: null,
+	llmStatus: {
+		primaryProviderId: null,
+		fallbackProviderId: "rule-fallback",
+		ready: false,
+	},
+	e2eReport: buildE2eMainPathReport({
+		children: 0,
+		messages: 0,
+		feedback: 0,
+		memoryVisible: false,
+		syncVisible: false,
+		llmFallbackReady: true,
+	}),
+	iterationSuite: buildIterationSuite({
+		children: 0,
+		facts: 0,
+		episodes: 0,
+		sessions: 0,
+		feedback: 0,
+		unsyncedDeltas: 0,
+	}),
+	providerConfig: buildProviderConfigSnapshot({
+		primaryProviderId: null,
+		fallbackProviderId: "rule-fallback",
+		ready: false,
+	}),
+	releaseGate: buildReleaseGatePlan(),
 	busy: false,
 	error: null,
 };
@@ -110,6 +171,17 @@ export function reducer(state: AppState, action: Action): AppState {
 			};
 		case "setMemoryStats":
 			return { ...state, memoryStats: action.memoryStats };
+		case "setConvergence":
+			return {
+				...state,
+				convergence: action.convergence,
+				memoryStats: action.convergence.memory,
+				llmStatus: action.llmStatus,
+				e2eReport: action.e2eReport,
+				iterationSuite: action.iterationSuite,
+				providerConfig: action.providerConfig,
+				releaseGate: action.releaseGate,
+			};
 		case "reset":
 			return {
 				...initialState,
@@ -117,6 +189,12 @@ export function reducer(state: AppState, action: Action): AppState {
 				selectedChildId: state.selectedChildId,
 				agents: state.agents,
 				memoryStats: state.memoryStats,
+				convergence: state.convergence,
+				llmStatus: state.llmStatus,
+				e2eReport: state.e2eReport,
+				iterationSuite: state.iterationSuite,
+				providerConfig: state.providerConfig,
+				releaseGate: state.releaseGate,
 			};
 		default:
 			return state;
@@ -125,6 +203,29 @@ export function reducer(state: AppState, action: Action): AppState {
 
 export function newMessageId(): string {
 	return `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function buildSetConvergenceAction(
+	convergence: WebConvergenceSnapshot,
+	llmStatus: WebLlmRegistry["status"],
+	messageCount: number,
+): Action {
+	return {
+		type: "setConvergence",
+		convergence,
+		llmStatus,
+		e2eReport: buildE2eMainPathReport({
+			children: convergence.memory.children,
+			messages: messageCount,
+			feedback: convergence.memory.feedback,
+			memoryVisible: true,
+			syncVisible: true,
+			llmFallbackReady: Boolean(llmStatus.fallbackProviderId),
+		}),
+		iterationSuite: buildIterationSuite(convergence.memory),
+		providerConfig: buildProviderConfigSnapshot(llmStatus),
+		releaseGate: buildReleaseGatePlan(),
+	};
 }
 
 /** Intermediate-representation node used by renderView. Exposed for tests. */
@@ -173,7 +274,7 @@ export function renderView(
 				children: [
 					renderChildrenPanel(state, dispatch),
 					renderChatPanel(state, dispatch),
-					renderMemoryPanel(state),
+					renderMemoryPanel(state, dispatch),
 				],
 			},
 		],
@@ -303,12 +404,49 @@ function renderChatPanel(
 	};
 }
 
-function renderMemoryPanel(state: AppState): ReturnType<typeof renderView> {
+function renderMemoryPanel(
+	state: AppState,
+	dispatch: (a: Action) => void,
+): ReturnType<typeof renderView> {
+	const scenarios = buildScenarioPack();
 	return {
 		tag: "aside",
 		props: { className: "memory-panel", "data-testid": "memory-panel" },
 		children: [
 			{ tag: "h2", children: ["Memory"] },
+			{
+				tag: "p",
+				props: { "data-testid": "iteration-suite-summary" },
+				children: [state.iterationSuite.summary],
+			},
+			{
+				tag: "p",
+				props: { "data-testid": "provider-config-status" },
+				children: [state.providerConfig.statusText],
+			},
+			{
+				tag: "p",
+				props: { "data-testid": "scenario-pack-summary" },
+				children: [`${scenarios.length} scenario pack cases ready`],
+			},
+			{
+				tag: "div",
+				props: { "data-testid": "scenario-pack-actions" },
+				children: scenarios.map((scenario) => ({
+					tag: "button",
+					props: {
+						"data-testid": `scenario-${scenario.id}`,
+						type: "button",
+						onClick: () => dispatch({ type: "setQuestion", question: scenario.prompt }),
+					},
+					children: [scenario.title],
+				})),
+			},
+			{
+				tag: "p",
+				props: { "data-testid": "release-gate-command" },
+				children: [state.releaseGate.command],
+			},
 			{
 				tag: "dl",
 				children: [
@@ -372,13 +510,16 @@ function createAppFromStack(stack: WebOrchestrator): {
 	function App(): ReactElement {
 		/* v8 ignore next 22 */
 		const [state, dispatch] = useReducer(reducer, initialState);
-		/* v8 ignore next 6 */
+		/* v8 ignore next 11 */
+		const refreshConvergence = (): void => {
+			const convergence = buildWebConvergenceSnapshot(stack.memory);
+			const registry = registerWebLlmProviders([createRuleFallbackProvider()]);
+			dispatch(buildSetConvergenceAction(convergence, registry.status, state.messages.length));
+		};
+		/* v8 ignore next 4 */
 		const onAsk = async (): Promise<void> => {
 			await dispatchAsk(stack, state, dispatch);
-			dispatch({
-				type: "setMemoryStats",
-				memoryStats: stack.getMemoryStats(),
-			});
+			refreshConvergence();
 		};
 		/* v8 ignore next 4 */
 		const onFeedback = (
@@ -386,10 +527,7 @@ function createAppFromStack(stack: WebOrchestrator): {
 			feedback: "up" | "down",
 		): void => {
 			recordMessageFeedback(stack, state, messageId, feedback, dispatch);
-			dispatch({
-				type: "setMemoryStats",
-				memoryStats: stack.getMemoryStats(),
-			});
+			refreshConvergence();
 		};
 		/* v8 ignore next 4 */
 		useEffect(() => {
@@ -402,14 +540,12 @@ function createAppFromStack(stack: WebOrchestrator): {
 			if (!state.selectedChildId && children.length > 0) {
 				dispatch({ type: "selectChild", childId: children[0].id });
 			}
-			dispatch({
-				type: "setMemoryStats",
-				memoryStats: stack.getMemoryStats(),
-			});
+			refreshConvergence();
 		}, [
-			stack.getMemoryStats,
+			stack.memory,
 			stack.listChildren,
 			stack.upsertChild,
+			state.messages.length,
 			state.selectedChildId,
 		]);
 
