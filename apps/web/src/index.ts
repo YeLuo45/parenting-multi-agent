@@ -74,10 +74,15 @@ export {
 	registerWebLlmProviders,
 } from "./web-convergence.js";
 export {
+	buildAcceptanceEvidence,
+	buildE2eDrill,
 	buildIterationSuite,
+	buildMemoryTimeline,
 	buildProviderConfigSnapshot,
 	buildReleaseGatePlan,
 	buildScenarioPack,
+	buildScenarioWorkflow,
+	buildSyncQueueActions,
 } from "./web-iteration-suite.js";
 export type {
 	E2eMainPathReport,

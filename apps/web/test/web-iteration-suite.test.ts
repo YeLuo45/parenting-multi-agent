@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
 	buildIterationSuite,
 	buildScenarioPack,
+	buildScenarioWorkflow,
+	buildAcceptanceEvidence,
+	buildMemoryTimeline,
+	buildSyncQueueActions,
+	buildE2eDrill,
 	buildProviderConfigSnapshot,
 	buildReleaseGatePlan,
 } from "../src/index.js";
@@ -70,4 +75,47 @@ describe("web unattended iteration suite", () => {
 		]);
 		expect(gate.steps.every((step) => step.required)).toBe(true);
 	});
+
+	it("builds scenario workflows with selected child stage and expected routing", () => {
+		const workflow = buildScenarioWorkflow(buildScenarioPack()[0], { childId: "c1", childStage: "toddler" });
+		expect(workflow.scenarioId).toBe("bedtime-delay");
+		expect(workflow.childId).toBe("c1");
+		expect(workflow.prompt).toContain("睡前");
+		expect(workflow.routePreview.agentIds).toEqual(["sleep-coach", "psychologist", "parent-support"]);
+		expect(workflow.ready).toBe(true);
+	});
+
+	it("builds acceptance evidence from release and e2e state", () => {
+		const evidence = buildAcceptanceEvidence({ tests: 259, passed: 259, statements: 99.11, branches: 95.3, assets: 7, e2eReady: true });
+		expect(evidence.ready).toBe(true);
+		expect(evidence.summary).toContain("259/259");
+		expect(evidence.items.map((item) => item.id)).toEqual(["tests", "coverage", "build", "smoke", "e2e"]);
+	});
+
+	it("builds memory timeline entries from children, facts, episodes, and feedback", () => {
+		const timeline = buildMemoryTimeline({
+			children: [{ id: "c1", name: "C1", birthDate: "2024-01-01", stage: "toddler" }],
+			facts: [{ id: "f1", childId: "c1", category: "preference", key: "sleep", value: {}, createdAt: "2026-01-01T00:00:00.000Z" }],
+			episodes: [{ id: "e1", childId: "c1", type: "qa", content: {}, createdAt: "2026-01-01T00:01:00.000Z" }],
+			feedback: [{ id: "fb1", childId: "c1", episodeId: "e1", agentId: "sleep-coach", rating: 1, createdAt: "2026-01-01T00:02:00.000Z" }],
+		});
+		expect(timeline).toHaveLength(4);
+		expect(timeline.map((entry) => entry.kind)).toEqual(["feedback", "episode", "fact", "child"]);
+	});
+
+	it("builds sync queue actions for pending and synced states", () => {
+		const pending = buildSyncQueueActions({ total: 2, unsynced: 2, byTable: { children: 2 }, byOp: { upsert: 2 } });
+		expect(pending.status).toBe("pending");
+		expect(pending.actions.map((action) => action.id)).toEqual(["retry", "mark-synced", "preview-conflicts"]);
+		const synced = buildSyncQueueActions({ total: 2, unsynced: 0, byTable: {}, byOp: {} });
+		expect(synced.status).toBe("synced");
+		expect(synced.actions.every((action) => action.enabled)).toBe(false);
+	});
+
+	it("builds an E2E drill from child, scenario, and evidence", () => {
+		const drill = buildE2eDrill({ childId: "c1", scenarioId: "bedtime-delay", evidenceReady: true, memoryTimelineCount: 4 });
+		expect(drill.ready).toBe(true);
+		expect(drill.steps.map((step) => step.id)).toEqual(["select-child", "load-scenario", "ask", "feedback", "evidence"]);
+	});
+
 });

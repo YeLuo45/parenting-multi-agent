@@ -570,6 +570,15 @@ describe("MemoryPanel", () => {
 			question: "孩子睡前反复要水、讲故事，不肯上床怎么办？",
 		});
 	});
+
+	it("renders all unattended dashboard controls as discoverable cards", () => {
+		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
+		expect(screen.getByTestId("acceptance-evidence-panel")).toHaveTextContent("Acceptance Evidence");
+		expect(screen.getByTestId("memory-timeline-panel")).toHaveTextContent("Memory Timeline");
+		expect(screen.getByTestId("sync-queue-panel")).toHaveTextContent("Sync Queue");
+		expect(screen.getByTestId("e2e-drill-panel")).toHaveTextContent("Main Path Drill");
+		expect(screen.getByTestId("provider-mode-toggle")).toHaveTextContent("fallback");
+	});
 });
 
 describe("AppBody", () => {

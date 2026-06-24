@@ -190,3 +190,139 @@ export function buildReleaseGatePlan(): ReleaseGatePlan {
 		],
 	};
 }
+
+export interface ScenarioWorkflow {
+	scenarioId: string;
+	childId: string;
+	childStage: ChildStage;
+	prompt: string;
+	routePreview: { agentIds: string[]; primaryAgentId: string; expectedAcceptance: string };
+	ready: boolean;
+}
+
+export function buildScenarioWorkflow(
+	scenario: ParentingScenario,
+	context: { childId: string; childStage: ChildStage },
+): ScenarioWorkflow {
+	return {
+		scenarioId: scenario.id,
+		childId: context.childId,
+		childStage: context.childStage,
+		prompt: scenario.prompt,
+		routePreview: {
+			agentIds: scenario.agentIds,
+			primaryAgentId: scenario.agentIds[0] ?? "parent-support",
+			expectedAcceptance: scenario.acceptance,
+		},
+		ready: Boolean(context.childId && scenario.prompt && scenario.agentIds.length > 0),
+	};
+}
+
+export interface AcceptanceEvidenceInput {
+	tests: number;
+	passed: number;
+	statements: number;
+	branches: number;
+	assets: number;
+	e2eReady: boolean;
+}
+
+export interface AcceptanceEvidenceItem {
+	id: "tests" | "coverage" | "build" | "smoke" | "e2e";
+	label: string;
+	ok: boolean;
+	detail: string;
+}
+
+export interface AcceptanceEvidence {
+	ready: boolean;
+	summary: string;
+	items: AcceptanceEvidenceItem[];
+}
+
+export function buildAcceptanceEvidence(input: AcceptanceEvidenceInput): AcceptanceEvidence {
+	const items: AcceptanceEvidenceItem[] = [
+		{ id: "tests", label: "Tests", ok: input.tests === input.passed && input.tests > 0, detail: `${input.passed}/${input.tests} passed` },
+		{ id: "coverage", label: "Coverage", ok: input.statements >= 95 && input.branches >= 75, detail: `${input.statements}% statements / ${input.branches}% branches` },
+		{ id: "build", label: "Build", ok: input.assets > 0, detail: `${input.assets} build assets` },
+		{ id: "smoke", label: "Smoke", ok: input.assets > 0, detail: "web smoke artifact check" },
+		{ id: "e2e", label: "E2E", ok: input.e2eReady, detail: input.e2eReady ? "main path ready" : "main path incomplete" },
+	];
+	return {
+		ready: items.every((item) => item.ok),
+		summary: `${input.passed}/${input.tests} tests, ${input.statements}% statements, ${input.assets} assets`,
+		items,
+	};
+}
+
+export interface MemoryTimelineInput {
+	children: Array<{ id: string; name: string; birthDate: string; stage: ChildStage }>;
+	facts: Array<{ id: string; childId: string; category: string; key: string; value: unknown; createdAt: string }>;
+	episodes: Array<{ id: string; childId: string; type: string; content: unknown; createdAt: string }>;
+	feedback: Array<{ id: string; childId: string; episodeId: string; agentId: string; rating: number; createdAt: string }>;
+}
+
+export interface MemoryTimelineEntry {
+	id: string;
+	kind: "child" | "fact" | "episode" | "feedback";
+	childId: string;
+	title: string;
+	createdAt: string;
+}
+
+export function buildMemoryTimeline(input: MemoryTimelineInput): MemoryTimelineEntry[] {
+	const childEntries = input.children.map((child) => ({ id: child.id, kind: "child" as const, childId: child.id, title: `${child.name} (${child.stage})`, createdAt: child.birthDate }));
+	const factEntries = input.facts.map((fact) => ({ id: fact.id, kind: "fact" as const, childId: fact.childId, title: `${fact.category}: ${fact.key}`, createdAt: fact.createdAt }));
+	const episodeEntries = input.episodes.map((episode) => ({ id: episode.id, kind: "episode" as const, childId: episode.childId, title: episode.type, createdAt: episode.createdAt }));
+	const feedbackEntries = input.feedback.map((feedback) => ({ id: feedback.id, kind: "feedback" as const, childId: feedback.childId, title: `${feedback.agentId}: ${feedback.rating}`, createdAt: feedback.createdAt }));
+	return [...childEntries, ...factEntries, ...episodeEntries, ...feedbackEntries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export interface SyncQueueAction {
+	id: "retry" | "mark-synced" | "preview-conflicts";
+	label: string;
+	enabled: boolean;
+}
+
+export interface SyncQueuePanel {
+	status: "synced" | "pending";
+	summary: string;
+	actions: SyncQueueAction[];
+}
+
+export function buildSyncQueueActions(stats: { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> }): SyncQueuePanel {
+	const hasPending = stats.unsynced > 0;
+	return {
+		status: hasPending ? "pending" : "synced",
+		summary: hasPending ? `${stats.unsynced}/${stats.total} operations pending` : `${stats.total} operations synced`,
+		actions: [
+			{ id: "retry", label: "Retry sync", enabled: hasPending },
+			{ id: "mark-synced", label: "Mark synced", enabled: hasPending },
+			{ id: "preview-conflicts", label: "Preview conflicts", enabled: hasPending },
+		],
+	};
+}
+
+export interface E2eDrillStep {
+	id: "select-child" | "load-scenario" | "ask" | "feedback" | "evidence";
+	ok: boolean;
+}
+
+export interface E2eDrill {
+	ready: boolean;
+	summary: string;
+	steps: E2eDrillStep[];
+}
+
+export function buildE2eDrill(input: { childId: string | null; scenarioId: string | null; evidenceReady: boolean; memoryTimelineCount: number }): E2eDrill {
+	const steps: E2eDrillStep[] = [
+		{ id: "select-child", ok: Boolean(input.childId) },
+		{ id: "load-scenario", ok: Boolean(input.scenarioId) },
+		{ id: "ask", ok: Boolean(input.childId && input.scenarioId) },
+		{ id: "feedback", ok: input.memoryTimelineCount > 0 },
+		{ id: "evidence", ok: input.evidenceReady },
+	];
+	const ready = steps.every((step) => step.ok);
+	return { ready, summary: ready ? "Main path drill ready" : "Main path drill needs data", steps };
+}
+
