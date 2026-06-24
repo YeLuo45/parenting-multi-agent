@@ -12,10 +12,18 @@ import { createFakeBackend } from "./_idb-fake.js";
 describe("web convergence facade", () => {
 	it("persists deletes for episodes and feedback in IndexedDB", async () => {
 		const fake = createFakeBackend();
-		const layer = new IndexedDbMemoryLayer({ backend: fake.backend, dbName: "conv" });
+		const layer = new IndexedDbMemoryLayer({
+			backend: fake.backend,
+			dbName: "conv",
+		});
 		await layer.ready();
 		const episode = layer.addEpisode("c1", "qa", { question: "Q" });
-		const feedback = layer.addFeedback({ childId: "c1", episodeId: episode.id, agentId: "educator", rating: 5 });
+		const feedback = layer.addFeedback({
+			childId: "c1",
+			episodeId: episode.id,
+			agentId: "educator",
+			rating: 5,
+		});
 		await layer.flush();
 		expect(fake.records.episodes.has(episode.id)).toBe(true);
 		expect(fake.records.feedback.has(feedback.id)).toBe(true);
@@ -28,49 +36,139 @@ describe("web convergence facade", () => {
 
 	it("builds a visible snapshot for sync queue and feedback analytics", async () => {
 		const fake = createFakeBackend();
-		const layer = new IndexedDbMemoryLayer({ backend: fake.backend, dbName: "snapshot" });
+		const layer = new IndexedDbMemoryLayer({
+			backend: fake.backend,
+			dbName: "snapshot",
+		});
 		await layer.ready();
-		layer.upsertChild({ id: "c1", name: "Alice", birthDate: "2024-01-01", stage: "toddler" });
+		layer.upsertChild({
+			id: "c1",
+			name: "Alice",
+			birthDate: "2024-01-01",
+			stage: "toddler",
+		});
 		layer.addFact("c1", "preference", "food", "apple");
-		layer.addFeedback({ childId: "c1", episodeId: "s1", agentId: "educator", rating: 5 });
+		layer.addFeedback({
+			childId: "c1",
+			episodeId: "s1",
+			agentId: "educator",
+			rating: 5,
+		});
 		const snapshot = buildWebConvergenceSnapshot(layer);
 		expect(snapshot.sync.status).toBe("pending");
 		expect(snapshot.sync.unsynced).toBeGreaterThanOrEqual(3);
 		expect(snapshot.sync.byTable.children).toBe(1);
-		expect(snapshot.feedback[0]).toMatchObject({ agentId: "educator", likes: 1, avgRating: 5 });
+		expect(snapshot.feedback[0]).toMatchObject({
+			agentId: "educator",
+			likes: 1,
+			avgRating: 5,
+		});
 		expect(snapshot.memory.children).toBe(1);
 	});
 
 	it("builds snapshot from the minimal memory interface when helpers are absent", () => {
 		const deltas = [
-			{ id: 1, tableName: "children", rowId: "c1", op: "upsert" as const, payload: {}, syncedAt: null, createdAt: "2026-01-01T00:00:00.000Z" },
+			{
+				id: 1,
+				tableName: "children",
+				rowId: "c1",
+				op: "upsert" as const,
+				payload: {},
+				syncedAt: null,
+				createdAt: "2026-01-01T00:00:00.000Z",
+			},
 		];
 		const snapshot = buildWebConvergenceSnapshot({
-			listChildren: () => [{ id: "c1", name: "C1", birthDate: "2024-01-01", stage: "toddler" }],
-			getDeltaStats: () => ({ total: 1, unsynced: 1, byTable: { children: 1 }, byOp: { upsert: 1 } }),
+			listChildren: () => [
+				{
+					id: "c1",
+					name: "C1",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+			],
+			getDeltaStats: () => ({
+				total: 1,
+				unsynced: 1,
+				byTable: { children: 1 },
+				byOp: { upsert: 1 },
+			}),
 			getUnsyncedDeltas: () => deltas,
 		} as never);
-		expect(snapshot.memory).toMatchObject({ children: 1, facts: 0, episodes: 0, sessions: 0, feedback: 0, unsyncedDeltas: 1 });
-		expect(snapshot.sync).toMatchObject({ total: 1, unsynced: 1, status: "pending", byTable: { children: 1 } });
+		expect(snapshot.memory).toMatchObject({
+			children: 1,
+			facts: 0,
+			episodes: 0,
+			sessions: 0,
+			feedback: 0,
+			unsyncedDeltas: 1,
+		});
+		expect(snapshot.sync).toMatchObject({
+			total: 1,
+			unsynced: 1,
+			status: "pending",
+			byTable: { children: 1 },
+		});
 		expect(snapshot.feedback).toEqual([]);
 	});
 
 	it("builds fallback snapshot with optional list helpers and synced queue", () => {
 		const snapshot = buildWebConvergenceSnapshot({
 			listChildren: () => [],
-			listFacts: () => [{ id: "f1", childId: "c1", category: "preference", key: "toy", value: {}, createdAt: "2026-01-01T00:00:00.000Z" }],
-			listEpisodes: () => [{ id: "e1", childId: "c1", type: "qa", content: {}, createdAt: "2026-01-01T00:00:00.000Z" }],
-			listFeedback: () => [{ id: "fb1", childId: "c1", episodeId: "e1", agentId: "educator", rating: 3, createdAt: "2026-01-01T00:00:00.000Z" }],
-			getDeltaStats: () => ({ total: 1, unsynced: 0, byTable: { children: 1 }, byOp: { upsert: 1 } }),
+			listFacts: () => [
+				{
+					id: "f1",
+					childId: "c1",
+					category: "preference",
+					key: "toy",
+					value: {},
+					createdAt: "2026-01-01T00:00:00.000Z",
+				},
+			],
+			listEpisodes: () => [
+				{
+					id: "e1",
+					childId: "c1",
+					type: "qa",
+					content: {},
+					createdAt: "2026-01-01T00:00:00.000Z",
+				},
+			],
+			listFeedback: () => [
+				{
+					id: "fb1",
+					childId: "c1",
+					episodeId: "e1",
+					agentId: "educator",
+					rating: 3,
+					createdAt: "2026-01-01T00:00:00.000Z",
+				},
+			],
+			getDeltaStats: () => ({
+				total: 1,
+				unsynced: 0,
+				byTable: { children: 1 },
+				byOp: { upsert: 1 },
+			}),
 			getUnsyncedDeltas: () => [],
 		} as never);
-		expect(snapshot.memory).toMatchObject({ children: 0, facts: 1, episodes: 1, feedback: 1, unsyncedDeltas: 0 });
+		expect(snapshot.memory).toMatchObject({
+			children: 0,
+			facts: 1,
+			episodes: 1,
+			feedback: 1,
+			unsyncedDeltas: 0,
+		});
 		expect(snapshot.sync.status).toBe("synced");
 	});
 
 	it("registers LLM providers with deterministic rule fallback", async () => {
 		const fallback = createRuleFallbackProvider("rule-fallback");
-		const remote = createWebLlmProvider({ id: "mock-remote", endpoint: "https://llm.example/v1", apiKey: "test-key" });
+		const remote = createWebLlmProvider({
+			id: "mock-remote",
+			endpoint: "https://llm.example/v1",
+			apiKey: "test-key",
+		});
 		const registry = registerWebLlmProviders([remote, fallback]);
 		expect(registry.status.primaryProviderId).toBe("mock-remote");
 		expect(registry.status.fallbackProviderId).toBe("rule-fallback");
@@ -83,9 +181,15 @@ describe("web convergence facade", () => {
 
 	it("falls back to rules when the configured LLM provider is not ready", async () => {
 		const fallback = createRuleFallbackProvider("rule-fallback");
-		const notReady = createWebLlmProvider({ id: "missing-key", endpoint: "https://llm.example/v1" });
+		const notReady = createWebLlmProvider({
+			id: "missing-key",
+			endpoint: "https://llm.example/v1",
+		});
 		const registry = registerWebLlmProviders([notReady, fallback]);
-		const reply = await registry.complete("safety-guard", "孩子误食药物怎么办");
+		const reply = await registry.complete(
+			"safety-guard",
+			"孩子误食药物怎么办",
+		);
 		expect(reply.providerId).toBe("rule-fallback");
 		expect(reply.usedFallback).toBe(true);
 		expect(registry.status.ready).toBe(false);

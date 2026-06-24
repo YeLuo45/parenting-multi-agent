@@ -555,10 +555,18 @@ describe("MemoryPanel", () => {
 
 	it("renders unattended suite evidence in the visible dashboard", () => {
 		render(<MemoryPanel state={makeState()} />);
-		expect(screen.getByTestId("iteration-suite-summary").textContent).toContain("7/7");
-		expect(screen.getByTestId("provider-config-status").textContent).toContain("rule-fallback");
-		expect(screen.getByTestId("scenario-pack-summary").textContent).toContain("7 scenario");
-		expect(screen.getByTestId("release-gate-command").textContent).toBe("npm run release:gate");
+		expect(
+			screen.getByTestId("iteration-suite-summary").textContent,
+		).toContain("7/7");
+		expect(
+			screen.getByTestId("provider-config-status").textContent,
+		).toContain("rule-fallback");
+		expect(
+			screen.getByTestId("scenario-pack-summary").textContent,
+		).toContain("7 scenario");
+		expect(screen.getByTestId("release-gate-command").textContent).toBe(
+			"npm run release:gate",
+		);
 	});
 
 	it("lets parents load a scenario prompt into the composer", () => {
@@ -573,47 +581,295 @@ describe("MemoryPanel", () => {
 
 	it("renders all unattended dashboard controls as discoverable cards", () => {
 		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
-		expect(screen.getByTestId("acceptance-evidence-panel")).toHaveTextContent("Acceptance Evidence");
-		expect(screen.getByTestId("memory-timeline-panel")).toHaveTextContent("Memory Timeline");
-		expect(screen.getByTestId("sync-queue-panel")).toHaveTextContent("Sync Queue");
-		expect(screen.getByTestId("e2e-drill-panel")).toHaveTextContent("Main Path Drill");
-		expect(screen.getByTestId("provider-mode-toggle")).toHaveTextContent("fallback");
+		expect(
+			screen.getByTestId("acceptance-evidence-panel"),
+		).toHaveTextContent("Acceptance Evidence");
+		expect(screen.getByTestId("memory-timeline-panel")).toHaveTextContent(
+			"Memory Timeline",
+		);
+		expect(screen.getByTestId("sync-queue-panel")).toHaveTextContent(
+			"Sync Queue",
+		);
+		expect(screen.getByTestId("e2e-drill-panel")).toHaveTextContent(
+			"Main Path Drill",
+		);
+		expect(screen.getByTestId("provider-mode-toggle")).toHaveTextContent(
+			"fallback",
+		);
 	});
 
 	it("exposes real dashboard actions through dispatchable buttons", () => {
 		const dispatch = vi.fn();
-		render(<MemoryPanel state={makeState({ selectedChildId: "default", children: [{ id: "default", name: "示例宝宝", birthDate: "2024-01-01", stage: "toddler" }], memoryStats: { children: 1, facts: 0, episodes: 0, sessions: 0, feedback: 0, unsyncedDeltas: 2 } })} dispatch={dispatch} />);
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+					],
+					memoryStats: {
+						children: 1,
+						facts: 0,
+						episodes: 0,
+						sessions: 0,
+						feedback: 0,
+						unsyncedDeltas: 2,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
 		fireEvent.click(screen.getByTestId("run-main-path-drill"));
-		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("睡前") }));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("睡前"),
+			}),
+		);
 		fireEvent.click(screen.getByTestId("sync-retry-action"));
-		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("Retry 2 pending") }));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("Retry 2 pending"),
+			}),
+		);
 		fireEvent.click(screen.getByTestId("export-delivery-report"));
-		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("P-20260624-015") }));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("P-20260624-015"),
+			}),
+		);
 	});
 
 	it("renders provider mode choices with accessible selected state", () => {
 		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
-		expect(screen.getByTestId("provider-option-fallback")).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByTestId("provider-option-fallback")).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
 		expect(screen.getByTestId("provider-option-primary")).toBeDisabled();
-		expect(screen.getByTestId("provider-option-api-health")).toHaveTextContent("needs key");
+		expect(
+			screen.getByTestId("provider-option-api-health"),
+		).toHaveTextContent("needs key");
 	});
 
 	it("renders all eight product direction panels on the main memory dashboard", () => {
 		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
-		expect(screen.getByTestId("product-hub-panel")).toHaveTextContent("8/8");
-		expect(screen.getByTestId("product-section-family-profile")).toBeEnabled();
-		expect(screen.getByTestId("product-section-agent-collaboration")).toBeEnabled();
-		expect(screen.getByTestId("product-section-sync-conflicts")).toBeEnabled();
-		expect(screen.getByTestId("product-section-scenario-library")).toBeEnabled();
-		expect(screen.getByTestId("product-section-llm-provider")).toBeEnabled();
-		expect(screen.getByTestId("product-section-acceptance-evidence")).toBeEnabled();
-		expect(screen.getByTestId("product-section-knowledge-base")).toBeEnabled();
-		expect(screen.getByTestId("product-section-safety-boundary")).toBeEnabled();
-		expect(screen.getByTestId("scenario-library-panel")).toHaveTextContent("7 templates");
-		expect(screen.getByTestId("conflict-resolution-panel")).toHaveTextContent("0 conflicts");
-		expect(screen.getByTestId("llm-provider-form-panel")).toHaveTextContent("4 fields");
-		expect(screen.getByTestId("knowledge-base-panel")).toHaveTextContent("6 zh-CN entries");
-		expect(screen.getByTestId("safety-boundary-panel")).toHaveTextContent("watch");
+		expect(screen.getByTestId("product-hub-panel")).toHaveTextContent(
+			"8/8",
+		);
+		expect(
+			screen.getByTestId("product-section-family-profile"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-agent-collaboration"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-sync-conflicts"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-scenario-library"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-llm-provider"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-acceptance-evidence"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-knowledge-base"),
+		).toBeEnabled();
+		expect(
+			screen.getByTestId("product-section-safety-boundary"),
+		).toBeEnabled();
+		expect(screen.getByTestId("scenario-library-panel")).toHaveTextContent(
+			"7 templates",
+		);
+		expect(
+			screen.getByTestId("conflict-resolution-panel"),
+		).toHaveTextContent("0 conflicts");
+		expect(screen.getByTestId("llm-provider-form-panel")).toHaveTextContent(
+			"4 fields",
+		);
+		expect(screen.getByTestId("knowledge-base-panel")).toHaveTextContent(
+			"6 zh-CN entries",
+		);
+		expect(screen.getByTestId("safety-boundary-panel")).toHaveTextContent(
+			"watch",
+		);
+	});
+
+	it("dispatches product direction summaries from the hub buttons", () => {
+		const dispatch = vi.fn();
+		render(<MemoryPanel state={makeState()} dispatch={dispatch} />);
+		fireEvent.click(screen.getByTestId("product-section-family-profile"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("children"),
+			}),
+		);
+	});
+
+	it("renders a visible parenting closed-loop card and action", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+					],
+					memoryStats: {
+						children: 1,
+						facts: 3,
+						episodes: 2,
+						sessions: 4,
+						feedback: 1,
+						unsyncedDeltas: 2,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(screen.getByTestId("closed-loop-panel")).toHaveTextContent(
+			"6-step closed loop",
+		);
+		expect(screen.getByTestId("closed-loop-panel")).toHaveTextContent(
+			"sleep-coach",
+		);
+		fireEvent.click(screen.getByTestId("closed-loop-next-action"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("开始睡前演练"),
+			}),
+		);
+	});
+
+	it("renders the seven-direction execution center with dispatchable actions", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+						{
+							id: "teen",
+							name: "阿宁",
+							birthDate: "2012-01-01",
+							stage: "teen",
+						},
+					],
+					question: "孩子高烧39度还持续皮疹怎么办？",
+					memoryStats: {
+						children: 2,
+						facts: 5,
+						episodes: 4,
+						sessions: 3,
+						feedback: 2,
+						unsyncedDeltas: 3,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(screen.getByTestId("execution-center-panel")).toHaveTextContent(
+			"7/7",
+		);
+		expect(screen.getByTestId("execution-action-plan")).toHaveTextContent(
+			"7-day plan",
+		);
+		expect(screen.getByTestId("execution-safety-first")).toHaveTextContent(
+			"doctor-first",
+		);
+		fireEvent.click(screen.getByTestId("execution-action-plan"));
+		fireEvent.click(screen.getByTestId("execution-feedback-repair"));
+		fireEvent.click(screen.getByTestId("execution-offline-sync"));
+		fireEvent.click(screen.getByTestId("execution-safety-first"));
+		fireEvent.click(screen.getByTestId("execution-parent-progress"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("7-day"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("修复"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("export 3 pending"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: "先看安全边界并联系医生",
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("2 completed"),
+			}),
+		);
+	});
+
+	it("renders execution center buttons safely without a dispatch handler", () => {
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+					],
+					question: "睡前拖延怎么办？",
+					memoryStats: {
+						children: 1,
+						facts: 0,
+						episodes: 0,
+						sessions: 0,
+						feedback: 0,
+						unsyncedDeltas: 0,
+					},
+				})}
+			/>,
+		);
+		fireEvent.click(screen.getByTestId("execution-safety-first"));
+		fireEvent.click(screen.getByTestId("execution-offline-sync"));
+		expect(screen.getByTestId("execution-safety-first")).toHaveTextContent(
+			"normal-loop",
+		);
+		expect(screen.getByTestId("execution-offline-sync")).toHaveTextContent(
+			"0 pending · 0 conflicts",
+		);
 	});
 });
 

@@ -656,10 +656,21 @@ describe("unattended iteration visibility", () => {
 	it("setConvergence stores the seven-direction suite summary", () => {
 		const stack = createWebOrchestrator();
 		try {
-			stack.upsertChild({ id: "c1", name: "C1", birthDate: "2024-01-01", stage: "toddler" });
+			stack.upsertChild({
+				id: "c1",
+				name: "C1",
+				birthDate: "2024-01-01",
+				stage: "toddler",
+			});
 			const convergence = buildWebConvergenceSnapshot(stack.memory);
-			const registry = registerWebLlmProviders([createRuleFallbackProvider()]);
-			const action = buildSetConvergenceAction(convergence, registry.status, 2);
+			const registry = registerWebLlmProviders([
+				createRuleFallbackProvider(),
+			]);
+			const action = buildSetConvergenceAction(
+				convergence,
+				registry.status,
+				2,
+			);
 			const next = reducer(makeState(), action);
 			expect(next.iterationSuite.summary).toContain("7/7");
 			expect(next.providerConfig.statusText).toContain("rule-fallback");
@@ -672,7 +683,9 @@ describe("unattended iteration visibility", () => {
 	it("renders unattended evidence in the memory panel", () => {
 		const ir = renderView(makeState(), () => {});
 		const serialized = JSON.stringify(ir);
-		expect(serialized).toContain("7/7 unattended iteration directions ready");
+		expect(serialized).toContain(
+			"7/7 unattended iteration directions ready",
+		);
 		expect(serialized).toContain("rule-fallback");
 		expect(serialized).toContain("scenario pack cases ready");
 		expect(serialized).toContain("npm run release:gate");

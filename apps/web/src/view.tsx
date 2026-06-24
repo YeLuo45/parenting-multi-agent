@@ -7,7 +7,7 @@
  */
 
 import type { ChildProfile } from "@parenting/memory";
-import { type ReactElement, useEffect, useReducer } from "react";
+import { type ReactElement, useCallback, useEffect, useReducer } from "react";
 import { AppBody, Header } from "./components.js";
 import { I18nProvider } from "./i18n.js";
 import { computeWebStage } from "./memory-helpers.js";
@@ -23,8 +23,8 @@ import {
 	buildE2eMainPathReport,
 	buildWebConvergenceSnapshot,
 	createRuleFallbackProvider,
-	registerWebLlmProviders,
 	type E2eMainPathReport,
+	registerWebLlmProviders,
 	type WebConvergenceSnapshot,
 	type WebLlmRegistry,
 } from "./web-convergence.js";
@@ -437,7 +437,11 @@ function renderMemoryPanel(
 					props: {
 						"data-testid": `scenario-${scenario.id}`,
 						type: "button",
-						onClick: () => dispatch({ type: "setQuestion", question: scenario.prompt }),
+						onClick: () =>
+							dispatch({
+								type: "setQuestion",
+								question: scenario.prompt,
+							}),
 					},
 					children: [scenario.title],
 				})),
@@ -511,11 +515,19 @@ function createAppFromStack(stack: WebOrchestrator): {
 		/* v8 ignore next 22 */
 		const [state, dispatch] = useReducer(reducer, initialState);
 		/* v8 ignore next 11 */
-		const refreshConvergence = (): void => {
+		const refreshConvergence = useCallback((): void => {
 			const convergence = buildWebConvergenceSnapshot(stack.memory);
-			const registry = registerWebLlmProviders([createRuleFallbackProvider()]);
-			dispatch(buildSetConvergenceAction(convergence, registry.status, state.messages.length));
-		};
+			const registry = registerWebLlmProviders([
+				createRuleFallbackProvider(),
+			]);
+			dispatch(
+				buildSetConvergenceAction(
+					convergence,
+					registry.status,
+					state.messages.length,
+				),
+			);
+		}, [stack.memory, state.messages.length]);
 		/* v8 ignore next 4 */
 		const onAsk = async (): Promise<void> => {
 			await dispatchAsk(stack, state, dispatch);
@@ -542,11 +554,10 @@ function createAppFromStack(stack: WebOrchestrator): {
 			}
 			refreshConvergence();
 		}, [
-			stack.memory,
 			stack.listChildren,
 			stack.upsertChild,
-			state.messages.length,
 			state.selectedChildId,
+			refreshConvergence,
 		]);
 
 		return (

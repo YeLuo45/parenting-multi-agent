@@ -13,12 +13,14 @@ import { LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeSwitcher } from "./theme.js";
 import type { Action, AppState, ChatMessage } from "./view.js";
 import {
-	buildDeliveryReportExport,
-	buildRuntimeDashboardSnapshot,
 	buildAllDirectionsProductHub,
 	buildBilingualKnowledgeBase,
+	buildDeliveryReportExport,
 	buildLlmProviderConfigForm,
 	buildMedicalSafetyEscalation,
+	buildParentingClosedLoopPlan,
+	buildParentingExecutionCenter,
+	buildRuntimeDashboardSnapshot,
 	buildScenarioPack,
 	buildScenarioTemplateLibrary,
 	buildScenarioWorkflow,
@@ -271,9 +273,14 @@ export function MemoryPanel({
 }): ReactElement {
 	const stats = state.memoryStats;
 	const scenarios = buildScenarioPack();
-	const selectedChild = state.children.find((child) => child.id === state.selectedChildId);
+	const selectedChild = state.children.find(
+		(child) => child.id === state.selectedChildId,
+	);
 	const fallbackScenario = scenarios[0]!;
-	const selectedScenario = scenarios.find((scenario) => scenario.childStage === selectedChild?.stage) ?? fallbackScenario;
+	const selectedScenario =
+		scenarios.find(
+			(scenario) => scenario.childStage === selectedChild?.stage,
+		) ?? fallbackScenario;
 	const dashboard = buildRuntimeDashboardSnapshot({
 		children: state.children,
 		facts: [],
@@ -286,7 +293,13 @@ export function MemoryPanel({
 			byOp: {},
 		},
 		provider: state.llmStatus,
-		release: { tests: 270, passed: 270, statements: 99.2, branches: 96.1, assets: 8 },
+		release: {
+			tests: 270,
+			passed: 270,
+			statements: 99.2,
+			branches: 96.1,
+			assets: 8,
+		},
 		selectedChildId: state.selectedChildId,
 		scenarioId: selectedScenario.id,
 	});
@@ -309,15 +322,41 @@ export function MemoryPanel({
 		provider: state.llmStatus,
 		question: state.question || selectedScenario.prompt,
 	});
+	const closedLoop = buildParentingClosedLoopPlan({
+		question: state.question || selectedScenario.prompt,
+		child: {
+			id: selectedChild?.id ?? "default",
+			name: selectedChild?.name ?? "示例宝宝",
+			stage: selectedChild?.stage ?? selectedScenario.childStage,
+		},
+		memory: stats,
+		provider: state.llmStatus,
+	});
+	const executionCenter = buildParentingExecutionCenter({
+		question: state.question || selectedScenario.prompt,
+		children: state.children,
+		selectedChildId: state.selectedChildId ?? undefined,
+		memory: stats,
+		provider: state.llmStatus,
+		lastFeedbackRating: stats.feedback > 0 ? -1 : undefined,
+	});
 	const scenarioLibrary = buildScenarioTemplateLibrary(scenarios);
 	const conflictPlan = buildSyncConflictResolution({
 		conflicts: state.convergence?.sync.unsynced
-			? [{ table: "memory", localUpdatedAt: "local", remoteUpdatedAt: "remote" }]
+			? [
+					{
+						table: "memory",
+						localUpdatedAt: "local",
+						remoteUpdatedAt: "remote",
+					},
+				]
 			: [],
 	});
 	const providerForm = buildLlmProviderConfigForm(state.llmStatus);
 	const knowledgeBase = buildBilingualKnowledgeBase("zh-CN");
-	const safety = buildMedicalSafetyEscalation(state.question || selectedScenario.prompt);
+	const safety = buildMedicalSafetyEscalation(
+		state.question || selectedScenario.prompt,
+	);
 	const items: Array<[string, string, number]> = [
 		["children", "Children", stats.children],
 		["facts", "Facts", stats.facts],
@@ -349,7 +388,10 @@ export function MemoryPanel({
 						type="button"
 						data-testid={`scenario-${scenario.id}`}
 						onClick={() =>
-							dispatch?.({ type: "setQuestion", question: scenario.prompt })
+							dispatch?.({
+								type: "setQuestion",
+								question: scenario.prompt,
+							})
 						}
 					>
 						{scenario.title}
@@ -359,26 +401,169 @@ export function MemoryPanel({
 			<p data-testid="release-gate-command">
 				{state.releaseGate.command}
 			</p>
-			<div className="dashboard-card product-hub" data-testid="product-hub-panel">
+			<div
+				className="dashboard-card product-hub"
+				data-testid="product-hub-panel"
+			>
 				<strong>All Directions Hub</strong>
 				<span>{productHub.summary}</span>
-				<div className="scenario-pack" data-testid="product-hub-sections">
+				<div
+					className="scenario-pack"
+					data-testid="product-hub-sections"
+				>
 					{productHub.sections.map((section) => (
-						<button key={section.id} type="button" data-testid={`product-section-${section.id}`} disabled={!section.ready} onClick={() => dispatch?.({ type: "setQuestion", question: section.summary })}>{section.id}</button>
+						<button
+							key={section.id}
+							type="button"
+							data-testid={`product-section-${section.id}`}
+							disabled={!section.ready}
+							onClick={() =>
+								dispatch?.({
+									type: "setQuestion",
+									question: section.summary,
+								})
+							}
+						>
+							{section.id}
+						</button>
 					))}
 				</div>
 			</div>
-			<div className="dashboard-card" data-testid="scenario-library-panel">
+			<div className="dashboard-card" data-testid="closed-loop-panel">
+				<strong>Parenting Closed Loop</strong>
+				<span>
+					{closedLoop.summary} · {closedLoop.primaryAgentId}
+				</span>
+				<button
+					type="button"
+					data-testid="closed-loop-next-action"
+					onClick={() =>
+						dispatch?.({
+							type: "setQuestion",
+							question: closedLoop.nextAction.prompt,
+						})
+					}
+				>
+					{closedLoop.nextAction.label}
+				</button>
+			</div>
+			<div
+				className="dashboard-card"
+				data-testid="execution-center-panel"
+			>
+				<strong>Execution Center</strong>
+				<span>{executionCenter.summary}</span>
+				<div
+					className="scenario-pack"
+					data-testid="execution-center-actions"
+				>
+					<button
+						type="button"
+						data-testid="execution-action-plan"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: executionCenter.actionPlan.summary,
+							})
+						}
+					>
+						{executionCenter.actionPlan.title}
+					</button>
+					<button
+						type="button"
+						data-testid="execution-feedback-repair"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: executionCenter.repair.repairPrompt,
+							})
+						}
+					>
+						Feedback Repair
+					</button>
+					<button
+						type="button"
+						data-testid="execution-multi-child"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: executionCenter.switcher.summary,
+							})
+						}
+					>
+						{executionCenter.switcher.summary}
+					</button>
+					<button
+						type="button"
+						data-testid="execution-safety-first"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: executionCenter.safety.cta,
+							})
+						}
+					>
+						{executionCenter.safety.mode}
+					</button>
+					<button
+						type="button"
+						data-testid="execution-offline-sync"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question:
+									executionCenter.sync.actions.find(
+										(action) =>
+											action.id === "export-deltas",
+									)?.prompt ?? executionCenter.sync.summary,
+							})
+						}
+					>
+						{executionCenter.sync.summary}
+					</button>
+					<button
+						type="button"
+						data-testid="execution-parent-progress"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: executionCenter.progress.summary,
+							})
+						}
+					>
+						{executionCenter.progress.summary}
+					</button>
+				</div>
+			</div>
+			<div
+				className="dashboard-card"
+				data-testid="scenario-library-panel"
+			>
 				<strong>Scenario Library</strong>
-				<span>{scenarioLibrary.total} templates / {scenarioLibrary.groups.length} stages</span>
+				<span>
+					{scenarioLibrary.total} templates /{" "}
+					{scenarioLibrary.groups.length} stages
+				</span>
 			</div>
-			<div className="dashboard-card" data-testid="conflict-resolution-panel">
+			<div
+				className="dashboard-card"
+				data-testid="conflict-resolution-panel"
+			>
 				<strong>Conflict Resolution</strong>
-				<span>{conflictPlan.totalConflicts} conflicts · {conflictPlan.recommendedChoiceId}</span>
+				<span>
+					{conflictPlan.totalConflicts} conflicts ·{" "}
+					{conflictPlan.recommendedChoiceId}
+				</span>
 			</div>
-			<div className="dashboard-card" data-testid="llm-provider-form-panel">
+			<div
+				className="dashboard-card"
+				data-testid="llm-provider-form-panel"
+			>
 				<strong>Provider Config</strong>
-				<span>{providerForm.fields.length} fields · {providerForm.testConnection.reason}</span>
+				<span>
+					{providerForm.fields.length} fields ·{" "}
+					{providerForm.testConnection.reason}
+				</span>
 			</div>
 			<div className="dashboard-card" data-testid="knowledge-base-panel">
 				<strong>Knowledge Base</strong>
@@ -388,10 +573,24 @@ export function MemoryPanel({
 				<strong>Safety Boundary</strong>
 				<span>{safety.level}</span>
 			</div>
-			<div className="dashboard-card" data-testid="acceptance-evidence-panel">
+			<div
+				className="dashboard-card"
+				data-testid="acceptance-evidence-panel"
+			>
 				<strong>Acceptance Evidence</strong>
 				<span>{dashboard.acceptance.summary}</span>
-				<button type="button" data-testid="export-delivery-report" onClick={() => dispatch?.({ type: "setQuestion", question: deliveryReport.markdown })}>Export report</button>
+				<button
+					type="button"
+					data-testid="export-delivery-report"
+					onClick={() =>
+						dispatch?.({
+							type: "setQuestion",
+							question: deliveryReport.markdown,
+						})
+					}
+				>
+					Export report
+				</button>
 			</div>
 			<div className="dashboard-card" data-testid="memory-timeline-panel">
 				<strong>Memory Timeline</strong>
@@ -400,17 +599,53 @@ export function MemoryPanel({
 			<div className="dashboard-card" data-testid="sync-queue-panel">
 				<strong>Sync Queue</strong>
 				<span>{dashboard.sync.summary}</span>
-				<button type="button" data-testid="sync-retry-action" disabled={!retryPlan.enabled} onClick={() => dispatch?.({ type: "setQuestion", question: retryPlan.summary })}>Retry</button>
+				<button
+					type="button"
+					data-testid="sync-retry-action"
+					disabled={!retryPlan.enabled}
+					onClick={() =>
+						dispatch?.({
+							type: "setQuestion",
+							question: retryPlan.summary,
+						})
+					}
+				>
+					Retry
+				</button>
 			</div>
 			<div className="dashboard-card" data-testid="e2e-drill-panel">
 				<strong>Main Path Drill</strong>
 				<span>{dashboard.drill.summary}</span>
-				<button type="button" data-testid="run-main-path-drill" onClick={() => dispatch?.({ type: "setQuestion", question: buildScenarioWorkflow(selectedScenario, { childId: state.selectedChildId ?? "default", childStage: selectedScenario.childStage }).prompt })}>Run drill</button>
+				<button
+					type="button"
+					data-testid="run-main-path-drill"
+					onClick={() =>
+						dispatch?.({
+							type: "setQuestion",
+							question: buildScenarioWorkflow(selectedScenario, {
+								childId: state.selectedChildId ?? "default",
+								childStage: selectedScenario.childStage,
+							}).prompt,
+						})
+					}
+				>
+					Run drill
+				</button>
 			</div>
 			<div className="dashboard-card" data-testid="provider-mode-toggle">
 				<strong>Provider</strong>
 				<span>{dashboard.provider.mode}</span>
-				{dashboard.providerOptions.map((option) => <button key={option.id} type="button" data-testid={`provider-option-${option.id}`} disabled={!option.enabled} aria-pressed={option.selected}>{option.label}</button>)}
+				{dashboard.providerOptions.map((option) => (
+					<button
+						key={option.id}
+						type="button"
+						data-testid={`provider-option-${option.id}`}
+						disabled={!option.enabled}
+						aria-pressed={option.selected}
+					>
+						{option.label}
+					</button>
+				))}
 			</div>
 			<dl>
 				{items.map(([key, label, value]) => (

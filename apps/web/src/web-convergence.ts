@@ -22,7 +22,8 @@ export function buildWebConvergenceSnapshot(
 		sync: memory.getSyncSnapshot?.() ?? {
 			total: memory.getDeltaStats().total,
 			unsynced: memory.getDeltaStats().unsynced,
-			status: memory.getDeltaStats().unsynced === 0 ? "synced" : "pending",
+			status:
+				memory.getDeltaStats().unsynced === 0 ? "synced" : "pending",
 			latestUnsynced: memory.getUnsyncedDeltas(5),
 			byTable: memory.getDeltaStats().byTable,
 		},
@@ -57,7 +58,9 @@ export interface WebLlmRegistry {
 	complete(agentId: string, prompt: string): Promise<WebLlmCompletion>;
 }
 
-export function createWebLlmProvider(options: WebLlmProviderOptions): WebLlmProvider {
+export function createWebLlmProvider(
+	options: WebLlmProviderOptions,
+): WebLlmProvider {
 	return {
 		id: options.id,
 		ready: Boolean(options.endpoint && options.apiKey),
@@ -67,7 +70,9 @@ export function createWebLlmProvider(options: WebLlmProviderOptions): WebLlmProv
 	};
 }
 
-export function createRuleFallbackProvider(id = "rule-fallback"): WebLlmProvider {
+export function createRuleFallbackProvider(
+	id = "rule-fallback",
+): WebLlmProvider {
 	return {
 		id,
 		ready: true,
@@ -77,8 +82,12 @@ export function createRuleFallbackProvider(id = "rule-fallback"): WebLlmProvider
 	};
 }
 
-export function registerWebLlmProviders(providers: WebLlmProvider[]): WebLlmRegistry {
-	const fallback = providers.find((provider) => provider.id.includes("fallback")) ?? createRuleFallbackProvider();
+export function registerWebLlmProviders(
+	providers: WebLlmProvider[],
+): WebLlmRegistry {
+	const fallback =
+		providers.find((provider) => provider.id.includes("fallback")) ??
+		createRuleFallbackProvider();
 	const primary = providers.find((provider) => provider !== fallback) ?? null;
 	return {
 		status: {
@@ -86,7 +95,10 @@ export function registerWebLlmProviders(providers: WebLlmProvider[]): WebLlmRegi
 			fallbackProviderId: fallback.id,
 			ready: primary?.ready ?? false,
 		},
-		async complete(agentId: string, prompt: string): Promise<WebLlmCompletion> {
+		async complete(
+			agentId: string,
+			prompt: string,
+		): Promise<WebLlmCompletion> {
 			const provider = primary?.ready ? primary : fallback;
 			return {
 				providerId: provider.id,
@@ -107,7 +119,13 @@ export interface E2eMainPathInput {
 }
 
 export interface E2eMainPathStep {
-	id: "add-child" | "ask-question" | "record-feedback" | "memory-dashboard" | "sync-queue" | "llm-fallback";
+	id:
+		| "add-child"
+		| "ask-question"
+		| "record-feedback"
+		| "memory-dashboard"
+		| "sync-queue"
+		| "llm-fallback";
 	ok: boolean;
 }
 
@@ -116,7 +134,9 @@ export interface E2eMainPathReport {
 	steps: E2eMainPathStep[];
 }
 
-export function buildE2eMainPathReport(input: E2eMainPathInput): E2eMainPathReport {
+export function buildE2eMainPathReport(
+	input: E2eMainPathInput,
+): E2eMainPathReport {
 	const steps: E2eMainPathStep[] = [
 		{ id: "add-child", ok: input.children > 0 },
 		{ id: "ask-question", ok: input.messages >= 2 },

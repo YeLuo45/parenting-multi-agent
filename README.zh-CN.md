@@ -95,9 +95,9 @@ NODE_ENV=development npm run test:coverage
 
 本地实际验收结果：
 
-- 总测试数：1274 passed
+- 总测试数：1278 passed
 - 全 workspace 通过率：100%
-- 最低整体 workspace 覆盖率：`@parenting/web` 分支覆盖率 95.19%，行覆盖率 98.79%，语句覆盖率 98.79%，函数覆盖率 97.94%
+- 最低整体 workspace 覆盖率：`@parenting/web` 分支覆盖率 95.22%，行覆盖率 99.35%，语句覆盖率 99.35%，函数覆盖率 98.39%
 
 ## 已验证命令清单
 
@@ -163,6 +163,7 @@ Web 应用包含：
 - `WebMemoryLayer`：浏览器安全的纯内存记忆实现，兼容 orchestrator 的记忆接口
 - 记忆面板辅助能力：孩子档案校验、同步健康、CRUD 管理、反馈分析
 - 无人值守迭代面板：显示 7 个方向的路线图，包括 Web convergence、记忆时间线、LLM fallback、验收证据、离线同步队列、场景包和发布门禁
+- Parenting Closed Loop：在首页记忆面板中把“提问 → 路由 → 回答 → 演练 → 记录 → 同步”串成 6 步闭环，并提供可点击的下一步行动按钮
 - Vite 手动分包：React vendor 与 parenting runtime 分离，避免循环 chunk
 
 构建命令：

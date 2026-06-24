@@ -53,9 +53,9 @@ export {
 export { WEB_VERSION } from "./version.js";
 export type { Action, AppState, ChatMessage, IRNode } from "./view.js";
 export {
+	buildSetConvergenceAction,
 	createParentingApp,
 	createParentingAppWithPersistence,
-	buildSetConvergenceAction,
 	defaultChild,
 	dispatchAsk,
 	initialState,
@@ -66,37 +66,6 @@ export {
 	renderView,
 	runAsk,
 } from "./view.js";
-export {
-	buildE2eMainPathReport,
-	buildWebConvergenceSnapshot,
-	createRuleFallbackProvider,
-	createWebLlmProvider,
-	registerWebLlmProviders,
-} from "./web-convergence.js";
-export {
-	buildAcceptanceEvidence,
-	buildAllDirectionsProductHub,
-	buildAgentCollaborationExplanation,
-	buildBilingualKnowledgeBase,
-	buildDeliveryReportExport,
-	buildE2eDrill,
-	buildFamilyProfileCenter,
-	buildFamilyTimelineFilters,
-	buildIterationSuite,
-	buildLlmProviderConfigForm,
-	buildMedicalSafetyEscalation,
-	buildMemoryTimeline,
-	buildProviderConfigSnapshot,
-	buildProviderModeOptions,
-	buildReleaseGatePlan,
-	buildRuntimeDashboardSnapshot,
-	buildScenarioPack,
-	buildScenarioTemplateLibrary,
-	buildScenarioWorkflow,
-	buildSyncConflictResolution,
-	buildSyncQueueActions,
-	buildSyncQueueOperationPlan,
-} from "./web-iteration-suite.js";
 export type {
 	E2eMainPathReport,
 	E2eMainPathStep,
@@ -104,6 +73,13 @@ export type {
 	WebLlmCompletion,
 	WebLlmProvider,
 	WebLlmRegistry,
+} from "./web-convergence.js";
+export {
+	buildE2eMainPathReport,
+	buildWebConvergenceSnapshot,
+	createRuleFallbackProvider,
+	createWebLlmProvider,
+	registerWebLlmProviders,
 } from "./web-convergence.js";
 export type {
 	IterationDirection,
@@ -113,4 +89,37 @@ export type {
 	ProviderConfigSnapshot,
 	ReleaseGatePlan,
 	ReleaseGateStep,
+} from "./web-iteration-suite.js";
+export {
+	buildAcceptanceEvidence,
+	buildActionPlanGenerator,
+	buildAgentCollaborationExplanation,
+	buildAllDirectionsProductHub,
+	buildBilingualKnowledgeBase,
+	buildClosedLoopEvidenceLedger,
+	buildDeliveryReportExport,
+	buildE2eDrill,
+	buildFamilyProfileCenter,
+	buildFamilyTimelineFilters,
+	buildFeedbackRepairLoop,
+	buildIterationSuite,
+	buildLlmProviderConfigForm,
+	buildMedicalSafetyEscalation,
+	buildMemoryTimeline,
+	buildMultiChildContextSwitcher,
+	buildOfflineSyncOperations,
+	buildParentingClosedLoopPlan,
+	buildParentingExecutionCenter,
+	buildParentProgressDashboard,
+	buildProviderConfigSnapshot,
+	buildProviderModeOptions,
+	buildReleaseGatePlan,
+	buildRuntimeDashboardSnapshot,
+	buildSafetyFirstMode,
+	buildScenarioPack,
+	buildScenarioTemplateLibrary,
+	buildScenarioWorkflow,
+	buildSyncConflictResolution,
+	buildSyncQueueActions,
+	buildSyncQueueOperationPlan,
 } from "./web-iteration-suite.js";
