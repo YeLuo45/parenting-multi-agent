@@ -73,7 +73,7 @@ jobs:
         run: npm run build:web
 
       - name: Install Playwright browser
-        run: cd apps/web && npx playwright install --with-deps=false chromium
+        run: cd apps/web && npx playwright install chromium
 
       - name: Run Playwright e2e tests
         run: cd apps/web && npx playwright test --project=chromium
