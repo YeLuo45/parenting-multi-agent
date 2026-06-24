@@ -588,7 +588,7 @@ describe("MemoryPanel", () => {
 		fireEvent.click(screen.getByTestId("sync-retry-action"));
 		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("Retry 2 pending") }));
 		fireEvent.click(screen.getByTestId("export-delivery-report"));
-		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("P-20260624-008") }));
+		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("P-20260624-015") }));
 	});
 
 	it("renders provider mode choices with accessible selected state", () => {
@@ -596,6 +596,24 @@ describe("MemoryPanel", () => {
 		expect(screen.getByTestId("provider-option-fallback")).toHaveAttribute("aria-pressed", "true");
 		expect(screen.getByTestId("provider-option-primary")).toBeDisabled();
 		expect(screen.getByTestId("provider-option-api-health")).toHaveTextContent("needs key");
+	});
+
+	it("renders all eight product direction panels on the main memory dashboard", () => {
+		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
+		expect(screen.getByTestId("product-hub-panel")).toHaveTextContent("8/8");
+		expect(screen.getByTestId("product-section-family-profile")).toBeEnabled();
+		expect(screen.getByTestId("product-section-agent-collaboration")).toBeEnabled();
+		expect(screen.getByTestId("product-section-sync-conflicts")).toBeEnabled();
+		expect(screen.getByTestId("product-section-scenario-library")).toBeEnabled();
+		expect(screen.getByTestId("product-section-llm-provider")).toBeEnabled();
+		expect(screen.getByTestId("product-section-acceptance-evidence")).toBeEnabled();
+		expect(screen.getByTestId("product-section-knowledge-base")).toBeEnabled();
+		expect(screen.getByTestId("product-section-safety-boundary")).toBeEnabled();
+		expect(screen.getByTestId("scenario-library-panel")).toHaveTextContent("7 templates");
+		expect(screen.getByTestId("conflict-resolution-panel")).toHaveTextContent("0 conflicts");
+		expect(screen.getByTestId("llm-provider-form-panel")).toHaveTextContent("4 fields");
+		expect(screen.getByTestId("knowledge-base-panel")).toHaveTextContent("6 zh-CN entries");
+		expect(screen.getByTestId("safety-boundary-panel")).toHaveTextContent("watch");
 	});
 });
 

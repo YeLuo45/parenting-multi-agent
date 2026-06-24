@@ -14,6 +14,14 @@ import {
 	buildSyncQueueOperationPlan,
 	buildProviderConfigSnapshot,
 	buildReleaseGatePlan,
+	buildAllDirectionsProductHub,
+	buildAgentCollaborationExplanation,
+	buildBilingualKnowledgeBase,
+	buildFamilyProfileCenter,
+	buildLlmProviderConfigForm,
+	buildMedicalSafetyEscalation,
+	buildScenarioTemplateLibrary,
+	buildSyncConflictResolution,
 } from "../src/index.js";
 
 describe("web unattended iteration suite", () => {
@@ -193,6 +201,95 @@ describe("web unattended iteration suite", () => {
 		expect(filters.childIds).toEqual(["c1", "c2"]);
 		expect(filters.kinds).toEqual(["child", "episode", "feedback"]);
 		expect(filters.defaultLabel).toBe("3 timeline entries across 2 children");
+	});
+
+	it("builds a family profile center with risk and next action", () => {
+		const profile = buildFamilyProfileCenter({
+			children: [
+				{ id: "c1", name: "米粒", birthDate: "2024-01-01", stage: "toddler" },
+				{ id: "c2", name: "小树", birthDate: "2018-01-01", stage: "school_age" },
+			],
+			memory: { children: 2, facts: 5, episodes: 3, sessions: 2, feedback: 4, unsyncedDeltas: 1 },
+			lastFeedbackRating: -1,
+		});
+		expect(profile.primaryChildName).toBe("米粒");
+		expect(profile.riskLevel).toBe("attention");
+		expect(profile.nextBestAction).toContain("复盘");
+		expect(profile.highlights).toContain("2 children");
+	});
+
+	it("explains multi-agent collaboration routing in human-readable steps", () => {
+		const explanation = buildAgentCollaborationExplanation({
+			question: "孩子发烧还咳嗽怎么办？",
+			scenario: buildScenarioPack().find((scenario) => scenario.id === "food-picky")!,
+			selectedAgentIds: ["pediatrician", "safety-guard", "parent-support"],
+		});
+		expect(explanation.primaryAgentId).toBe("pediatrician");
+		expect(explanation.steps.map((step) => step.kind)).toEqual(["route", "consult", "merge", "guardrail"]);
+		expect(explanation.summary).toContain("3 agents");
+	});
+
+	it("plans offline sync conflict resolution choices without mutating data", () => {
+		const plan = buildSyncConflictResolution({
+			conflicts: [
+				{ table: "children", localUpdatedAt: "2026-01-02", remoteUpdatedAt: "2026-01-01" },
+				{ table: "facts", localUpdatedAt: "2026-01-01", remoteUpdatedAt: "2026-01-03" },
+			],
+		});
+		expect(plan.totalConflicts).toBe(2);
+		expect(plan.choices.map((choice) => choice.id)).toEqual(["preview", "local-wins", "remote-wins", "merge-manual"]);
+		expect(plan.recommendedChoiceId).toBe("merge-manual");
+	});
+
+	it("builds a scenario template library grouped by child stage", () => {
+		const library = buildScenarioTemplateLibrary(buildScenarioPack());
+		expect(library.total).toBe(7);
+		expect(library.groups.some((group) => group.stage === "toddler" && group.count >= 2)).toBe(true);
+		expect(library.quickStartPrompts[0]).toContain("孩子");
+	});
+
+	it("builds an editable LLM provider config form model", () => {
+		const form = buildLlmProviderConfigForm({ primaryProviderId: "remote", fallbackProviderId: "rule-fallback", ready: false });
+		expect(form.fields.map((field) => field.id)).toEqual(["baseUrl", "model", "apiKey", "fallbackProvider"]);
+		expect(form.testConnection.enabled).toBe(false);
+		expect(form.testConnection.reason).toContain("API key");
+	});
+
+	it("builds bilingual knowledge base entries with evidence levels", () => {
+		const kb = buildBilingualKnowledgeBase("zh-CN");
+		expect(kb.locale).toBe("zh-CN");
+		expect(kb.entries.length).toBeGreaterThanOrEqual(6);
+		expect(kb.entries[0]).toHaveProperty("evidenceLevel");
+		expect(buildBilingualKnowledgeBase("en-US").entries[0].title).not.toBe(kb.entries[0].title);
+	});
+
+	it("escalates medical and emergency safety boundaries", () => {
+		const safe = buildMedicalSafetyEscalation("孩子发烧38度但精神还好");
+		const urgent = buildMedicalSafetyEscalation("孩子呼吸困难并且嘴唇发紫");
+		expect(safe.level).toBe("watch");
+		expect(urgent.level).toBe("emergency");
+		expect(urgent.disclaimer).toContain("not a medical diagnosis");
+	});
+
+	it("combines all eight directions into a product hub snapshot", () => {
+		const hub = buildAllDirectionsProductHub({
+			children: [{ id: "c1", name: "米粒", birthDate: "2024-01-01", stage: "toddler" }],
+			memory: { children: 1, facts: 2, episodes: 1, sessions: 1, feedback: 1, unsyncedDeltas: 0 },
+			provider: { primaryProviderId: null, fallbackProviderId: "rule-fallback", ready: false },
+			question: "孩子睡前拖延怎么办？",
+		});
+		expect(hub.sections.map((section) => section.id)).toEqual([
+			"family-profile",
+			"agent-collaboration",
+			"sync-conflicts",
+			"scenario-library",
+			"llm-provider",
+			"acceptance-evidence",
+			"knowledge-base",
+			"safety-boundary",
+		]);
+		expect(hub.readyCount).toBe(8);
+		expect(hub.summary).toContain("8/8");
 	});
 
 });

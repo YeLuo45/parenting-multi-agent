@@ -15,8 +15,14 @@ import type { Action, AppState, ChatMessage } from "./view.js";
 import {
 	buildDeliveryReportExport,
 	buildRuntimeDashboardSnapshot,
+	buildAllDirectionsProductHub,
+	buildBilingualKnowledgeBase,
+	buildLlmProviderConfigForm,
+	buildMedicalSafetyEscalation,
 	buildScenarioPack,
+	buildScenarioTemplateLibrary,
 	buildScenarioWorkflow,
+	buildSyncConflictResolution,
 	buildSyncQueueOperationPlan,
 } from "./web-iteration-suite.js";
 
@@ -291,12 +297,27 @@ export function MemoryPanel({
 		byOp: {},
 	});
 	const deliveryReport = buildDeliveryReportExport({
-		proposalId: "P-20260624-008",
+		proposalId: "P-20260624-015",
 		commit: "pending",
 		acceptance: dashboard.acceptance,
 		drill: dashboard.drill,
 		sync: dashboard.sync,
 	});
+	const productHub = buildAllDirectionsProductHub({
+		children: state.children,
+		memory: stats,
+		provider: state.llmStatus,
+		question: state.question || selectedScenario.prompt,
+	});
+	const scenarioLibrary = buildScenarioTemplateLibrary(scenarios);
+	const conflictPlan = buildSyncConflictResolution({
+		conflicts: state.convergence?.sync.unsynced
+			? [{ table: "memory", localUpdatedAt: "local", remoteUpdatedAt: "remote" }]
+			: [],
+	});
+	const providerForm = buildLlmProviderConfigForm(state.llmStatus);
+	const knowledgeBase = buildBilingualKnowledgeBase("zh-CN");
+	const safety = buildMedicalSafetyEscalation(state.question || selectedScenario.prompt);
 	const items: Array<[string, string, number]> = [
 		["children", "Children", stats.children],
 		["facts", "Facts", stats.facts],
@@ -338,6 +359,35 @@ export function MemoryPanel({
 			<p data-testid="release-gate-command">
 				{state.releaseGate.command}
 			</p>
+			<div className="dashboard-card product-hub" data-testid="product-hub-panel">
+				<strong>All Directions Hub</strong>
+				<span>{productHub.summary}</span>
+				<div className="scenario-pack" data-testid="product-hub-sections">
+					{productHub.sections.map((section) => (
+						<button key={section.id} type="button" data-testid={`product-section-${section.id}`} disabled={!section.ready} onClick={() => dispatch?.({ type: "setQuestion", question: section.summary })}>{section.id}</button>
+					))}
+				</div>
+			</div>
+			<div className="dashboard-card" data-testid="scenario-library-panel">
+				<strong>Scenario Library</strong>
+				<span>{scenarioLibrary.total} templates / {scenarioLibrary.groups.length} stages</span>
+			</div>
+			<div className="dashboard-card" data-testid="conflict-resolution-panel">
+				<strong>Conflict Resolution</strong>
+				<span>{conflictPlan.totalConflicts} conflicts · {conflictPlan.recommendedChoiceId}</span>
+			</div>
+			<div className="dashboard-card" data-testid="llm-provider-form-panel">
+				<strong>Provider Config</strong>
+				<span>{providerForm.fields.length} fields · {providerForm.testConnection.reason}</span>
+			</div>
+			<div className="dashboard-card" data-testid="knowledge-base-panel">
+				<strong>Knowledge Base</strong>
+				<span>{knowledgeBase.entries.length} zh-CN entries</span>
+			</div>
+			<div className="dashboard-card" data-testid="safety-boundary-panel">
+				<strong>Safety Boundary</strong>
+				<span>{safety.level}</span>
+			</div>
 			<div className="dashboard-card" data-testid="acceptance-evidence-panel">
 				<strong>Acceptance Evidence</strong>
 				<span>{dashboard.acceptance.summary}</span>
