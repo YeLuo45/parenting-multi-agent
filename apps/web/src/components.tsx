@@ -13,11 +13,11 @@ import { LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeSwitcher } from "./theme.js";
 import type { Action, AppState, ChatMessage } from "./view.js";
 import {
-	buildAcceptanceEvidence,
-	buildE2eDrill,
-	buildMemoryTimeline,
+	buildDeliveryReportExport,
+	buildRuntimeDashboardSnapshot,
 	buildScenarioPack,
-	buildSyncQueueActions,
+	buildScenarioWorkflow,
+	buildSyncQueueOperationPlan,
 } from "./web-iteration-suite.js";
 
 /** Header: app title + agent count + theme switcher + language switcher. */
@@ -265,31 +265,37 @@ export function MemoryPanel({
 }): ReactElement {
 	const stats = state.memoryStats;
 	const scenarios = buildScenarioPack();
-	const acceptance = buildAcceptanceEvidence({
-		tests: 259,
-		passed: 259,
-		statements: 99.11,
-		branches: 95.3,
-		assets: 7,
-		e2eReady: state.e2eReport.ready,
-	});
-	const timeline = buildMemoryTimeline({
+	const selectedChild = state.children.find((child) => child.id === state.selectedChildId);
+	const fallbackScenario = scenarios[0]!;
+	const selectedScenario = scenarios.find((scenario) => scenario.childStage === selectedChild?.stage) ?? fallbackScenario;
+	const dashboard = buildRuntimeDashboardSnapshot({
 		children: state.children,
 		facts: [],
 		episodes: [],
 		feedback: [],
+		deltaStats: {
+			total: state.convergence?.sync.total ?? stats.unsyncedDeltas,
+			unsynced: state.convergence?.sync.unsynced ?? stats.unsyncedDeltas,
+			byTable: state.convergence?.sync.byTable ?? {},
+			byOp: {},
+		},
+		provider: state.llmStatus,
+		release: { tests: 270, passed: 270, statements: 99.2, branches: 96.1, assets: 8 },
+		selectedChildId: state.selectedChildId,
+		scenarioId: selectedScenario.id,
 	});
-	const syncQueue = buildSyncQueueActions({
-		total: stats.unsyncedDeltas,
-		unsynced: stats.unsyncedDeltas,
-		byTable: {},
+	const retryPlan = buildSyncQueueOperationPlan("retry", {
+		total: state.convergence?.sync.total ?? stats.unsyncedDeltas,
+		unsynced: state.convergence?.sync.unsynced ?? stats.unsyncedDeltas,
+		byTable: state.convergence?.sync.byTable ?? {},
 		byOp: {},
 	});
-	const drill = buildE2eDrill({
-		childId: state.selectedChildId,
-		scenarioId: scenarios[0]?.id ?? null,
-		evidenceReady: acceptance.ready,
-		memoryTimelineCount: timeline.length,
+	const deliveryReport = buildDeliveryReportExport({
+		proposalId: "P-20260624-008",
+		commit: "pending",
+		acceptance: dashboard.acceptance,
+		drill: dashboard.drill,
+		sync: dashboard.sync,
 	});
 	const items: Array<[string, string, number]> = [
 		["children", "Children", stats.children],
@@ -334,23 +340,27 @@ export function MemoryPanel({
 			</p>
 			<div className="dashboard-card" data-testid="acceptance-evidence-panel">
 				<strong>Acceptance Evidence</strong>
-				<span>{acceptance.summary}</span>
+				<span>{dashboard.acceptance.summary}</span>
+				<button type="button" data-testid="export-delivery-report" onClick={() => dispatch?.({ type: "setQuestion", question: deliveryReport.markdown })}>Export report</button>
 			</div>
 			<div className="dashboard-card" data-testid="memory-timeline-panel">
 				<strong>Memory Timeline</strong>
-				<span>{timeline.length} entries</span>
+				<span>{dashboard.timelineFilters.defaultLabel}</span>
 			</div>
 			<div className="dashboard-card" data-testid="sync-queue-panel">
 				<strong>Sync Queue</strong>
-				<span>{syncQueue.summary}</span>
+				<span>{dashboard.sync.summary}</span>
+				<button type="button" data-testid="sync-retry-action" disabled={!retryPlan.enabled} onClick={() => dispatch?.({ type: "setQuestion", question: retryPlan.summary })}>Retry</button>
 			</div>
 			<div className="dashboard-card" data-testid="e2e-drill-panel">
 				<strong>Main Path Drill</strong>
-				<span>{drill.summary}</span>
+				<span>{dashboard.drill.summary}</span>
+				<button type="button" data-testid="run-main-path-drill" onClick={() => dispatch?.({ type: "setQuestion", question: buildScenarioWorkflow(selectedScenario, { childId: state.selectedChildId ?? "default", childStage: selectedScenario.childStage }).prompt })}>Run drill</button>
 			</div>
 			<div className="dashboard-card" data-testid="provider-mode-toggle">
 				<strong>Provider</strong>
-				<span>{state.providerConfig.mode}</span>
+				<span>{dashboard.provider.mode}</span>
+				{dashboard.providerOptions.map((option) => <button key={option.id} type="button" data-testid={`provider-option-${option.id}`} disabled={!option.enabled} aria-pressed={option.selected}>{option.label}</button>)}
 			</div>
 			<dl>
 				{items.map(([key, label, value]) => (

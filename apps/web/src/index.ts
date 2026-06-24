@@ -75,14 +75,19 @@ export {
 } from "./web-convergence.js";
 export {
 	buildAcceptanceEvidence,
+	buildDeliveryReportExport,
 	buildE2eDrill,
+	buildFamilyTimelineFilters,
 	buildIterationSuite,
 	buildMemoryTimeline,
 	buildProviderConfigSnapshot,
+	buildProviderModeOptions,
 	buildReleaseGatePlan,
+	buildRuntimeDashboardSnapshot,
 	buildScenarioPack,
 	buildScenarioWorkflow,
 	buildSyncQueueActions,
+	buildSyncQueueOperationPlan,
 } from "./web-iteration-suite.js";
 export type {
 	E2eMainPathReport,

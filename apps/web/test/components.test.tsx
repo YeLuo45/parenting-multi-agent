@@ -579,6 +579,24 @@ describe("MemoryPanel", () => {
 		expect(screen.getByTestId("e2e-drill-panel")).toHaveTextContent("Main Path Drill");
 		expect(screen.getByTestId("provider-mode-toggle")).toHaveTextContent("fallback");
 	});
+
+	it("exposes real dashboard actions through dispatchable buttons", () => {
+		const dispatch = vi.fn();
+		render(<MemoryPanel state={makeState({ selectedChildId: "default", children: [{ id: "default", name: "示例宝宝", birthDate: "2024-01-01", stage: "toddler" }], memoryStats: { children: 1, facts: 0, episodes: 0, sessions: 0, feedback: 0, unsyncedDeltas: 2 } })} dispatch={dispatch} />);
+		fireEvent.click(screen.getByTestId("run-main-path-drill"));
+		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("睡前") }));
+		fireEvent.click(screen.getByTestId("sync-retry-action"));
+		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("Retry 2 pending") }));
+		fireEvent.click(screen.getByTestId("export-delivery-report"));
+		expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "setQuestion", question: expect.stringContaining("P-20260624-008") }));
+	});
+
+	it("renders provider mode choices with accessible selected state", () => {
+		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
+		expect(screen.getByTestId("provider-option-fallback")).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByTestId("provider-option-primary")).toBeDisabled();
+		expect(screen.getByTestId("provider-option-api-health")).toHaveTextContent("needs key");
+	});
 });
 
 describe("AppBody", () => {

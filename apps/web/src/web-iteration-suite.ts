@@ -326,3 +326,128 @@ export function buildE2eDrill(input: { childId: string | null; scenarioId: strin
 	return { ready, summary: ready ? "Main path drill ready" : "Main path drill needs data", steps };
 }
 
+export interface RuntimeDashboardInput extends MemoryTimelineInput {
+	deltaStats: { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> };
+	provider: WebLlmRegistry["status"];
+	release: Omit<AcceptanceEvidenceInput, "e2eReady">;
+	selectedChildId: string | null;
+	scenarioId: string | null;
+}
+
+export interface RuntimeDashboardSnapshot {
+	timeline: MemoryTimelineEntry[];
+	timelineFilters: FamilyTimelineFilters;
+	sync: SyncQueuePanel;
+	provider: ProviderConfigSnapshot;
+	providerOptions: ProviderModeOption[];
+	acceptance: AcceptanceEvidence;
+	drill: E2eDrill;
+}
+
+export function buildRuntimeDashboardSnapshot(input: RuntimeDashboardInput): RuntimeDashboardSnapshot {
+	const timeline = buildMemoryTimeline(input);
+	const sync = buildSyncQueueActions(input.deltaStats);
+	const provider = buildProviderConfigSnapshot(input.provider);
+	const acceptance = buildAcceptanceEvidence({ ...input.release, e2eReady: Boolean(input.selectedChildId && input.scenarioId && timeline.length > 0) });
+	return {
+		timeline,
+		timelineFilters: buildFamilyTimelineFilters(timeline),
+		sync,
+		provider,
+		providerOptions: buildProviderModeOptions(input.provider),
+		acceptance,
+		drill: buildE2eDrill({
+			childId: input.selectedChildId,
+			scenarioId: input.scenarioId,
+			evidenceReady: acceptance.ready,
+			memoryTimelineCount: timeline.length,
+		}),
+	};
+}
+
+export type SyncQueueOperation = "retry" | "mark-synced" | "preview-conflicts";
+
+export interface SyncQueueOperationPlan {
+	operation: SyncQueueOperation;
+	enabled: boolean;
+	summary: string;
+	affectedTables: string[];
+}
+
+export function buildSyncQueueOperationPlan(operation: SyncQueueOperation, stats: { total: number; unsynced: number; byTable: Record<string, number>; byOp: Record<string, number> }): SyncQueueOperationPlan {
+	const affectedTables = Object.keys(stats.byTable).sort();
+	const enabled = stats.unsynced > 0;
+	const label = operation === "retry" ? "Retry" : operation === "mark-synced" ? "Mark synced" : "Preview conflicts for";
+	return {
+		operation,
+		enabled,
+		affectedTables,
+		summary: enabled ? `${label} ${stats.unsynced} pending operations` : "No pending sync operations",
+	};
+}
+
+export interface ProviderModeOption {
+	id: "fallback" | "primary" | "api-health";
+	label: string;
+	enabled: boolean;
+	selected: boolean;
+}
+
+export function buildProviderModeOptions(status: WebLlmRegistry["status"]): ProviderModeOption[] {
+	const selected = status.ready ? "primary" : "fallback";
+	return [
+		{ id: "fallback", label: `Fallback: ${status.fallbackProviderId ?? "none"}`, enabled: Boolean(status.fallbackProviderId), selected: selected === "fallback" },
+		{ id: "primary", label: `Primary: ${status.primaryProviderId ?? "not configured"}`, enabled: status.ready, selected: selected === "primary" },
+		{ id: "api-health", label: status.ready ? "API health: ready" : "API health: needs key", enabled: true, selected: false },
+	];
+}
+
+export interface DeliveryReportExportInput {
+	proposalId: string;
+	commit: string;
+	acceptance: AcceptanceEvidence;
+	drill: E2eDrill;
+	sync: SyncQueuePanel;
+}
+
+export interface DeliveryReportExport {
+	markdown: string;
+	json: string;
+}
+
+export function buildDeliveryReportExport(input: DeliveryReportExportInput): DeliveryReportExport {
+	const payload = {
+		proposalId: input.proposalId,
+		commit: input.commit,
+		acceptanceReady: input.acceptance.ready,
+		drillReady: input.drill.ready,
+		syncStatus: input.sync.status,
+		items: input.acceptance.items,
+	};
+	const markdown = [
+		`# Delivery Report — ${input.proposalId}`,
+		`- Commit: ${input.commit}`,
+		`- Acceptance: ${input.acceptance.summary}`,
+		`- Drill: ${input.drill.summary}`,
+		`- Sync: ${input.sync.summary}`,
+		...input.acceptance.items.map((item) => `- ${item.label}: ${item.detail} ${item.ok ? "✓" : "✗"}`),
+	].join("\n");
+	return { markdown, json: JSON.stringify(payload, null, 2) };
+}
+
+export interface FamilyTimelineFilters {
+	childIds: string[];
+	kinds: MemoryTimelineEntry["kind"][];
+	defaultLabel: string;
+}
+
+export function buildFamilyTimelineFilters(entries: MemoryTimelineEntry[]): FamilyTimelineFilters {
+	const childIds = Array.from(new Set(entries.map((entry) => entry.childId))).sort();
+	const kinds = Array.from(new Set(entries.map((entry) => entry.kind))).sort();
+	return {
+		childIds,
+		kinds,
+		defaultLabel: `${entries.length} timeline entries across ${childIds.length} children`,
+	};
+}
+
