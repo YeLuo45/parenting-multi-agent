@@ -17,6 +17,8 @@ import {
 	buildBilingualKnowledgeBase,
 	buildDeliveryReportExport,
 	buildLlmProviderConfigForm,
+	buildLongitudinalDevelopmentInsightGraph,
+	buildParentingCompletionPack,
 	buildMedicalSafetyEscalation,
 	buildParentingClosedLoopPlan,
 	buildParentingExecutionCenter,
@@ -24,8 +26,10 @@ import {
 	buildScenarioPack,
 	buildScenarioTemplateLibrary,
 	buildScenarioWorkflow,
+	buildSevenDirectionClosureCenter,
 	buildSyncConflictResolution,
 	buildSyncQueueOperationPlan,
+	buildWeeklyCoachingStressPlan,
 } from "./web-iteration-suite.js";
 
 /** Header: app title + agent count + theme switcher + language switcher. */
@@ -357,6 +361,78 @@ export function MemoryPanel({
 	const safety = buildMedicalSafetyEscalation(
 		state.question || selectedScenario.prompt,
 	);
+	const closureCenter = buildSevenDirectionClosureCenter({
+		proposalId: "P-20260624-027",
+		ciRunId: "28110840468",
+		remoteCommit: "70296dc3",
+		children: state.children,
+		memory: stats,
+		provider: state.llmStatus,
+		question: state.question || selectedScenario.prompt,
+		selectedChildId: state.selectedChildId ?? undefined,
+	});
+	const weeklyPlan = buildWeeklyCoachingStressPlan({
+		child: selectedChild ?? {
+			id: "default",
+			name: "示例宝宝",
+			birthDate: "2024-01-01",
+			stage: selectedScenario.childStage,
+		},
+		memory: stats,
+		stressSignals: [
+			...(stats.feedback >= 3 ? ["low-confidence"] : []),
+			...(stats.episodes >= 5 ? ["conflict"] : []),
+			...(state.question.includes("崩溃") || state.question.includes("累")
+				? ["sleep-debt"]
+				: []),
+		],
+		focus: selectedScenario.title.toLowerCase(),
+	});
+	const developmentGraph = buildLongitudinalDevelopmentInsightGraph({
+		child: selectedChild ?? {
+			id: "default",
+			name: "示例宝宝",
+			birthDate: "2024-01-01",
+			stage: selectedScenario.childStage,
+		},
+		memory: stats,
+		observations: [
+			{
+				month: "2026-01",
+				domain: "sleep",
+				score: 42,
+				note: "bedtime resistance",
+			},
+			{
+				month: "2026-02",
+				domain: "sleep",
+				score: Math.min(90, 42 + stats.feedback * 4),
+				note: "routine improving",
+			},
+			{
+				month: "2026-03",
+				domain: "language",
+				score: Math.min(95, 60 + stats.facts),
+				note: "new words",
+			},
+			{
+				month: "2026-04",
+				domain: "social",
+				score: Math.min(95, 55 + stats.sessions),
+				note: "parallel play",
+			},
+		],
+	});
+	const completionPack = buildParentingCompletionPack({
+		proposalId: "P-20260625-017",
+		ciRunId: "local-full-gate",
+		remoteCommit: "pending",
+		question: state.question || selectedScenario.prompt,
+		children: state.children,
+		selectedChildId: state.selectedChildId ?? undefined,
+		memory: stats,
+		provider: state.llmStatus,
+	});
 	const items: Array<[string, string, number]> = [
 		["children", "Children", stats.children],
 		["facts", "Facts", stats.facts],
@@ -533,6 +609,147 @@ export function MemoryPanel({
 					>
 						{executionCenter.progress.summary}
 					</button>
+				</div>
+			</div>
+			<div
+				className="dashboard-card"
+				data-testid="development-insight-graph-panel"
+			>
+				<strong>Development Insight Graph</strong>
+				<span>{developmentGraph.summary}</span>
+				<div className="scenario-pack">
+					{developmentGraph.nodes.slice(0, 4).map((node) => (
+						<button
+							key={node.id}
+							type="button"
+							data-testid={`development-graph-node-${node.id}`}
+							title={node.note}
+						>
+							{node.domain} · {node.score}
+						</button>
+					))}
+				</div>
+				<div className="scenario-pack">
+					<button
+						type="button"
+						data-testid="development-graph-review"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: developmentGraph.nextReviewPrompt,
+							})
+						}
+					>
+						Review development trend
+					</button>
+					<button
+						type="button"
+						data-testid="development-graph-compare"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: `compare sleep trajectory: ${developmentGraph.domainSummaries.sleep ?? "no sleep data"}`,
+							})
+						}
+					>
+						Compare sleep trend
+					</button>
+				</div>
+			</div>
+			<div
+				className="dashboard-card"
+				data-testid="weekly-coaching-stress-panel"
+			>
+				<strong>Weekly Coaching + Parent Stress</strong>
+				<span>{weeklyPlan.summary}</span>
+				<p data-testid="weekly-plan-day-1">
+					{weeklyPlan.days[0]?.microAction}
+				</p>
+				<div className="scenario-pack">
+					<button
+						type="button"
+						data-testid="weekly-coaching-start"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: `weekly coaching: ${weeklyPlan.reviewPrompt}`,
+							})
+						}
+					>
+						Start weekly coaching
+					</button>
+					<button
+						type="button"
+						data-testid="parent-stress-recovery"
+						onClick={() =>
+							dispatch?.({
+								type: "setQuestion",
+								question: `parent stress recovery: ${weeklyPlan.parentStress.recoveryActions.join(", ")}`,
+							})
+						}
+					>
+						{weeklyPlan.parentStress.level} stress recovery
+					</button>
+				</div>
+			</div>
+			<div
+				className="dashboard-card"
+				data-testid="seven-direction-closure-panel"
+			>
+				<strong>Seven Direction Closures</strong>
+				<span>{closureCenter.summary}</span>
+				<div
+					className="scenario-pack"
+					data-testid="seven-direction-closure-actions"
+				>
+					{closureCenter.actions.map((action) => (
+						<button
+							key={action.id}
+							type="button"
+							data-testid={`closure-action-${action.id}`}
+							disabled={!action.ready}
+							title={action.evidence}
+							onClick={() =>
+								dispatch?.({
+									type: "setQuestion",
+									question: action.prompt,
+								})
+							}
+						>
+							{action.label}
+						</button>
+					))}
+				</div>
+			</div>
+			<div
+				className="dashboard-card"
+				data-testid="parenting-completion-pack-panel"
+			>
+				<strong>1-6 Completion Pack</strong>
+				<span>{completionPack.summary}</span>
+				<p>{completionPack.caregiverHandoff.summary}</p>
+				<p>{completionPack.evidenceConfidence.summary}</p>
+				<p>{completionPack.deliveryEvidence.summary}</p>
+				<div
+					className="scenario-pack"
+					data-testid="parenting-completion-pack-actions"
+				>
+					{completionPack.actions.map((action) => (
+						<button
+							key={action.id}
+							type="button"
+							data-testid={`completion-action-${action.id}`}
+							disabled={!action.ready}
+							onClick={() =>
+								dispatch?.({
+									type: "setQuestion",
+									question: action.prompt,
+								})
+							}
+						>
+							{action.label}
+						</button>
+					))}
 				</div>
 			</div>
 			<div

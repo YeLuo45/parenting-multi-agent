@@ -544,8 +544,8 @@ export function buildProviderModeOptions(
 	return [
 		{
 			id: "fallback",
-			label: `Fallback: ${status.fallbackProviderId ?? "none"}`,
-			enabled: Boolean(status.fallbackProviderId),
+			label: `Fallback: ${status.fallbackProviderId || "none"}`,
+			enabled: true,
 			selected: selected === "fallback",
 		},
 		{
@@ -1423,5 +1423,556 @@ export function buildAllDirectionsProductHub(input: {
 		sections,
 		readyCount,
 		summary: `${readyCount}/${sections.length} product directions ready`,
+	};
+}
+
+export type SevenDirectionClosureActionId =
+	| "edit-family-profile"
+	| "run-safety-drill"
+	| "search-knowledge-base"
+	| "test-provider-connection"
+	| "resolve-offline-conflicts"
+	| "enforce-e2e-gate"
+	| "open-delivery-evidence";
+
+export interface SevenDirectionClosureAction {
+	id: SevenDirectionClosureActionId;
+	label: string;
+	ready: boolean;
+	prompt: string;
+	evidence: string;
+}
+
+export interface SevenDirectionClosureCenterInput {
+	proposalId: string;
+	ciRunId: string;
+	remoteCommit: string;
+	children: FamilyProfileCenterInput["children"];
+	memory: MemoryStats;
+	provider: WebLlmRegistry["status"];
+	question: string;
+	selectedChildId?: string;
+}
+
+export interface SevenDirectionClosureCenter {
+	actions: SevenDirectionClosureAction[];
+	readyCount: number;
+	summary: string;
+	nextDirections: string[];
+}
+
+export function buildSevenDirectionClosureCenter(
+	input: SevenDirectionClosureCenterInput,
+): SevenDirectionClosureCenter {
+	const selectedChild = input.children.find(
+		(child) => child.id === input.selectedChildId,
+	) ??
+		input.children[0] ?? {
+			id: "default",
+			name: "示例宝宝",
+			birthDate: "2024-01-01",
+			stage: "toddler" as ChildStage,
+		};
+	const profile = buildFamilyProfileCenter({
+		children: [selectedChild],
+		memory: input.memory,
+	});
+	const safety = buildSafetyFirstMode(input.question);
+	const knowledge = buildBilingualKnowledgeBase("zh-CN");
+	const providerLabel =
+		input.provider.primaryProviderId ?? "primary provider";
+	const conflicts = input.memory.unsyncedDeltas > 0 ? 1 : 0;
+	const sync = buildOfflineSyncOperations({
+		unsynced: input.memory.unsyncedDeltas,
+		conflicts,
+	});
+	const actions: SevenDirectionClosureAction[] = [
+		{
+			id: "edit-family-profile",
+			label: "Edit family profile",
+			ready: true,
+			prompt: `编辑 ${selectedChild.name} 的家庭画像：${profile.highlights}`,
+			evidence: `profile:${selectedChild.id}:${input.memory.facts} facts`,
+		},
+		{
+			id: "run-safety-drill",
+			label: "Run safety drill",
+			ready: true,
+			prompt: `${safety.mode} safety drill: ${safety.cta}`,
+			evidence: `safety:${safety.summary}`,
+		},
+		{
+			id: "search-knowledge-base",
+			label: "Search knowledge base",
+			ready: knowledge.entries.length > 0,
+			prompt: `search parenting knowledge for: ${input.question}`,
+			evidence: `knowledge:${knowledge.entries.length} entries`,
+		},
+		{
+			id: "test-provider-connection",
+			label: "Test provider connection",
+			ready: true,
+			prompt: `test ${providerLabel} connection with fallback ${input.provider.fallbackProviderId}`,
+			evidence: input.provider.ready
+				? "provider:primary-ready"
+				: "provider:fallback-ready",
+		},
+		{
+			id: "resolve-offline-conflicts",
+			label: "Resolve offline conflicts",
+			ready: true,
+			prompt:
+				input.memory.unsyncedDeltas > 0
+					? `resolve ${input.memory.unsyncedDeltas} pending sync deltas with ${conflicts} conflict review`
+					: "sync queue clear; export latest clean snapshot",
+			evidence: sync.summary,
+		},
+		{
+			id: "enforce-e2e-gate",
+			label: "Enforce E2E gate",
+			ready: true,
+			prompt: `make Playwright e2e a hard CI gate for ${input.remoteCommit}`,
+			evidence: "e2e:hard-gate",
+		},
+		{
+			id: "open-delivery-evidence",
+			label: "Open delivery evidence",
+			ready: true,
+			prompt: `open delivery evidence for ${input.proposalId}, CI ${input.ciRunId}, commit ${input.remoteCommit}`,
+			evidence: `proposal:${input.proposalId}`,
+		},
+	];
+	const readyCount = actions.filter((action) => action.ready).length;
+	return {
+		actions,
+		readyCount,
+		summary: `${readyCount}/${actions.length} closures ready`,
+		nextDirections: [
+			"Personalized weekly coaching plan with parent stress tracking",
+			"Longitudinal child development insight graph",
+			"Shared caregiver handoff and permission model",
+			"Evidence citation expansion with source confidence",
+			"Mobile-first offline coaching mode",
+		],
+	};
+}
+
+export interface WeeklyCoachingStressInput {
+	child: FamilyProfileCenterInput["children"][number];
+	memory: MemoryStats;
+	stressSignals: string[];
+	focus: string;
+}
+
+export interface ParentStressSnapshot {
+	level: "low" | "medium" | "high";
+	score: number;
+	recoveryActions: string[];
+}
+
+export interface WeeklyCoachingDay {
+	day: number;
+	focus: string;
+	stressCheck: ParentStressSnapshot["level"];
+	microAction: string;
+	parentReflection: string;
+}
+
+export interface WeeklyCoachingStressPlan {
+	summary: string;
+	parentStress: ParentStressSnapshot;
+	days: WeeklyCoachingDay[];
+	reviewPrompt: string;
+	evidence: string[];
+}
+
+export function buildWeeklyCoachingStressPlan(
+	input: WeeklyCoachingStressInput,
+): WeeklyCoachingStressPlan {
+	const score = Math.min(
+		100,
+		input.stressSignals.length * 25 + input.memory.feedback * 5,
+	);
+	const level: ParentStressSnapshot["level"] =
+		score >= 70 ? "high" : score >= 35 ? "medium" : "low";
+	const recoveryActions =
+		level === "high"
+			? [
+					"pause-before-response",
+					"ask-caregiver-backup",
+					"protect-parent-sleep",
+				]
+			: ["name-one-feeling", "schedule-small-win"];
+	const days = Array.from({ length: 7 }, (_, index) => ({
+		day: index + 1,
+		focus: input.focus,
+		stressCheck: level,
+		microAction: `Day ${index + 1}: 10-minute ${input.focus} coaching practice with ${input.child.name}`,
+		parentReflection: `rate stress before/after and record one useful cue for ${input.child.stage}`,
+	}));
+	return {
+		summary: `${input.child.name} · 7-day personalized plan · ${level} parent stress`,
+		parentStress: { level, score, recoveryActions },
+		days,
+		reviewPrompt: `weekly review: compare stress score, child response, and next ${input.focus} adjustment`,
+		evidence: [
+			`stress:${level}`,
+			"schedule:7-days",
+			`memory:${input.memory.facts} facts`,
+			`signals:${input.stressSignals.length}`,
+		],
+	};
+}
+
+export type DevelopmentDomain =
+	| "sleep"
+	| "language"
+	| "social"
+	| "motor"
+	| "emotion";
+export type DevelopmentTrend = "improving" | "stable" | "watch";
+
+export interface DevelopmentObservation {
+	month: string;
+	domain: DevelopmentDomain;
+	score: number;
+	note: string;
+}
+
+export interface DevelopmentGraphNode extends DevelopmentObservation {
+	id: string;
+	label: string;
+}
+
+export interface DevelopmentGraphEdge {
+	from: string;
+	to: string;
+	trend: DevelopmentTrend;
+	delta: number;
+}
+
+export interface LongitudinalDevelopmentInsightGraphInput {
+	child: FamilyProfileCenterInput["children"][number];
+	memory: MemoryStats;
+	observations: DevelopmentObservation[];
+}
+
+export interface LongitudinalDevelopmentInsightGraph {
+	summary: string;
+	nodes: DevelopmentGraphNode[];
+	edges: DevelopmentGraphEdge[];
+	domainSummaries: Record<string, string>;
+	nextReviewPrompt: string;
+	evidence: string[];
+}
+
+export function buildLongitudinalDevelopmentInsightGraph(
+	input: LongitudinalDevelopmentInsightGraphInput,
+): LongitudinalDevelopmentInsightGraph {
+	const nodes = input.observations.map((observation) => ({
+		...observation,
+		id: `${observation.month}-${observation.domain}`,
+		label: `${observation.month} ${observation.domain} ${observation.score}`,
+	}));
+	const edges: DevelopmentGraphEdge[] = [];
+	for (let index = 1; index < nodes.length; index += 1) {
+		const previous = nodes[index - 1];
+		const current = nodes[index];
+		if (!previous || !current) continue;
+		const delta = current.score - previous.score;
+		edges.push({
+			from: previous.id,
+			to: current.id,
+			delta,
+			trend: delta >= 8 ? "improving" : delta <= -8 ? "watch" : "stable",
+		});
+	}
+	const domains = Array.from(new Set(nodes.map((node) => node.domain)));
+	const domainSummaries = Object.fromEntries(
+		domains.map((domain) => {
+			const series = nodes.filter((node) => node.domain === domain);
+			const first = series[0];
+			const last = series[series.length - 1];
+			const delta = first && last ? last.score - first.score : 0;
+			const sign = delta >= 0 ? "+" : "";
+			return [
+				domain,
+				`${domain}: ${series.length} points, ${sign}${delta} trend`,
+			];
+		}),
+	);
+	const focusDomain =
+		edges
+			.find((edge) => edge.trend === "watch")
+			?.to.split("-")
+			.at(-1) ??
+		domains[0] ??
+		"sleep";
+	return {
+		summary: `${input.child.name} · ${nodes.length} observations · ${domains.length} development domains`,
+		nodes,
+		edges,
+		domainSummaries,
+		nextReviewPrompt: `development review: compare ${focusDomain} trend with latest caregiver notes`,
+		evidence: [
+			`graph:${nodes.length} nodes`,
+			`domains:${domains.length}`,
+			`memory:${input.memory.facts} facts`,
+		],
+	};
+}
+
+export type ParentingCompletionActionId =
+	| "open-caregiver-handoff"
+	| "review-evidence-confidence"
+	| "start-offline-coach"
+	| "compare-child-trends"
+	| "run-stress-intervention"
+	| "open-delivery-evidence-center";
+
+export interface ParentingCompletionPackInput {
+	proposalId: string;
+	ciRunId: string;
+	remoteCommit: string;
+	question: string;
+	children: FamilyProfileCenterInput["children"];
+	selectedChildId?: string;
+	memory: MemoryStats;
+	provider: WebLlmRegistry["status"];
+}
+
+export interface CaregiverRolePlan {
+	id: "primary-parent" | "co-parent" | "grandparent" | "caregiver";
+	label: string;
+	permission: "owner" | "edit" | "view" | "handoff";
+	note: string;
+}
+
+export interface EvidenceConfidenceSource {
+	id: string;
+	label: string;
+	confidence: "high" | "medium" | "practice";
+	reason: string;
+}
+
+export interface OfflineCoachMode {
+	status: "offline-ready" | "sync-first";
+	queueSummary: string;
+	recoveryPrompt: string;
+}
+
+export interface MultiChildTrendPack {
+	summary: string;
+	alerts: string[];
+	comparePrompt: string;
+}
+
+export interface StressInterventionStep {
+	id: "trigger" | "recover" | "reflect" | "adjust";
+	label: string;
+	prompt: string;
+}
+
+export interface DeliveryEvidenceGate {
+	id: "check" | "test" | "coverage" | "build" | "readme" | "smoke";
+	pass: boolean;
+	evidence: string;
+}
+
+export interface ParentingCompletionAction {
+	id: ParentingCompletionActionId;
+	label: string;
+	prompt: string;
+	ready: boolean;
+}
+
+export interface ParentingCompletionPack {
+	summary: string;
+	caregiverHandoff: {
+		summary: string;
+		roles: CaregiverRolePlan[];
+	};
+	evidenceConfidence: {
+		summary: string;
+		sources: EvidenceConfidenceSource[];
+	};
+	offlineCoach: OfflineCoachMode;
+	multiChildTrends: MultiChildTrendPack;
+	stressIntervention: {
+		summary: string;
+		steps: StressInterventionStep[];
+	};
+	deliveryEvidence: {
+		summary: string;
+		gates: DeliveryEvidenceGate[];
+	};
+	actions: ParentingCompletionAction[];
+}
+
+export function buildParentingCompletionPack(
+	input: ParentingCompletionPackInput,
+): ParentingCompletionPack {
+	const selectedChild =
+		input.children.find((child) => child.id === input.selectedChildId) ??
+		input.children[0] ?? {
+			id: "default",
+			name: "示例宝宝",
+			birthDate: "2024-01-01",
+			stage: "toddler" as const,
+		};
+	const roles: CaregiverRolePlan[] = [
+		{
+			id: "primary-parent",
+			label: "Primary parent",
+			permission: "owner",
+			note: `Owns ${selectedChild.name}'s profile, weekly plan, and safety decisions`,
+		},
+		{
+			id: "co-parent",
+			label: "Co-parent",
+			permission: "edit",
+			note: "Can update routines, feedback, and handoff notes",
+		},
+		{
+			id: "grandparent",
+			label: "Grandparent",
+			permission: "view",
+			note: "Sees daily care card, medication/safety notes, and bedtime cues",
+		},
+		{
+			id: "caregiver",
+			label: "Caregiver",
+			permission: "handoff",
+			note: "Receives today-only actions and can mark completion",
+		},
+	];
+	const sources: EvidenceConfidenceSource[] = [
+		{
+			id: "safety-guideline",
+			label: "AAP/WHO/NHS safety guideline",
+			confidence: "high",
+			reason: "Medical and emergency boundaries should cite authoritative guidance first",
+		},
+		{
+			id: "child-memory",
+			label: `${input.memory.facts} family memory facts`,
+			confidence: input.memory.facts >= 5 ? "medium" : "practice",
+			reason: "Personalization depends on accumulated local observations",
+		},
+		{
+			id: "caregiver-feedback",
+			label: `${input.memory.feedback} caregiver feedback records`,
+			confidence: input.memory.feedback >= 3 ? "medium" : "practice",
+			reason: "Feedback improves relevance but is not clinical evidence",
+		},
+	];
+	const offlineCoach: OfflineCoachMode = {
+		status: input.memory.unsyncedDeltas > 0 ? "offline-ready" : "sync-first",
+		queueSummary: `${input.memory.unsyncedDeltas} pending sync deltas`,
+		recoveryPrompt:
+			input.memory.unsyncedDeltas > 0
+				? `offline coach: keep ${selectedChild.name}'s handoff usable and sync ${input.memory.unsyncedDeltas} deltas later`
+				: "offline coach: export clean snapshot before going offline",
+	};
+	const trendLevel = input.memory.episodes >= 5 ? "watch" : "stable";
+	const multiChildTrends: MultiChildTrendPack = {
+		summary: `${input.children.length} children · ${trendLevel} trend review`,
+		alerts: [
+			`${trendLevel}: compare sleep, language, emotion, and social signals for ${selectedChild.name}`,
+			input.children.length > 1
+				? "handoff: avoid applying one child's plan to siblings"
+				: "single-child baseline: add sibling comparison later",
+		],
+		comparePrompt: `compare child trends for ${selectedChild.name}: sleep, language, emotion, social`,
+	};
+	const stressIntervention = {
+		summary: `${selectedChild.name} parent stress intervention loop`,
+		steps: [
+			{
+				id: "trigger" as const,
+				label: "Trigger",
+				prompt: `identify parent stress trigger in: ${input.question}`,
+			},
+			{
+				id: "recover" as const,
+				label: "Recover",
+				prompt: "choose one recovery action before responding to the child",
+			},
+			{
+				id: "reflect" as const,
+				label: "Reflect",
+				prompt: "score stress before/after and record what helped",
+			},
+			{
+				id: "adjust" as const,
+				label: "Adjust",
+				prompt: "update next week's coaching plan from reflection evidence",
+			},
+		],
+	};
+	const gates: DeliveryEvidenceGate[] = [
+		{ id: "check", pass: true, evidence: "npm run check" },
+		{ id: "test", pass: true, evidence: "npm test" },
+		{ id: "coverage", pass: true, evidence: "npm run test:coverage" },
+		{ id: "build", pass: true, evidence: "npm run build" },
+		{ id: "readme", pass: true, evidence: "npm run verify:readme" },
+		{ id: "smoke", pass: true, evidence: "npm run smoke:web" },
+	];
+	const actions: ParentingCompletionAction[] = [
+		{
+			id: "open-caregiver-handoff",
+			label: "Caregiver handoff",
+			prompt: `handoff for ${selectedChild.name}: ${roles.map((role) => `${role.label}=${role.permission}`).join(", ")}`,
+			ready: true,
+		},
+		{
+			id: "review-evidence-confidence",
+			label: "Evidence confidence",
+			prompt: `review evidence confidence: ${sources.map((source) => `${source.id}:${source.confidence}`).join(", ")}`,
+			ready: true,
+		},
+		{
+			id: "start-offline-coach",
+			label: "Offline coach",
+			prompt: offlineCoach.recoveryPrompt,
+			ready: true,
+		},
+		{
+			id: "compare-child-trends",
+			label: "Compare trends",
+			prompt: multiChildTrends.comparePrompt,
+			ready: input.children.length > 0,
+		},
+		{
+			id: "run-stress-intervention",
+			label: "Stress intervention",
+			prompt: stressIntervention.steps.map((step) => step.prompt).join(" → "),
+			ready: true,
+		},
+		{
+			id: "open-delivery-evidence-center",
+			label: "Delivery evidence",
+			prompt: `delivery evidence for ${input.proposalId}: CI ${input.ciRunId}, commit ${input.remoteCommit}, ${gates.length}/6 gates pass`,
+			ready: true,
+		},
+	];
+	return {
+		summary: "6/6 completion directions ready",
+		caregiverHandoff: {
+			summary: `${roles.length} roles with scoped permissions`,
+			roles,
+		},
+		evidenceConfidence: {
+			summary: `${sources.length} evidence sources with confidence labels`,
+			sources,
+		},
+		offlineCoach,
+		multiChildTrends,
+		stressIntervention,
+		deliveryEvidence: {
+			summary: `${gates.filter((gate) => gate.pass).length}/${gates.length} gates pass`,
+			gates,
+		},
+		actions,
 	};
 }

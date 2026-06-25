@@ -13,6 +13,8 @@ import {
 	buildFeedbackRepairLoop,
 	buildIterationSuite,
 	buildLlmProviderConfigForm,
+	buildLongitudinalDevelopmentInsightGraph,
+	buildParentingCompletionPack,
 	buildMedicalSafetyEscalation,
 	buildMemoryTimeline,
 	buildMultiChildContextSwitcher,
@@ -28,9 +30,11 @@ import {
 	buildScenarioPack,
 	buildScenarioTemplateLibrary,
 	buildScenarioWorkflow,
+	buildSevenDirectionClosureCenter,
 	buildSyncConflictResolution,
 	buildSyncQueueActions,
 	buildSyncQueueOperationPlan,
+	buildWeeklyCoachingStressPlan,
 } from "../src/index.js";
 
 describe("web unattended iteration suite", () => {
@@ -352,7 +356,7 @@ describe("web unattended iteration suite", () => {
 	it("builds primary provider options and fallback-none label", () => {
 		const primary = buildProviderModeOptions({
 			primaryProviderId: "remote",
-			fallbackProviderId: null,
+			fallbackProviderId: "",
 			ready: true,
 		});
 		expect(primary.find((option) => option.selected)?.id).toBe("primary");
@@ -663,6 +667,173 @@ describe("web unattended iteration suite", () => {
 		);
 	});
 
+	it("builds a longitudinal child development insight graph", () => {
+		const graph = buildLongitudinalDevelopmentInsightGraph({
+			child: {
+				id: "c1",
+				name: "米粒",
+				birthDate: "2024-01-01",
+				stage: "toddler",
+			},
+			memory: {
+				children: 1,
+				facts: 8,
+				episodes: 7,
+				sessions: 5,
+				feedback: 4,
+				unsyncedDeltas: 1,
+			},
+			observations: [
+				{
+					month: "2026-01",
+					domain: "sleep",
+					score: 42,
+					note: "bedtime resistance",
+				},
+				{
+					month: "2026-02",
+					domain: "sleep",
+					score: 56,
+					note: "routine improving",
+				},
+				{
+					month: "2026-03",
+					domain: "language",
+					score: 68,
+					note: "new words",
+				},
+				{
+					month: "2026-04",
+					domain: "social",
+					score: 61,
+					note: "parallel play",
+				},
+			],
+		});
+		expect(graph.summary).toContain("米粒");
+		expect(graph.summary).toContain("4 observations");
+		expect(graph.nodes.map((node) => node.id)).toEqual([
+			"2026-01-sleep",
+			"2026-02-sleep",
+			"2026-03-language",
+			"2026-04-social",
+		]);
+		expect(graph.edges).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					from: "2026-01-sleep",
+					to: "2026-02-sleep",
+					trend: "improving",
+				}),
+			]),
+		);
+		expect(graph.domainSummaries.sleep).toContain("+14");
+		expect(graph.nextReviewPrompt).toContain("sleep");
+		expect(graph.evidence).toEqual(
+			expect.arrayContaining([
+				"graph:4 nodes",
+				"domains:3",
+				"memory:8 facts",
+			]),
+		);
+	});
+
+	it("builds a personalized weekly coaching plan with parent stress tracking", () => {
+		const plan = buildWeeklyCoachingStressPlan({
+			child: {
+				id: "c1",
+				name: "米粒",
+				birthDate: "2024-01-01",
+				stage: "toddler",
+			},
+			memory: {
+				children: 1,
+				facts: 6,
+				episodes: 5,
+				sessions: 4,
+				feedback: 3,
+				unsyncedDeltas: 1,
+			},
+			stressSignals: ["sleep-debt", "conflict", "low-confidence"],
+			focus: "sleep routine",
+		});
+		expect(plan.summary).toContain("米粒");
+		expect(plan.summary).toContain("high parent stress");
+		expect(plan.days).toHaveLength(7);
+		expect(plan.days[0]).toMatchObject({
+			day: 1,
+			focus: "sleep routine",
+			stressCheck: "high",
+		});
+		expect(plan.days[0].microAction).toContain("10-minute");
+		expect(plan.parentStress.score).toBeGreaterThanOrEqual(70);
+		expect(plan.parentStress.recoveryActions).toEqual(
+			expect.arrayContaining([
+				"pause-before-response",
+				"ask-caregiver-backup",
+			]),
+		);
+		expect(plan.reviewPrompt).toContain("weekly review");
+		expect(plan.evidence).toEqual(
+			expect.arrayContaining([
+				"stress:high",
+				"schedule:7-days",
+				"memory:6 facts",
+			]),
+		);
+	});
+
+	it("builds an actionable seven-direction closure center", () => {
+		const center = buildSevenDirectionClosureCenter({
+			proposalId: "P-20260624-027",
+			ciRunId: "28110840468",
+			remoteCommit: "70296dc3",
+			children: [
+				{
+					id: "c1",
+					name: "米粒",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+			],
+			memory: {
+				children: 1,
+				facts: 4,
+				episodes: 3,
+				sessions: 2,
+				feedback: 1,
+				unsyncedDeltas: 2,
+			},
+			provider: {
+				primaryProviderId: "remote-llm",
+				fallbackProviderId: "rule-fallback",
+				ready: false,
+			},
+			question: "孩子高烧39度持续皮疹怎么办？",
+			selectedChildId: "c1",
+		});
+		expect(center.summary).toContain("7/7 closures ready");
+		expect(center.actions.map((action) => action.id)).toEqual([
+			"edit-family-profile",
+			"run-safety-drill",
+			"search-knowledge-base",
+			"test-provider-connection",
+			"resolve-offline-conflicts",
+			"enforce-e2e-gate",
+			"open-delivery-evidence",
+		]);
+		expect(center.actions.every((action) => action.ready)).toBe(true);
+		expect(center.actions[0].prompt).toContain("米粒");
+		expect(center.actions[1].prompt).toContain("doctor-first");
+		expect(center.actions[2].evidence).toContain("knowledge:6 entries");
+		expect(center.actions[3].prompt).toContain("remote-llm");
+		expect(center.actions[4].prompt).toContain("resolve 2 pending");
+		expect(center.actions[5].evidence).toContain("e2e:hard-gate");
+		expect(center.actions[6].prompt).toContain("P-20260624-027");
+		expect(center.nextDirections).toHaveLength(5);
+		expect(center.nextDirections[0]).toContain("Personalized");
+	});
+
 	it("builds the execution center from all seven visible product primitives", () => {
 		const input = {
 			question: "孩子高烧39度还持续皮疹怎么办？",
@@ -763,5 +934,130 @@ describe("web unattended iteration suite", () => {
 			"parent-progress",
 		]);
 		expect(center.readyCount).toBe(7);
+	});
+
+	it("marks provider closure evidence as fallback-ready when primary provider is unavailable", () => {
+		const center = buildSevenDirectionClosureCenter({
+			question: "睡前拖延怎么办？",
+			children: [
+				{
+					id: "c1",
+					name: "米粒",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+			],
+			selectedChildId: "c1",
+			memory: {
+				children: 1,
+				facts: 0,
+				episodes: 0,
+				sessions: 0,
+				feedback: 0,
+				unsyncedDeltas: 0,
+			},
+			provider: {
+				primaryProviderId: "remote",
+				fallbackProviderId: "rule-fallback",
+				ready: false,
+			},
+			conflicts: 0,
+			remoteCommit: "local",
+			ciRunId: "manual",
+			proposalId: "P-local",
+		});
+		expect(
+			center.actions.find(
+				(action) => action.id === "test-provider-connection",
+			)?.evidence,
+		).toBe("provider:fallback-ready");
+	});
+
+	it("falls back to sleep review when the development graph has no observations", () => {
+		const graph = buildLongitudinalDevelopmentInsightGraph({
+			child: {
+				id: "c1",
+				name: "米粒",
+				birthDate: "2024-01-01",
+				stage: "toddler",
+			},
+			memory: {
+				children: 1,
+				facts: 2,
+				episodes: 0,
+				sessions: 0,
+				feedback: 0,
+				unsyncedDeltas: 0,
+			},
+			observations: [],
+		});
+		expect(graph.nodes).toEqual([]);
+		expect(graph.edges).toEqual([]);
+		expect(graph.nextReviewPrompt).toContain("sleep trend");
+	});
+
+	it("builds the unattended 1-6 parenting completion pack", () => {
+		const pack = buildParentingCompletionPack({
+			proposalId: "P-20260625-017",
+			ciRunId: "local-full-gate",
+			remoteCommit: "uncommitted",
+			question: "阿宁最近晚睡，家里老人和保姆交接也不一致",
+			children: [
+				{
+					id: "c1",
+					name: "米粒",
+					birthDate: "2024-01-01",
+					stage: "toddler",
+				},
+				{
+					id: "c2",
+					name: "阿宁",
+					birthDate: "2012-01-01",
+					stage: "teen",
+				},
+			],
+			selectedChildId: "c2",
+			memory: {
+				children: 2,
+				facts: 8,
+				episodes: 6,
+				sessions: 4,
+				feedback: 3,
+				unsyncedDeltas: 2,
+			},
+			provider: {
+				primaryProviderId: "remote-llm",
+				fallbackProviderId: "rule-fallback",
+				ready: true,
+			},
+		});
+		expect(pack.summary).toContain("6/6");
+		expect(pack.caregiverHandoff.roles.map((role) => role.id)).toEqual([
+			"primary-parent",
+			"co-parent",
+			"grandparent",
+			"caregiver",
+		]);
+		expect(pack.evidenceConfidence.sources[0]).toMatchObject({
+			id: "safety-guideline",
+			confidence: "high",
+		});
+		expect(pack.offlineCoach.status).toBe("offline-ready");
+		expect(pack.multiChildTrends.alerts[0]).toContain("watch");
+		expect(pack.stressIntervention.steps.map((step) => step.id)).toEqual([
+			"trigger",
+			"recover",
+			"reflect",
+			"adjust",
+		]);
+		expect(pack.deliveryEvidence.gates.every((gate) => gate.pass)).toBe(true);
+		expect(pack.actions.map((action) => action.id)).toEqual([
+			"open-caregiver-handoff",
+			"review-evidence-confidence",
+			"start-offline-coach",
+			"compare-child-trends",
+			"run-stress-intervention",
+			"open-delivery-evidence-center",
+		]);
 	});
 });

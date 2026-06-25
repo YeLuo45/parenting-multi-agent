@@ -659,6 +659,51 @@ describe("MemoryPanel", () => {
 		).toHaveTextContent("needs key");
 	});
 
+	it("uses default child, clear sync summary, and primary provider branches", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: null,
+					children: [],
+					llmStatus: {
+						primaryProviderId: "remote-llm",
+						fallbackProviderId: "rule-fallback",
+						ready: true,
+					},
+					memoryStats: {
+						children: 0,
+						facts: 0,
+						episodes: 0,
+						sessions: 0,
+						feedback: 0,
+						unsyncedDeltas: 0,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(screen.getByTestId("provider-option-primary")).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
+		expect(screen.getByTestId("provider-option-primary")).toBeEnabled();
+		fireEvent.click(screen.getByTestId("run-main-path-drill"));
+		fireEvent.click(screen.getByTestId("execution-offline-sync"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("睡前"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("0 pending"),
+			}),
+		);
+	});
+
 	it("renders all eight product direction panels on the main memory dashboard", () => {
 		render(<MemoryPanel state={makeState()} dispatch={vi.fn()} />);
 		expect(screen.getByTestId("product-hub-panel")).toHaveTextContent(
@@ -802,6 +847,7 @@ describe("MemoryPanel", () => {
 		);
 		fireEvent.click(screen.getByTestId("execution-action-plan"));
 		fireEvent.click(screen.getByTestId("execution-feedback-repair"));
+		fireEvent.click(screen.getByTestId("execution-multi-child"));
 		fireEvent.click(screen.getByTestId("execution-offline-sync"));
 		fireEvent.click(screen.getByTestId("execution-safety-first"));
 		fireEvent.click(screen.getByTestId("execution-parent-progress"));
@@ -869,6 +915,221 @@ describe("MemoryPanel", () => {
 		);
 		expect(screen.getByTestId("execution-offline-sync")).toHaveTextContent(
 			"0 pending · 0 conflicts",
+		);
+	});
+
+	it("renders the seven all-direction closure actions in the main dashboard", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+					],
+					question: "孩子高烧39度持续皮疹怎么办？",
+					memoryStats: {
+						children: 1,
+						facts: 4,
+						episodes: 3,
+						sessions: 2,
+						feedback: 1,
+						unsyncedDeltas: 2,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(
+			screen.getByTestId("seven-direction-closure-panel"),
+		).toHaveTextContent("7/7 closures ready");
+		for (const id of [
+			"edit-family-profile",
+			"run-safety-drill",
+			"search-knowledge-base",
+			"test-provider-connection",
+			"resolve-offline-conflicts",
+			"enforce-e2e-gate",
+			"open-delivery-evidence",
+		]) {
+			expect(screen.getByTestId(`closure-action-${id}`)).toBeEnabled();
+		}
+		fireEvent.click(screen.getByTestId("closure-action-run-safety-drill"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("doctor-first"),
+			}),
+		);
+	});
+
+	it("renders the longitudinal development insight graph in the main dashboard", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+					],
+					memoryStats: {
+						children: 1,
+						facts: 8,
+						episodes: 7,
+						sessions: 5,
+						feedback: 4,
+						unsyncedDeltas: 1,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(
+			screen.getByTestId("development-insight-graph-panel"),
+		).toHaveTextContent("Development Insight Graph");
+		expect(
+			screen.getByTestId("development-insight-graph-panel"),
+		).toHaveTextContent("4 observations");
+		expect(
+			screen.getByTestId("development-graph-node-2026-01-sleep"),
+		).toHaveTextContent("sleep");
+		fireEvent.click(screen.getByTestId("development-graph-review"));
+		fireEvent.click(screen.getByTestId("development-graph-compare"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("development review"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("compare sleep"),
+			}),
+		);
+	});
+
+	it("renders the weekly coaching and parent stress plan in the main dashboard", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "default",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+					],
+					question: "睡前拖延，家长也很崩溃",
+					memoryStats: {
+						children: 1,
+						facts: 6,
+						episodes: 5,
+						sessions: 4,
+						feedback: 3,
+						unsyncedDeltas: 1,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(
+			screen.getByTestId("weekly-coaching-stress-panel"),
+		).toHaveTextContent("7-day personalized plan");
+		expect(
+			screen.getByTestId("weekly-coaching-stress-panel"),
+		).toHaveTextContent("high parent stress");
+		expect(screen.getByTestId("weekly-plan-day-1")).toHaveTextContent(
+			"10-minute",
+		);
+		fireEvent.click(screen.getByTestId("weekly-coaching-start"));
+		fireEvent.click(screen.getByTestId("parent-stress-recovery"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("weekly coaching"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("pause-before-response"),
+			}),
+		);
+	});
+
+	it("renders the unattended 1-6 completion pack hub in the main dashboard", () => {
+		const dispatch = vi.fn();
+		render(
+			<MemoryPanel
+				state={makeState({
+					selectedChildId: "teen",
+					children: [
+						{
+							id: "default",
+							name: "示例宝宝",
+							birthDate: "2024-01-01",
+							stage: "toddler",
+						},
+						{
+							id: "teen",
+							name: "阿宁",
+							birthDate: "2012-01-01",
+							stage: "teen",
+						},
+					],
+					question: "阿宁最近晚睡，家里老人和保姆交接也不一致",
+					memoryStats: {
+						children: 2,
+						facts: 8,
+						episodes: 6,
+						sessions: 4,
+						feedback: 3,
+						unsyncedDeltas: 2,
+					},
+				})}
+				dispatch={dispatch}
+			/>,
+		);
+		expect(
+			screen.getByTestId("parenting-completion-pack-panel"),
+		).toHaveTextContent("6/6 completion directions ready");
+		for (const id of [
+			"open-caregiver-handoff",
+			"review-evidence-confidence",
+			"start-offline-coach",
+			"compare-child-trends",
+			"run-stress-intervention",
+			"open-delivery-evidence-center",
+		]) {
+			expect(screen.getByTestId(`completion-action-${id}`)).toBeEnabled();
+		}
+		fireEvent.click(screen.getByTestId("completion-action-open-caregiver-handoff"));
+		fireEvent.click(screen.getByTestId("completion-action-open-delivery-evidence-center"));
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("handoff"),
+			}),
+		);
+		expect(dispatch).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "setQuestion",
+				question: expect.stringContaining("P-20260625-017"),
+			}),
 		);
 	});
 });
