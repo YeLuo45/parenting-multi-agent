@@ -411,3 +411,35 @@ describe("WebMemoryLayer — Lifecycle", () => {
 		expect(memory.isClosed).toBe(true);
 	});
 });
+
+describe("agent hints persistence", () => {
+	it("stores and retrieves agent hints by childId", () => {
+		const layer = new WebMemoryLayer();
+		const hints = {
+			boosts: [
+				{ agentId: "sleep-coach", boost: 2, reason: "today plan completed" },
+				{ agentId: "psychologist", boost: 1, reason: "positive note" },
+			],
+			totalCompleted: 2,
+			signalSummary: "sleep-coach got 2 completions, signal=positive",
+		};
+		layer.setAgentHints("child-1", hints);
+		expect(layer.getAgentHints("child-1")).toEqual(hints);
+		expect(layer.getAgentHints("child-2")).toBeNull();
+	});
+
+	it("overwrites hints on subsequent set calls", () => {
+		const layer = new WebMemoryLayer();
+		layer.setAgentHints("c1", {
+			boosts: [{ agentId: "a1", boost: 1, reason: "first" }],
+			totalCompleted: 1,
+			signalSummary: "first",
+		});
+		layer.setAgentHints("c1", {
+			boosts: [{ agentId: "a1", boost: 5, reason: "second" }],
+			totalCompleted: 3,
+			signalSummary: "second",
+		});
+		expect(layer.getAgentHints("c1")?.totalCompleted).toBe(3);
+	});
+});

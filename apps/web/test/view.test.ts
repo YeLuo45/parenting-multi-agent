@@ -5,7 +5,7 @@
  * structure without rendering React. This test file covers reducer transitions
  * and the view's IR shape.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	type Action,
 	type AppState,
@@ -185,10 +185,119 @@ describe("reducer", () => {
 		expect(s.messages[0].feedback).toBe("up");
 	});
 
+	it("feedbackDone leaves other agent messages untouched", () => {
+		const s = reducer(
+			makeState({
+				messages: [
+					{
+						id: "m1",
+						role: "agent",
+						author: "儿科",
+						content: "a",
+						agentId: "pediatrician",
+						ts: 1,
+					},
+					{
+						id: "m2",
+						role: "agent",
+						author: "心理",
+						content: "b",
+						agentId: "psychologist",
+						ts: 2,
+					},
+				],
+			}),
+			{ type: "feedbackDone", messageId: "m1", feedback: "down" },
+		);
+		expect(s.messages[0].feedback).toBe("down");
+		expect(s.messages[1].feedback).toBeUndefined();
+	});
+
 	it("unknown action returns state unchanged", () => {
 		const before = makeState();
 		const after = reducer(before, { type: "noop" } as unknown as Action);
 		expect(after).toBe(before);
+	});
+
+	it("advanceIntake marks a step complete and stores scenario and goal", () => {
+		const s = reducer(makeState(), {
+			type: "advanceIntake",
+			stepId: "scenario",
+			scenarioId: "bedtime-delay",
+			goal: "稳定作息",
+		});
+		expect(s.guidedIntake.completedSteps).toEqual(["child", "scenario"]);
+		expect(s.guidedIntake.activeStepId).toBe("scenario");
+		expect(s.guidedIntake.scenarioId).toBe("bedtime-delay");
+		expect(s.guidedIntake.goal).toBe("稳定作息");
+	});
+
+	it("advanceIntake preserves previous scenarioId when omitted", () => {
+		const s = reducer(
+			makeState({
+				guidedIntake: {
+					completedSteps: ["child"],
+					activeStepId: "scenario",
+					scenarioId: "homework-conflict",
+					goal: "之前的目标",
+				},
+			}),
+			{ type: "advanceIntake", stepId: "urgency" },
+		);
+		expect(s.guidedIntake.scenarioId).toBe("homework-conflict");
+		expect(s.guidedIntake.goal).toBe("之前的目标");
+	});
+
+	it("toggleActionCard adds and removes a horizon id without touching notes", () => {
+		const s1 = reducer(makeState(), {
+			type: "toggleActionCard",
+			horizon: "today",
+		});
+		expect(s1.actionBoard.completedIds).toEqual(["today"]);
+		const s2 = reducer(s1, {
+			type: "toggleActionCard",
+			horizon: "today",
+		});
+		expect(s2.actionBoard.completedIds).toEqual([]);
+	});
+
+	it("annotateActionCard records a note for a horizon", () => {
+		const s = reducer(makeState(), {
+			type: "annotateActionCard",
+			horizon: "week",
+			note: "本周坚持 4 天",
+		});
+		expect(s.actionBoard.notes.week).toBe("本周坚持 4 天");
+	});
+
+	it("advanceIntake is idempotent when the same step id arrives twice", () => {
+		const s1 = reducer(makeState(), {
+			type: "advanceIntake",
+			stepId: "urgency",
+			scenarioId: "bedtime-delay",
+		});
+		const s2 = reducer(s1, {
+			type: "advanceIntake",
+			stepId: "urgency",
+			scenarioId: "bedtime-delay",
+		});
+		expect(s2.guidedIntake.completedSteps.filter((id) => id === "urgency")).toHaveLength(1);
+	});
+
+	it("setMemoryStats replaces the memory stats field", () => {
+		const s = reducer(makeState(), {
+			type: "setMemoryStats",
+			memoryStats: {
+				children: 1,
+				facts: 2,
+				episodes: 3,
+				sessions: 4,
+				feedback: 5,
+				unsyncedDeltas: 6,
+			},
+		});
+		expect(s.memoryStats.facts).toBe(2);
+		expect(s.memoryStats.unsyncedDeltas).toBe(6);
 	});
 });
 
@@ -689,5 +798,56 @@ describe("unattended iteration visibility", () => {
 		expect(serialized).toContain("rule-fallback");
 		expect(serialized).toContain("scenario pack cases ready");
 		expect(serialized).toContain("npm run release:gate");
+	});
+});
+
+import { recordMessageFeedback } from "../src/view.js";
+
+describe("recordMessageFeedback helper", () => {
+	it("dispatches feedbackDone when message and child are valid", () => {
+		const dispatch = vi.fn();
+		const state = makeState({
+			selectedChildId: "alice",
+			messages: [
+				{
+					id: "m1",
+					role: "agent",
+					author: "儿科",
+					content: "a",
+					agentId: "pediatrician",
+					ts: 1,
+				},
+			],
+		});
+		const stack = {
+			recordAgentFeedback: vi.fn(),
+		} as unknown as WebOrchestrator;
+		recordMessageFeedback(stack, state, "m1", "up", dispatch);
+		expect(dispatch).toHaveBeenCalledWith({
+			type: "feedbackDone",
+			messageId: "m1",
+			feedback: "up",
+		});
+	});
+
+	it("skips dispatch when message agentId is missing", () => {
+		const dispatch = vi.fn();
+		const state = makeState({
+			selectedChildId: "alice",
+			messages: [
+				{
+					id: "m1",
+					role: "user",
+					author: "p",
+					content: "y",
+					ts: 1,
+				},
+			],
+		});
+		const stack = {
+			recordAgentFeedback: vi.fn(),
+		} as unknown as WebOrchestrator;
+		recordMessageFeedback(stack, state, "m1", "up", dispatch);
+		expect(dispatch).not.toHaveBeenCalled();
 	});
 });

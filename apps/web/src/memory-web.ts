@@ -17,7 +17,8 @@ import type {
 	FactCategory,
 	Session,
 } from "@parenting/memory";
-import type { Feedback } from "@parenting/orchestrator";
+	import type { Feedback } from "@parenting/orchestrator";
+	import type { AgentWeightHints } from "./web-iteration-suite.js";
 import type { FeedbackAnalyticsRow, SyncSnapshot } from "./memory-helpers.js";
 import {
 	buildFeedbackAnalytics,
@@ -95,6 +96,10 @@ export interface MemoryLayerLike {
 	deleteFeedback?(id: string): boolean;
 	getFeedbackAnalytics?(): FeedbackAnalyticsRow[];
 
+	// Agent hints (per-child workbench boost map)
+	setAgentHints?(childId: string, hints: AgentWeightHints): void;
+	getAgentHints?(childId: string): AgentWeightHints | null;
+
 	// Lifecycle
 	close(): void;
 	get isClosed(): boolean;
@@ -108,8 +113,8 @@ export class WebMemoryLayer implements MemoryLayerLike {
 	private feedback = new Map<string, Feedback>();
 	private deltas: DeltaEntry[] = [];
 	private nextDeltaId = 1;
+	private agentHints = new Map<string, AgentWeightHints>();
 	private closed = false;
-
 	// ─── L1: Children ────────────────────────────────────────────────────
 
 	upsertChild(profile: ChildProfile): ChildProfile {
@@ -295,6 +300,25 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		return buildFeedbackAnalytics(this.listFeedback());
 	}
 
+	setAgentHints(childId: string, hints: AgentWeightHints): void {
+		if (this.isClosed) return;
+		this.agentHints.set(childId, hints);
+	}
+
+	getAgentHints(childId: string): AgentWeightHints | null {
+		const hints = this.agentHints.get(childId);
+		if (!hints) return null;
+		return {
+			boosts: hints.boosts.map((b) => ({
+				agentId: b.agentId,
+				boost: b.boost,
+				reason: b.reason ?? "",
+			})),
+			totalCompleted: hints.totalCompleted,
+			signalSummary: hints.signalSummary,
+		};
+	}
+
 	// ─── Delta Log ───────────────────────────────────────────────────────
 
 	private recordDelta(
@@ -379,7 +403,7 @@ export class WebMemoryLayer implements MemoryLayerLike {
 		this.facts.clear();
 		this.episodes.clear();
 		this.sessions.clear();
-		this.feedback.clear();
+		this.agentHints.clear();
 		this.deltas = [];
 		this.closed = true;
 	}

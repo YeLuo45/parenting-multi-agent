@@ -1452,6 +1452,7 @@ export interface SevenDirectionClosureCenterInput {
 	provider: WebLlmRegistry["status"];
 	question: string;
 	selectedChildId?: string;
+	conflicts?: number;
 }
 
 export interface SevenDirectionClosureCenter {
@@ -1976,3 +1977,606 @@ export function buildParentingCompletionPack(
 		actions,
 	};
 }
+
+export interface AgentHintBoost {
+	agentId: string;
+	boost: number;
+}
+
+export function buildOrchestratorHintBoosts(
+	hints: AgentWeightHints,
+): AgentHintBoost[] {
+	return hints.boosts
+		.filter((boost) => boost.boost > 0)
+		.map((boost) => ({ agentId: boost.agentId, boost: boost.boost }));
+}
+
+// ---------------------------------------------------------------------------
+// Web Interaction Workbench — 7-direction unification (A-G workbench).
+//
+// The workbench aggregates 7 product directions (scenario intake, agent
+// collaboration viz, action plan board, growth timeline, high-risk safety,
+// family collaboration, retrospective & personalization) into a single
+// discoverable surface on the home memory dashboard. Builders are pure so
+// they can be unit-tested without React.
+// ---------------------------------------------------------------------------
+
+export type GuidedIntakeStepId = "child" | "scenario" | "urgency" | "goal";
+
+export interface GuidedIntakeStep {
+	id: GuidedIntakeStepId;
+	label: string;
+	hint: string;
+	complete: boolean;
+	active: boolean;
+}
+
+export interface GuidedIntakeWizard {
+	steps: GuidedIntakeStep[];
+	currentStep: GuidedIntakeStepId | null;
+	progressRatio: number;
+	canAdvance: boolean;
+}
+
+export type WebInteractionDirectionId =
+	| "scenario-intake"
+	| "agent-collaboration"
+	| "action-plan"
+	| "growth-timeline"
+	| "high-risk-safety"
+	| "family-collaboration"
+	| "retrospective";
+
+export interface WebInteractionDirection {
+	id: WebInteractionDirectionId;
+	title: string;
+	status: "ready" | "blocked";
+	hint: string;
+}
+
+export interface WebInteractionWorkbench {
+	directions: WebInteractionDirection[];
+	summary: string;
+	collaboration: {
+		primaryAgentId: string;
+		steps: { kind: "primary" | "consult" | "guardrail"; label: string }[];
+	};
+	safety: { mode: "normal-loop" | "high-risk"; reason: string };
+	actionCards: ActionPlanCard[];
+	selectedAgentShortcut: { agentId: string | null; lastReplyExcerpt: string };
+}
+
+export type ActionPlanHorizon = "today" | "this-week" | "this-month";
+
+export interface ActionPlanCard {
+	horizon: ActionPlanHorizon;
+	title: string;
+	summary: string;
+	tips: string[];
+	completed: boolean;
+	note: string;
+}
+
+export interface ActionPlanBoard {
+	cards: ActionPlanCard[];
+	completedCount: number;
+	totalCount: number;
+	completionRatio: number;
+}
+
+export type AgentDagNodeKind = "primary" | "consult" | "guardrail";
+
+export interface AgentDagNode {
+	id: string;
+	kind: AgentDagNodeKind;
+	label: string;
+	x: number;
+	y: number;
+}
+
+export interface AgentDagEdge {
+	from: string;
+	to: string;
+	kind: "handoff" | "consult" | "guard";
+}
+
+export interface AgentCollaborationDag {
+	nodes: AgentDagNode[];
+	edges: AgentDagEdge[];
+	width: number;
+	height: number;
+}
+
+export interface AgentNodeAction {
+	agentId: string;
+	label: string;
+	dispatch: "selectAgent";
+}
+
+export interface DagAgentShortcut {
+	agentId: string;
+	lastReply: { id: string; content: string; ts: number } | null;
+}
+
+export interface SelectedAgentHint {
+	hint: string;
+	shortcut: string;
+}
+
+export interface AgentWeightHints {
+	boosts: { agentId: string; boost: number; reason: string }[];
+	totalCompleted: number;
+	signalSummary: string;
+}
+
+export interface WorkbenchPersistedState {
+	guidedIntake: {
+		completedSteps: GuidedIntakeStepId[];
+		activeStepId: GuidedIntakeStepId;
+		scenarioId: string | null;
+		goal: string;
+	};
+	actionBoard: {
+		completedIds: ActionPlanHorizon[];
+		notes: Partial<Record<ActionPlanHorizon, string>>;
+	};
+}
+
+const GUIDED_INTAKE_LABELS: Record<
+	GuidedIntakeStepId,
+	{ label: string; hint: string }
+> = {
+	child: {
+		label: "选择孩子",
+		hint: "先选一个孩子档案，让 Agent 拿到年龄和发展阶段",
+	},
+	scenario: {
+		label: "描述情境",
+		hint: "选择最贴近的场景模板（挑食/夜醒/入学焦虑等）",
+	},
+	urgency: {
+		label: "紧急程度",
+		hint: "判断是否需要立即升级到安全守护 Agent",
+	},
+	goal: {
+		label: "目标",
+		hint: "把结果翻译成家长可衡量的目标",
+	},
+};
+
+const WORKBENCH_DIRECTION_TITLES: Record<WebInteractionDirectionId, string> = {
+	"scenario-intake": "场景化问诊向导",
+	"agent-collaboration": "Agent 协作可视化",
+	"action-plan": "行动计划卡片",
+	"growth-timeline": "孩子成长时间线",
+	"high-risk-safety": "高风险安全模式",
+	"family-collaboration": "家庭协作视图",
+	retrospective: "复盘与个性化调优",
+};
+
+const WORKBENCH_DIRECTION_HINTS: Record<WebInteractionDirectionId, string> = {
+	"scenario-intake": "4 步可点击推进：child / scenario / urgency / goal",
+	"agent-collaboration": "DAG 内联 SVG，可点击节点查看 Agent 最近回复",
+	"action-plan": "勾选 + 备注，完成率反哺 Agent 路由权重",
+	"growth-timeline": "L0-L4 记忆 + 里程碑自动串成时间线",
+	"high-risk-safety": "危险信号 → 安全守护 Agent 升级 + 急救指引",
+	"family-collaboration": "家庭成员共享档案 + 责任分摊",
+	retrospective: "反馈评分 + 备注情感信号 → 个性化调优",
+};
+
+const DEFAULT_WORKBENCH_DIRECTIONS: WebInteractionDirectionId[] = [
+	"scenario-intake",
+	"agent-collaboration",
+	"action-plan",
+	"growth-timeline",
+	"high-risk-safety",
+	"family-collaboration",
+	"retrospective",
+];
+
+export function buildWebInteractionWorkbench(input: {
+	question: string;
+	children: { id: string }[];
+	selectedChildId?: string;
+	memory: { feedback: number; unsyncedDeltas: number };
+	provider: { primaryProviderId: string | null; fallbackProviderId: string; ready: boolean };
+	lastFeedbackRating?: number;
+}): WebInteractionWorkbench {
+	const primaryAgentId = inferPrimaryAgentId(input.question);
+	const consultedAgents = inferConsultedAgents(input.question, primaryAgentId);
+	const safetyMode = detectHighRiskMode(input.question);
+	const steps: WebInteractionWorkbench["collaboration"]["steps"] = [
+		{ kind: "primary", label: `Primary ${primaryAgentId}` },
+		...consultedAgents.map((id) => ({
+			kind: "consult" as const,
+			label: `Consult ${id}`,
+		})),
+	];
+	if (safetyMode !== "normal-loop") {
+		steps.push({ kind: "guardrail", label: "Safety guardrail" });
+	}
+	const directions: WebInteractionDirection[] = DEFAULT_WORKBENCH_DIRECTIONS.map(
+		(id) => ({
+			id,
+			title: WORKBENCH_DIRECTION_TITLES[id],
+			status: "ready",
+			hint: WORKBENCH_DIRECTION_HINTS[id],
+		}),
+	);
+	return {
+		directions,
+		summary: `7 directions · primary=${primaryAgentId}, mode=${safetyMode}`,
+		collaboration: { primaryAgentId, steps },
+		safety: {
+			mode: safetyMode,
+			reason: safetyMode === "normal-loop" ? "" : "high-risk keyword detected",
+		},
+		actionCards: buildActionCardsForMode(safetyMode),
+		selectedAgentShortcut: {
+			agentId: primaryAgentId,
+			lastReplyExcerpt: "",
+		},
+	};
+}
+
+function inferPrimaryAgentId(question: string): string {
+	const q = question.toLowerCase();
+	if (/(发高烧|高热|38\.5|呼吸困难|抽搐|过敏|误食|烫伤)/.test(q))
+		return "pediatrician";
+	if (/(哭闹|焦虑|发脾气|心理|情绪|抑郁|自残)/.test(q)) return "psychologist";
+	if (/(学习|学校|作业|成绩|兴趣|升学)/.test(q)) return "educator";
+	if (/(吃|挑食|辅食|过敏|营养|食谱|饮食)/.test(q)) return "nutritionist";
+	if (/(睡|夜醒|作息|哄睡|睡眠倒退)/.test(q)) return "sleep-coach";
+	if (/(打架|兄弟姐妹|手足)/.test(q)) return "sibling";
+	if (/(预算|教育储蓄|育儿花销|学费)/.test(q)) return "finance";
+	if (/(老人|配偶|家庭冲突|沟通)/.test(q)) return "family-mediator";
+	if (/(压力|burnout|崩溃|撑不住)/.test(q)) return "parent-support";
+	if (/(身高|体重|里程碑|发育)/.test(q)) return "growth-tracker";
+	return "parent-support";
+}
+
+function inferConsultedAgents(question: string, primary: string): string[] {
+	const consulted = new Set<string>();
+	const q = question.toLowerCase();
+	if (primary !== "pediatrician" && /(发烧|咳嗽|过敏|症状|疼痛|生病)/.test(q))
+		consulted.add("pediatrician");
+	if (primary !== "nutritionist" && /(吃|辅食|挑食|饮食|体重|身高)/.test(q))
+		consulted.add("nutritionist");
+	if (primary !== "psychologist" && /(哭闹|情绪|焦虑|压力)/.test(q))
+		consulted.add("psychologist");
+	if (primary !== "sleep-coach" && /(睡|夜醒|作息)/.test(q))
+		consulted.add("sleep-coach");
+	if (primary !== "safety-guard" && /(安全|危险|误食|烫伤|溺水)/.test(q))
+		consulted.add("safety-guard");
+	return [...consulted].slice(0, 2);
+}
+
+function detectHighRiskMode(
+	question: string,
+): "normal-loop" | "high-risk" {
+	const q = question.toLowerCase();
+	const dangerKeywords = [
+		"抽搐",
+		"呼吸困难",
+		"38.5",
+		"高热惊厥",
+		"误食",
+		"烫伤",
+		"溺水",
+		"自残",
+	];
+	return dangerKeywords.some((k) => q.includes(k)) ? "high-risk" : "normal-loop";
+}
+
+function buildActionCardsForMode(
+	mode: "normal-loop" | "high-risk",
+): ActionPlanCard[] {
+	if (mode === "high-risk") {
+		return [
+			{
+				horizon: "today",
+				title: "立即呼救/就医",
+				summary: "拨打 120 或就近急诊",
+				tips: ["保持气道通畅", "记录时间线", "不要自行喂药"],
+				completed: false,
+				note: "",
+			},
+			{
+				horizon: "this-week",
+				title: "复盘事故原因",
+				summary: "排查家庭环境风险点",
+				tips: ["锁抽屉/插座", "准备急救包", "家庭成员演练"],
+				completed: false,
+				note: "",
+			},
+			{
+				horizon: "this-month",
+				title: "建立家庭安全 SOP",
+				summary: "把应急流程写到家庭文档",
+				tips: ["张贴急救号码", "季度演练", "跟儿科医生随访"],
+				completed: false,
+				note: "",
+			},
+		];
+	}
+	return [
+		{
+			horizon: "today",
+			title: "记录今天的孩子表现",
+			summary: "写 1 句孩子的进步或挑战",
+			tips: ["拍照/视频", "记录时间", "标注情绪"],
+			completed: false,
+			note: "",
+		},
+		{
+			horizon: "this-week",
+			title: "本周小目标",
+			summary: "围绕主 Agent 建议的 1 个可执行行动",
+			tips: ["每天 10 分钟", "固定时间段", "完成后给反馈"],
+			completed: false,
+			note: "",
+		},
+		{
+			horizon: "this-month",
+			title: "本月复盘",
+			summary: "汇总反馈 + 调整 Agent 路由权重",
+			tips: ["看完成率", "回看记忆时间线", "调目标"],
+			completed: false,
+			note: "",
+		},
+	];
+}
+
+export function buildGuidedIntakeWizard(input: {
+	children: { id: string }[];
+	selectedChildId?: string;
+	completedSteps: GuidedIntakeStepId[];
+	activeStepId: GuidedIntakeStepId;
+	scenarioId: string | null;
+	goal: string;
+}): GuidedIntakeWizard {
+	const order: GuidedIntakeStepId[] = ["child", "scenario", "urgency", "goal"];
+	const hasChild = input.children.length > 0;
+	const effectiveCompleted = new Set<GuidedIntakeStepId>(
+		hasChild ? input.completedSteps : input.completedSteps.filter((s) => s !== "child"),
+	);
+	const steps: GuidedIntakeStep[] = order.map((id) => ({
+		id,
+		label: GUIDED_INTAKE_LABELS[id].label,
+		hint: GUIDED_INTAKE_LABELS[id].hint,
+		complete: effectiveCompleted.has(id),
+		active: id === input.activeStepId,
+	}));
+	const currentStep = order.find(
+		(s) => !effectiveCompleted.has(s),
+	) as GuidedIntakeStepId | undefined;
+	const progressRatio = effectiveCompleted.size / order.length;
+	const canAdvance = order.indexOf(input.activeStepId) < order.length - 1;
+	return { steps, currentStep: currentStep ?? null, progressRatio, canAdvance };
+}
+
+export function buildAgentCollaborationDag(input: {
+	primaryAgentId: string;
+	consultedAgentIds: string[];
+	safetyGuardrail: boolean;
+}): AgentCollaborationDag {
+	const nodes: AgentDagNode[] = [];
+	const edgeList: AgentDagEdge[] = [];
+	const colW = 160;
+	const rowH = 90;
+	const centerX = 80;
+	const centerY = 40;
+	// Primary
+	nodes.push({
+		id: input.primaryAgentId,
+		kind: "primary",
+		label: input.primaryAgentId,
+		x: centerX,
+		y: centerY,
+	});
+	input.consultedAgentIds.forEach((id, idx) => {
+		const offset = (idx + 1) * colW;
+		const dir = idx % 2 === 0 ? 1 : -1;
+		const y = centerY + dir * rowH;
+		nodes.push({ id, kind: "consult", label: id, x: centerX + offset, y });
+		edgeList.push({ from: input.primaryAgentId, to: id, kind: "consult" });
+	});
+	if (input.safetyGuardrail) {
+		nodes.push({
+			id: "safety-guard",
+			kind: "guardrail",
+			label: "safety-guard",
+			x: centerX,
+			y: centerY + 2 * rowH,
+		});
+		edgeList.push({
+			from: input.primaryAgentId,
+			to: "safety-guard",
+			kind: "guard",
+		});
+	}
+	const xs = nodes.map((n) => n.x);
+	const ys = nodes.map((n) => n.y);
+	const width = Math.max(240, (Math.max(...xs) - Math.min(...xs)) + 200);
+	const height = Math.max(120, (Math.max(...ys) - Math.min(...ys)) + 120);
+	return { nodes, edges: edgeList, width, height };
+}
+
+export function buildActionPlanBoard(input: {
+	actionCards: ActionPlanCard[];
+	completedIds: ActionPlanHorizon[];
+	notes: Partial<Record<ActionPlanHorizon, string>>;
+}): ActionPlanBoard {
+	const completedSet = new Set(input.completedIds);
+	const cards: ActionPlanCard[] = input.actionCards.map((card) => ({
+		...card,
+		completed: completedSet.has(card.horizon),
+		note: input.notes[card.horizon] ?? card.note,
+	}));
+	const completedCount = cards.filter((c) => c.completed).length;
+	const totalCount = cards.length;
+	const completionRatio = totalCount === 0 ? 0 : completedCount / totalCount;
+	return { cards, completedCount, totalCount, completionRatio };
+}
+
+export function buildAgentNodeActions(
+	dag: AgentCollaborationDag,
+): AgentNodeAction[] {
+	return dag.nodes.map((node) => ({
+		agentId: node.id,
+		label: node.label,
+		dispatch: "selectAgent" as const,
+	}));
+}
+
+export function buildSelectedAgentHint(
+	hints: AgentWeightHints,
+	selectedAgentId: string | null,
+): SelectedAgentHint | null {
+	if (!selectedAgentId) return null;
+	const boost = hints.boosts.find((b) => b.agentId === selectedAgentId);
+	const boostText = boost ? `+${boost.boost} boost · ${boost.reason}` : "no boost";
+	return {
+		hint: `${selectedAgentId}: ${boostText}`,
+		shortcut: selectedAgentId,
+	};
+}
+
+export function buildDagAgentShortcut(input: {
+	agentId: string;
+	messages: { id: string; role: string; content: string; ts: number }[];
+}): DagAgentShortcut {
+	if (!input.agentId) {
+		return { agentId: "", lastReply: null };
+	}
+	const reply = [...input.messages]
+		.reverse()
+		.find((m) => m.role === "agent" && m.content.includes(input.agentId));
+	const fallback = [...input.messages].reverse().find((m) => m.role === "agent");
+	return {
+		agentId: input.agentId,
+		lastReply: reply
+			? { id: reply.id, content: reply.content, ts: reply.ts }
+			: fallback
+				? { id: fallback.id, content: fallback.content, ts: fallback.ts }
+				: null,
+	};
+}
+
+export function buildAgentWeightHints(input: {
+	primaryAgentId: string;
+	completedIds: ActionPlanHorizon[];
+	notes: Partial<Record<ActionPlanHorizon, string>>;
+}): AgentWeightHints {
+	const completedSet = new Set(input.completedIds);
+	const boosts: AgentWeightHints["boosts"] = [];
+	if (completedSet.has("today")) {
+		boosts.push({
+			agentId: input.primaryAgentId,
+			boost: 0.3,
+			reason: "today plan completed",
+		});
+	}
+	if (completedSet.has("this-week")) {
+		boosts.push({
+			agentId: input.primaryAgentId,
+			boost: 0.2,
+			reason: "this-week plan completed",
+		});
+	}
+	if (completedSet.has("this-month")) {
+		boosts.push({
+			agentId: input.primaryAgentId,
+			boost: 0.1,
+			reason: "this-month plan completed",
+		});
+	}
+	// Sentiment signal from notes
+	for (const [horizon, note] of Object.entries(input.notes)) {
+		if (!note) continue;
+		const positive = /(好|棒|有效|顺利|开心|进步|感谢)/.test(note);
+		const negative = /(难|失败|哭|崩溃|没用|无效)/.test(note);
+		if (positive) {
+			boosts.push({
+				agentId: input.primaryAgentId,
+				boost: 0.15,
+				reason: `positive note on ${horizon}`,
+			});
+		} else if (negative) {
+			boosts.push({
+				agentId: input.primaryAgentId,
+				boost: -0.2,
+				reason: `negative note on ${horizon}`,
+			});
+		}
+	}
+	const totalCompleted = input.completedIds.length;
+	const summary =
+		boosts.length === 0
+			? "no agent signal"
+			: `${boosts.length} signal${boosts.length > 1 ? "s" : ""} (${totalCompleted} completed)`;
+	return { boosts, totalCompleted, signalSummary: summary };
+}
+
+export function serializeWorkbenchState(state: WorkbenchPersistedState): string {
+	return JSON.stringify({
+		v: 1,
+		g: {
+			c: state.guidedIntake.completedSteps,
+			a: state.guidedIntake.activeStepId,
+			s: state.guidedIntake.scenarioId,
+			o: state.guidedIntake.goal,
+		},
+		b: {
+			c: state.actionBoard.completedIds,
+			n: state.actionBoard.notes,
+		},
+	});
+}
+
+export function deserializeWorkbenchState(
+	raw: string,
+): WorkbenchPersistedState | null {
+	try {
+		const obj = JSON.parse(raw) as {
+			v: number;
+			g: {
+				c: GuidedIntakeStepId[];
+				a: GuidedIntakeStepId;
+				s: string | null;
+				o: string;
+			};
+			b: { c: ActionPlanHorizon[]; n: Partial<Record<ActionPlanHorizon, string>> };
+		};
+		if (obj.v !== 1) return null;
+		return {
+			guidedIntake: {
+				completedSteps: obj.g.c,
+				activeStepId: obj.g.a,
+				scenarioId: obj.g.s,
+				goal: obj.g.o,
+			},
+			actionBoard: { completedIds: obj.b.c, notes: obj.b.n },
+		};
+	} catch {
+		return null;
+	}
+}
+
+export function applyActionPlanToggle(
+	completedIds: ActionPlanHorizon[],
+	horizon: ActionPlanHorizon,
+): ActionPlanHorizon[] {
+	return completedIds.includes(horizon)
+		? completedIds.filter((h) => h !== horizon)
+		: [...completedIds, horizon];
+}
+
+export function applyActionPlanNote(
+	notes: Partial<Record<ActionPlanHorizon, string>>,
+	horizon: ActionPlanHorizon,
+	note: string,
+): Partial<Record<ActionPlanHorizon, string>> {
+	return { ...notes, [horizon]: note };
+}
+

@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
 	buildAcceptanceEvidence,
 	buildActionPlanGenerator,
+	buildAgentCollaborationDag,
+	buildAgentNodeActions,
+	buildAgentWeightHints,
+	buildActionPlanBoard,
+	buildDagAgentShortcut,
+	buildGuidedIntakeWizard,
+	buildSelectedAgentHint,
+	buildWebInteractionWorkbench,
+	serializeWorkbenchState,
+	deserializeWorkbenchState,
+	applyActionPlanToggle,
+	applyActionPlanNote,
 	buildAgentCollaborationExplanation,
 	buildAllDirectionsProductHub,
 	buildBilingualKnowledgeBase,
@@ -25,6 +37,7 @@ import {
 	buildProviderConfigSnapshot,
 	buildProviderModeOptions,
 	buildReleaseGatePlan,
+	buildOrchestratorHintBoosts,
 	buildRuntimeDashboardSnapshot,
 	buildSafetyFirstMode,
 	buildScenarioPack,
@@ -1059,5 +1072,281 @@ describe("web unattended iteration suite", () => {
 			"run-stress-intervention",
 			"open-delivery-evidence-center",
 		]);
+	});
+});
+
+describe("buildOrchestratorHintBoosts", () => {
+	it("filters out non-positive boosts and copies agentId", () => {
+		const result = buildOrchestratorHintBoosts({
+			boosts: [
+				{ agentId: "sleep-coach", boost: 2 },
+				{ agentId: "psychologist", boost: 0 },
+				{ agentId: "nutritionist", boost: 1 },
+			],
+			totalCompleted: 3,
+			signalSummary: "test",
+		});
+		expect(result).toEqual([
+			{ agentId: "sleep-coach", boost: 2 },
+			{ agentId: "nutritionist", boost: 1 },
+		]);
+	});
+
+	it("returns an empty array when no positive boosts exist", () => {
+		expect(
+			buildOrchestratorHintBoosts({
+				boosts: [{ agentId: "a1", boost: 0 }],
+				totalCompleted: 0,
+				signalSummary: "none",
+			}),
+		).toEqual([]);
+	});
+});
+
+describe("buildWebInteractionWorkbench", () => {
+	const baseMemory = { feedback: 0, unsyncedDeltas: 0 };
+	const baseProvider = {
+		primaryProviderId: "remote",
+		fallbackProviderId: "rule-fallback",
+		ready: true,
+	};
+
+	it("returns 7 directions and infers pediatrician for medical keywords", () => {
+		const wb = buildWebInteractionWorkbench({
+			question: "我家宝宝3个月发烧38.5怎么办",
+			children: [{ id: "c1" }],
+			selectedChildId: "c1",
+			memory: baseMemory,
+			provider: baseProvider,
+		});
+		expect(wb.directions).toHaveLength(7);
+		expect(wb.collaboration.primaryAgentId).toBe("pediatrician");
+		expect(wb.safety.mode).toBe("high-risk");
+		expect(wb.collaboration.steps.some((s) => s.kind === "guardrail")).toBe(true);
+	});
+
+	it("infers sleep-coach for sleep keywords and stays in normal-loop", () => {
+		const wb = buildWebInteractionWorkbench({
+			question: "宝宝夜醒频繁怎么办",
+			children: [{ id: "c1" }],
+			memory: baseMemory,
+			provider: baseProvider,
+		});
+		expect(wb.collaboration.primaryAgentId).toBe("sleep-coach");
+		expect(wb.safety.mode).toBe("normal-loop");
+	});
+
+	it("falls back to parent-support when no keyword matches", () => {
+		const wb = buildWebInteractionWorkbench({
+			question: "我想找点育儿灵感",
+			children: [],
+			memory: baseMemory,
+			provider: baseProvider,
+		});
+		expect(wb.collaboration.primaryAgentId).toBe("parent-support");
+	});
+
+	it("limits consulted agents to 2", () => {
+		const wb = buildWebInteractionWorkbench({
+			question: "宝宝挑食、睡不好、哭闹、还发烧",
+			children: [{ id: "c1" }],
+			memory: baseMemory,
+			provider: baseProvider,
+		});
+		const consults = wb.collaboration.steps.filter((s) => s.kind === "consult");
+		expect(consults.length).toBeLessThanOrEqual(2);
+	});
+});
+
+describe("buildGuidedIntakeWizard", () => {
+	it("marks the active step and tracks progress", () => {
+		const wiz = buildGuidedIntakeWizard({
+			children: [{ id: "c1" }],
+			completedSteps: ["child"],
+			activeStepId: "scenario",
+			scenarioId: "bedtime-delay",
+			goal: "稳定作息",
+		});
+		expect(wiz.steps.find((s) => s.id === "child")?.complete).toBe(true);
+		expect(wiz.steps.find((s) => s.id === "scenario")?.active).toBe(true);
+		expect(wiz.currentStep).toBe("scenario");
+		expect(wiz.progressRatio).toBe(0.25);
+		expect(wiz.canAdvance).toBe(true);
+	});
+
+	it("forces child step incomplete when no children exist", () => {
+		const wiz = buildGuidedIntakeWizard({
+			children: [],
+			completedSteps: ["child", "scenario"],
+			activeStepId: "urgency",
+			scenarioId: null,
+			goal: "",
+		});
+		expect(wiz.steps.find((s) => s.id === "child")?.complete).toBe(false);
+		expect(wiz.currentStep).toBe("child");
+	});
+});
+
+describe("buildAgentCollaborationDag", () => {
+	it("places primary node and consults around it", () => {
+		const dag = buildAgentCollaborationDag({
+			primaryAgentId: "pediatrician",
+			consultedAgentIds: ["nutritionist", "sleep-coach"],
+			safetyGuardrail: false,
+		});
+		expect(dag.nodes.find((n) => n.kind === "primary")?.id).toBe("pediatrician");
+		expect(dag.nodes.filter((n) => n.kind === "consult")).toHaveLength(2);
+		expect(dag.edges).toHaveLength(2);
+	});
+
+	it("adds safety guardrail node and edge when requested", () => {
+		const dag = buildAgentCollaborationDag({
+			primaryAgentId: "pediatrician",
+			consultedAgentIds: [],
+			safetyGuardrail: true,
+		});
+		expect(dag.nodes.find((n) => n.kind === "guardrail")).toBeDefined();
+		expect(dag.edges.some((e) => e.kind === "guard")).toBe(true);
+	});
+});
+
+describe("buildActionPlanBoard", () => {
+	const baseCards = [
+		{ horizon: "today" as const, title: "T1", summary: "S1", tips: ["a"], completed: false, note: "" },
+		{ horizon: "this-week" as const, title: "T2", summary: "S2", tips: ["b"], completed: false, note: "" },
+		{ horizon: "this-month" as const, title: "T3", summary: "S3", tips: ["c"], completed: false, note: "" },
+	];
+
+	it("computes completion ratio and merges notes", () => {
+		const board = buildActionPlanBoard({
+			actionCards: baseCards,
+			completedIds: ["today", "this-week"],
+			notes: { today: "有效" },
+		});
+		expect(board.completedCount).toBe(2);
+		expect(board.totalCount).toBe(3);
+		expect(board.completionRatio).toBeCloseTo(2 / 3);
+		expect(board.cards[0]?.note).toBe("有效");
+		expect(board.cards[0]?.completed).toBe(true);
+		expect(board.cards[2]?.completed).toBe(false);
+	});
+
+	it("returns 0 ratio when no cards complete", () => {
+		const board = buildActionPlanBoard({
+			actionCards: baseCards,
+			completedIds: [],
+			notes: {},
+		});
+		expect(board.completionRatio).toBe(0);
+	});
+});
+
+describe("buildAgentNodeActions + buildSelectedAgentHint + buildDagAgentShortcut", () => {
+	const dag = buildAgentCollaborationDag({
+		primaryAgentId: "pediatrician",
+		consultedAgentIds: ["nutritionist"],
+		safetyGuardrail: true,
+	});
+
+	it("maps every DAG node to a selectAgent action", () => {
+		const actions = buildAgentNodeActions(dag);
+		expect(actions).toHaveLength(dag.nodes.length);
+		expect(actions.every((a) => a.dispatch === "selectAgent")).toBe(true);
+	});
+
+	it("returns null when no agent is selected", () => {
+		expect(buildSelectedAgentHint({ boosts: [], totalCompleted: 0, signalSummary: "" }, null)).toBeNull();
+	});
+
+	it("builds a shortcut that surfaces the latest agent reply", () => {
+		const shortcut = buildDagAgentShortcut({
+			agentId: "pediatrician",
+			messages: [
+				{ id: "1", role: "user", content: "发烧", ts: 1 },
+				{ id: "2", role: "agent", content: "建议多喝水", ts: 2 },
+				{ id: "3", role: "agent", content: "pediatrician: 用退烧药", ts: 3 },
+			],
+		});
+		expect(shortcut.lastReply?.content).toContain("pediatrician");
+	});
+
+	it("falls back to any agent reply when no matching reply exists", () => {
+		const shortcut = buildDagAgentShortcut({
+			agentId: "psychologist",
+			messages: [{ id: "1", role: "user", content: "hi", ts: 1 }],
+		});
+		expect(shortcut.lastReply).toBeNull();
+	});
+});
+
+describe("buildAgentWeightHints", () => {
+	it("emits positive boosts for completed horizons", () => {
+		const hints = buildAgentWeightHints({
+			primaryAgentId: "pediatrician",
+			completedIds: ["today", "this-week"],
+			notes: {},
+		});
+		expect(hints.boosts.length).toBe(2);
+		expect(hints.signalSummary).toContain("2 completed");
+	});
+
+	it("decodes positive sentiment from notes", () => {
+		const hints = buildAgentWeightHints({
+			primaryAgentId: "pediatrician",
+			completedIds: [],
+			notes: { today: "孩子很棒" },
+		});
+		expect(hints.boosts.some((b) => b.boost > 0)).toBe(true);
+	});
+
+	it("decodes negative sentiment from notes", () => {
+		const hints = buildAgentWeightHints({
+			primaryAgentId: "pediatrician",
+			completedIds: [],
+			notes: { today: "完全没用" },
+		});
+		expect(hints.boosts.some((b) => b.boost < 0)).toBe(true);
+	});
+});
+
+describe("serializeWorkbenchState + deserializeWorkbenchState", () => {
+	const state = {
+		guidedIntake: {
+			completedSteps: ["child", "scenario"],
+			activeStepId: "urgency",
+			scenarioId: "bedtime-delay",
+			goal: "稳定",
+		},
+		actionBoard: {
+			completedIds: ["today"],
+			notes: { today: "有效" },
+		},
+	};
+
+	it("round-trips through serialize/deserialize", () => {
+		const raw = serializeWorkbenchState(state);
+		const restored = deserializeWorkbenchState(raw);
+		expect(restored).toEqual(state);
+	});
+
+	it("returns null on corrupt input", () => {
+		expect(deserializeWorkbenchState("not json")).toBeNull();
+		expect(deserializeWorkbenchState('{"v":0}')).toBeNull();
+	});
+});
+
+describe("applyActionPlanToggle + applyActionPlanNote", () => {
+	it("toggles a horizon in and out", () => {
+		const after = applyActionPlanToggle([], "today");
+		expect(after).toEqual(["today"]);
+		const off = applyActionPlanToggle(after, "today");
+		expect(off).toEqual([]);
+	});
+
+	it("applies a note without mutating the original map", () => {
+		const original: Partial<Record<"today" | "this-week" | "this-month", string>> = {};
+		const updated = applyActionPlanNote(original, "today", "棒");
+		expect(updated.today).toBe("棒");
+		expect(original.today).toBeUndefined();
 	});
 });

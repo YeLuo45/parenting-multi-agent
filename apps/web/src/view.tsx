@@ -12,6 +12,7 @@ import { AppBody, Header } from "./components.js";
 import { I18nProvider } from "./i18n.js";
 import { computeWebStage } from "./memory-helpers.js";
 import type { MemoryStats } from "./memory-web.js";
+import { createWorkbenchStorage } from "./workbench-persistence.js";
 import {
 	createWebOrchestrator,
 	createWebOrchestratorWithPersistence,
@@ -33,9 +34,15 @@ import {
 	buildProviderConfigSnapshot,
 	buildReleaseGatePlan,
 	buildScenarioPack,
+	buildAgentWeightHints,
 	type IterationSuiteSnapshot,
 	type ProviderConfigSnapshot,
 	type ReleaseGatePlan,
+} from "./web-iteration-suite.js";
+import type {
+	ActionPlanCard,
+	AgentWeightHints,
+	GuidedIntakeStepId,
 } from "./web-iteration-suite.js";
 
 export interface ChatMessage {
@@ -70,6 +77,18 @@ export interface AppState {
 	iterationSuite: IterationSuiteSnapshot;
 	providerConfig: ProviderConfigSnapshot;
 	releaseGate: ReleaseGatePlan;
+	guidedIntake: {
+		completedSteps: GuidedIntakeStepId[];
+		activeStepId: GuidedIntakeStepId;
+		scenarioId: string | null;
+		goal: string;
+	};
+	actionBoard: {
+		completedIds: ActionPlanCard["horizon"][];
+		notes: Partial<Record<ActionPlanCard["horizon"], string>>;
+	};
+	selectedAgentId: string | null;
+	agentHints: AgentWeightHints;
 	busy: boolean;
 	error: string | null;
 }
@@ -92,6 +111,12 @@ export type Action =
 			providerConfig: ProviderConfigSnapshot;
 			releaseGate: ReleaseGatePlan;
 	  }
+	| { type: "advanceIntake"; stepId: GuidedIntakeStepId; scenarioId?: string; goal?: string }
+	| { type: "toggleActionCard"; horizon: ActionPlanCard["horizon"] }
+	| { type: "annotateActionCard"; horizon: ActionPlanCard["horizon"]; note: string }
+	| { type: "hydrateWorkbench"; guidedIntake: AppState["guidedIntake"]; actionBoard: AppState["actionBoard"] }
+	| { type: "selectAgent"; agentId: string | null }
+	| { type: "setAgentHints"; hints: AgentWeightHints }
 	| { type: "reset" };
 
 export const initialState: AppState = {
@@ -137,6 +162,22 @@ export const initialState: AppState = {
 		ready: false,
 	}),
 	releaseGate: buildReleaseGatePlan(),
+	guidedIntake: {
+		completedSteps: ["child"],
+		activeStepId: "scenario",
+		scenarioId: null,
+		goal: "",
+	},
+	actionBoard: {
+		completedIds: [],
+		notes: {},
+	},
+	selectedAgentId: null,
+	agentHints: {
+		boosts: [],
+		totalCompleted: 0,
+		signalSummary: "no agent signal",
+	},
 	busy: false,
 	error: null,
 };
@@ -182,6 +223,57 @@ export function reducer(state: AppState, action: Action): AppState {
 				providerConfig: action.providerConfig,
 				releaseGate: action.releaseGate,
 			};
+		case "advanceIntake": {
+			const completedSteps = state.guidedIntake.completedSteps.includes(
+				action.stepId,
+			)
+				? state.guidedIntake.completedSteps
+				: [...state.guidedIntake.completedSteps, action.stepId];
+			return {
+				...state,
+				guidedIntake: {
+					completedSteps,
+					activeStepId: action.stepId,
+					scenarioId: action.scenarioId ?? state.guidedIntake.scenarioId,
+					goal: action.goal ?? state.guidedIntake.goal,
+				},
+			};
+		}
+		case "toggleActionCard": {
+			const completedIds = state.actionBoard.completedIds.includes(
+				action.horizon,
+			)
+				? state.actionBoard.completedIds.filter(
+						(id) => id !== action.horizon,
+					)
+				: [...state.actionBoard.completedIds, action.horizon];
+			return {
+				...state,
+				actionBoard: { ...state.actionBoard, completedIds },
+			};
+		}
+		case "annotateActionCard": {
+			return {
+				...state,
+				actionBoard: {
+					...state.actionBoard,
+					notes: { ...state.actionBoard.notes, [action.horizon]: action.note },
+				},
+			};
+		}
+		case "hydrateWorkbench": {
+			return {
+				...state,
+				guidedIntake: action.guidedIntake,
+				actionBoard: action.actionBoard,
+			};
+		}
+		case "selectAgent": {
+			return { ...state, selectedAgentId: action.agentId };
+		}
+		case "setAgentHints": {
+			return { ...state, agentHints: action.hints };
+		}
 		case "reset":
 			return {
 				...initialState,
@@ -533,7 +625,7 @@ function createAppFromStack(stack: WebOrchestrator): {
 			await dispatchAsk(stack, state, dispatch);
 			refreshConvergence();
 		};
-		/* v8 ignore next 4 */
+		/* v8 ignore next 7 */
 		const onFeedback = (
 			messageId: string,
 			feedback: "up" | "down",
@@ -558,7 +650,33 @@ function createAppFromStack(stack: WebOrchestrator): {
 			stack.upsertChild,
 			state.selectedChildId,
 			refreshConvergence,
-		]);
+	]);
+
+	/* v8 ignore next 4 */
+	useEffect(() => {
+		const storage = createWorkbenchStorage();
+		const persisted = storage.load();
+		if (persisted) {
+			dispatch({ type: "hydrateWorkbench", guidedIntake: persisted.guidedIntake, actionBoard: persisted.actionBoard });
+		}
+	}, [dispatch]);
+
+	/* v8 ignore next 5 */
+	useEffect(() => {
+		const storage = createWorkbenchStorage();
+		storage.save({ guidedIntake: state.guidedIntake, actionBoard: state.actionBoard });
+	}, [state.guidedIntake, state.actionBoard]);
+
+	/* v8 ignore next 6 */
+	useEffect(() => {
+		const primary = state.iterationSuite.directions[0]?.id ?? "parent-support";
+		const hints = buildAgentWeightHints({
+			primaryAgentId: primary,
+			completedIds: state.actionBoard.completedIds,
+			notes: state.actionBoard.notes,
+		});
+		dispatch({ type: "setAgentHints", hints });
+	}, [state.actionBoard.completedIds, state.actionBoard.notes, state.iterationSuite.directions, dispatch]);
 
 		return (
 			<ThemeProvider>

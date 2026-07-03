@@ -12,6 +12,7 @@ import type { FormEvent, ReactElement } from "react";
 import { LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeSwitcher } from "./theme.js";
 import type { Action, AppState, ChatMessage } from "./view.js";
+	import { WorkbenchPanel } from "./workbench-panel.js";
 import {
 	buildAllDirectionsProductHub,
 	buildBilingualKnowledgeBase,
@@ -273,7 +274,7 @@ export function MemoryPanel({
 	dispatch,
 }: {
 	state: AppState;
-	dispatch?: (a: Action) => void;
+	dispatch: (a: Action) => void;
 }): ReactElement {
 	const stats = state.memoryStats;
 	const scenarios = buildScenarioPack();
@@ -872,7 +873,9 @@ export function MemoryPanel({
 					</div>
 				))}
 			</dl>
-		</aside>
+
+		<WorkbenchPanel state={state} dispatch={dispatch} />
+			</aside>
 	);
 }
 

@@ -164,6 +164,14 @@ Web 应用包含：
 - 记忆面板辅助能力：孩子档案校验、同步健康、CRUD 管理、反馈分析
 - 无人值守迭代面板：显示 7 个方向的路线图，包括 Web convergence、记忆时间线、LLM fallback、验收证据、离线同步队列、场景包和发布门禁
 - Parenting Closed Loop：在首页记忆面板中把“提问 → 路由 → 回答 → 演练 → 记录 → 同步”串成 6 步闭环，并提供可点击的下一步行动按钮
+- Web Interaction Workbench：在首页记忆面板中聚合 7 个交互方向（场景化问诊向导、Agent 协作可视化、行动计划卡片、孩子成长时间线、高风险安全模式、家庭协作视图、复盘与个性化调优），统一在主设置区可见
+  - 场景化问诊向导支持 4 步可点击推进（child / scenario / urgency / goal）
+  - Agent 协作 DAG 内联 SVG 可视化，包含主 Agent、咨询 Agent 与安全兜底节点
+  - 行动计划卡片支持勾选与备注，自动计算完成率并回写到 memory
+- Workbench 跨会话持久化（`LocalStorageWorkbenchStorage` / `InMemoryWorkbenchStorage`）：保存 guidedIntake + actionBoard 状态
+- 行动板完成率反哺 Agent 权重（`buildAgentWeightHints`）：完成度 + 备注情感信号 → Agent 路由提升
+- Agent DAG 节点可点击（`selectAgent` action）：选中后展示该 Agent 最近回复 + 权重 hint
+- Workbench UI Panel（`apps/web/src/workbench-panel.tsx`）：在 MemoryPanel 末尾独立挂载，渲染 7 方向、问诊 4 步、DAG 按钮网格、行动板勾选/备注、agent shortcut hint
 - Vite 手动分包：React vendor 与 parenting runtime 分离，避免循环 chunk
 
 构建命令：
