@@ -24,8 +24,10 @@ import {
 	type AgentStats,
 	type AgentTopic,
 	detectTopics,
+	type AgentWeightHints,
 	type Feedback,
 	type FeedbackRating,
+	type MemoryLayerLike,
 	type OrchestratorConfig,
 	type OrchestratorEvent,
 	type OrchestratorResult,
@@ -81,6 +83,30 @@ export function applyFeedbackBoost(
 	for (const [agentId, score] of scores.entries()) {
 		const boost = getAvg(agentId);
 		if (boost > 0) scores.set(agentId, score + boost);
+	}
+}
+
+/**
+ * Apply workbench-derived per-agent weight hints. Each hint's fractional
+ * boost is scaled by `WORKBENCH_HINT_MULTIPLIER` (default 10) so that a
+ * 0.3 boost is equivalent to one stage bonus. Negative hints can demote
+ * an agent, and the floor is clamped to 0 (we never let routing scores
+ * go negative). Agents that are not already in the score map are
+ * ignored — hints are nudges, not new candidates.
+ */
+export const WORKBENCH_HINT_MULTIPLIER = 10;
+
+export function applyWorkbenchHints(
+	scores: Map<string, number>,
+	hints: AgentWeightHints,
+): void {
+	for (const hint of hints.boosts) {
+		if (hint.boost === 0) continue;
+		const current = scores.get(hint.agentId);
+		if (current === undefined) continue;
+		const delta = Math.round(hint.boost * WORKBENCH_HINT_MULTIPLIER);
+		const next = Math.max(0, current + delta);
+		scores.set(hint.agentId, next);
 	}
 }
 
@@ -174,6 +200,21 @@ export class OrchestratorCore {
 			avgRating: total / items.length,
 			positiveCount: positive,
 		};
+	}
+
+	// ─── Workbench agent hints ───────────────────────────────────────
+
+	/** Store workbench-derived per-child agent weight hints. */
+	setAgentHints(childId: string, hints: AgentWeightHints): void {
+		if (this.config.memory.setAgentHints) {
+			this.config.memory.setAgentHints(childId, hints);
+		}
+	}
+
+	/** Read workbench-derived per-child agent weight hints, or null. */
+	getAgentHints(childId: string): AgentWeightHints | null {
+		if (!this.config.memory.getAgentHints) return null;
+		return this.config.memory.getAgentHints(childId);
 	}
 
 	/**
@@ -381,6 +422,11 @@ export class OrchestratorCore {
 			child,
 		);
 		applyFeedbackBoost(scores, (agentId) => this.feedbackBoost(agentId));
+		// Workbench hints nudge the final order based on completion + sentiment
+		const hints = this.getAgentHints(child.id);
+		if (hints) {
+			applyWorkbenchHints(scores, hints);
+		}
 
 		// Sort by score desc, take top N
 		const sorted = Array.from(scores.entries())

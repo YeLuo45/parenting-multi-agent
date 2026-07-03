@@ -5,9 +5,11 @@ import {
 	applyFeedbackBoost,
 	applyStageBonus,
 	applyTopicMatch,
+	applyWorkbenchHints,
 	detectTopics,
 	MessageBus,
 	OrchestratorCore,
+	WORKBENCH_HINT_MULTIPLIER,
 } from "../src/index.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
@@ -27,43 +29,59 @@ const makeChild = (
 	stage: computeStage(daysAgo(ageDays), TODAY),
 });
 
-const makeAgent = (overrides: Partial<Agent> = {}): Agent => ({
-	id: "test-agent",
-	name: "Test Agent",
-	topics: [
-		"health",
-		"illness",
-		"development",
-		"sleep",
-		"emotion",
-		"behavior",
-		"education",
-		"school",
-		"family",
-		"nutrition",
-		"vaccine",
-		"finance",
-		"legal",
-		"parent_support",
-	],
-	stages: [
-		"newborn",
-		"infant",
-		"toddler",
-		"preschool",
-		"school_age",
-		"tween",
-		"teen",
-		"young_adult",
-	],
-	respond: vi.fn(async (q: string) => ({
-		agentId: "test-agent",
-		agentName: "Test Agent",
-		content: `Reply to: ${q}`,
-		confidence: 0.8,
-	})),
-	...overrides,
-});
+const makeAgent = (overrides: Partial<Agent> = {}): Agent => {
+	const base: Agent = {
+		id: "test-agent",
+		name: "Test Agent",
+		topics: [
+			"health",
+			"illness",
+			"development",
+			"sleep",
+			"emotion",
+			"behavior",
+			"education",
+			"school",
+			"family",
+			"nutrition",
+			"vaccine",
+			"finance",
+			"legal",
+			"parent_support",
+		],
+		stages: [
+			"newborn",
+			"infant",
+			"toddler",
+			"preschool",
+			"school_age",
+			"tween",
+			"teen",
+			"young_adult",
+		],
+		respond: vi.fn(async (q: string) => ({
+			agentId: "test-agent",
+			agentName: "Test Agent",
+			content: `Reply to: ${q}`,
+			confidence: 0.8,
+		})),
+	};
+	const merged: Agent = { ...base, ...overrides };
+	// When the caller did NOT provide a custom respond, re-wire the spy so
+	// it returns the merged agent's id/name. This keeps `respond` a `vi.fn`
+	// so existing tests can still assert `toHaveBeenCalled()`.
+	if (!overrides.respond) {
+		(base.respond as ReturnType<typeof vi.fn>).mockImplementation(
+			async (q: string) => ({
+				agentId: merged.id,
+				agentName: merged.name,
+				content: `Reply to: ${q}`,
+				confidence: 0.8,
+			}),
+		);
+	}
+	return merged;
+};
 
 describe("MessageBus", () => {
 	it("subscribe + publish delivers events to handler", () => {
@@ -1034,6 +1052,7 @@ describe("L4 working-memory sessions", () => {
 describe("feedback & self-evolution", () => {
 	function makeMockMemory() {
 		const feedback: any[] = [];
+		const hints = new Map<string, any>();
 		return {
 			memory: {
 				startSession: vi
@@ -1057,7 +1076,12 @@ describe("feedback & self-evolution", () => {
 				getFeedback: vi.fn((agentId: string) =>
 					feedback.filter((f) => f.agentId === agentId),
 				),
+				setAgentHints: vi.fn((childId: string, h: any) => {
+					hints.set(childId, h);
+				}),
+				getAgentHints: vi.fn((childId: string) => hints.get(childId) ?? null),
 				_feedback: feedback,
+				_hints: hints,
 			} as any,
 		};
 	}
@@ -1170,6 +1194,59 @@ describe("feedback & self-evolution", () => {
 		const result = orch.recordFeedback("c1", "ep_1", "a1", 5);
 		expect(result?.comment).toBeUndefined();
 	});
+
+	it("setAgentHints delegates to memory and getAgentHints roundtrips", () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		orch.setAgentHints("c1", {
+			boosts: [{ agentId: "pediatrician", boost: 0.2, reason: "good" }],
+			totalCompleted: 1,
+			signalSummary: "ok",
+		});
+		expect(memory.setAgentHints).toHaveBeenCalled();
+		const got = orch.getAgentHints("c1");
+		expect(got?.boosts[0]?.agentId).toBe("pediatrician");
+		expect(orch.getAgentHints("c2")).toBeNull();
+	});
+
+	it("setAgentHints is a no-op when memory lacks the method", () => {
+		const orch = new OrchestratorCore({ memory: {} as any });
+		// should not throw
+		orch.setAgentHints("c1", {
+			boosts: [],
+			totalCompleted: 0,
+			signalSummary: "none",
+		});
+		expect(orch.getAgentHints("c1")).toBeNull();
+	});
+
+	it("routing applies workbench hints to lift the boosted agent", async () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		orch.registerAgent(makeAgent({ id: "pediatrician", topics: ["illness"], stages: ["infant"] }));
+		orch.registerAgent(makeAgent({ id: "psychologist", topics: ["emotion"], stages: ["infant"] }));
+		orch.setAgentHints("c1", {
+			boosts: [{ agentId: "pediatrician", boost: 0.5, reason: "today" }],
+			totalCompleted: 1,
+			signalSummary: "1",
+		});
+		const result = await orch.ask("宝宝发烧了", makeChild(90, "c1"));
+		expect(result.replies[0]?.agentId).toBe("pediatrician");
+	});
+
+	it("routing tolerates an empty hint list", async () => {
+		const { memory } = makeMockMemory();
+		const orch = new OrchestratorCore({ memory });
+		orch.registerAgent(makeAgent({ id: "pediatrician", topics: ["illness"], stages: ["infant"] }));
+		orch.registerAgent(makeAgent({ id: "psychologist", topics: ["emotion"], stages: ["infant"] }));
+		orch.setAgentHints("c1", {
+			boosts: [],
+			totalCompleted: 0,
+			signalSummary: "none",
+		});
+		const result = await orch.ask("宝宝发烧了", makeChild(90, "c1"));
+		expect(result.replies[0]?.agentId).toBe("pediatrician");
+	});
 });
 
 describe("applyFeedbackBoost", () => {
@@ -1214,5 +1291,60 @@ describe("applyFeedbackBoost", () => {
 		const getAvg = (): number => 4;
 		applyFeedbackBoost(scores, getAvg);
 		expect(scores.size).toBe(0);
+	});
+});
+
+describe("applyWorkbenchHints", () => {
+	it("boosts an agent when hints include its id with positive boost", () => {
+		const scores = new Map<string, number>([["pediatrician", 10]]);
+		applyWorkbenchHints(scores, {
+			boosts: [{ agentId: "pediatrician", boost: 0.5, reason: "today plan completed" }],
+			totalCompleted: 1,
+			signalSummary: "1 signal",
+		});
+		expect(scores.get("pediatrician")).toBe(15);
+	});
+
+	it("penalizes an agent when hints include a negative boost", () => {
+		const scores = new Map<string, number>([["sleep-coach", 10]]);
+		applyWorkbenchHints(scores, {
+			boosts: [{ agentId: "sleep-coach", boost: -0.3, reason: "negative note" }],
+			totalCompleted: 0,
+			signalSummary: "1 signal",
+		});
+		expect(scores.get("sleep-coach")).toBe(7);
+	});
+
+	it("does not add a fresh entry for an agent not in scores", () => {
+		const scores = new Map<string, number>();
+		applyWorkbenchHints(scores, {
+			boosts: [{ agentId: "pediatrician", boost: 0.5, reason: "x" }],
+			totalCompleted: 1,
+			signalSummary: "x",
+		});
+		expect(scores.has("pediatrician")).toBe(false);
+	});
+
+	it("skips zero or undefined boosts", () => {
+		const scores = new Map<string, number>([["a1", 10]]);
+		applyWorkbenchHints(scores, {
+			boosts: [
+				{ agentId: "a1", boost: 0, reason: "noop" },
+				{ agentId: "a1", boost: 0.4, reason: "ok" },
+			],
+			totalCompleted: 1,
+			signalSummary: "x",
+		});
+		expect(scores.get("a1")).toBe(14);
+	});
+
+	it("clamps a negative boost that would drop score below zero", () => {
+		const scores = new Map<string, number>([["a1", 1]]);
+		applyWorkbenchHints(scores, {
+			boosts: [{ agentId: "a1", boost: -2, reason: "strong dislike" }],
+			totalCompleted: 0,
+			signalSummary: "x",
+		});
+		expect(scores.get("a1")).toBe(0);
 	});
 });

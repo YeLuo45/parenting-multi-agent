@@ -112,6 +112,10 @@ export interface MemoryLayerLike {
 	addFeedback?(feedback: Omit<Feedback, "id" | "createdAt">): Feedback;
 	/** Optional: fetch recent feedback for an agent. */
 	getFeedback?(agentId: string, limit?: number): Feedback[];
+	/** Optional: store workbench-derived per-child agent weight hints. */
+	setAgentHints?(childId: string, hints: AgentWeightHints): void;
+	/** Optional: read workbench-derived per-child agent weight hints. */
+	getAgentHints?(childId: string): AgentWeightHints | null;
 }
 
 /** Events that flow on the MessageBus. */
@@ -173,6 +177,23 @@ export interface OrchestratorConfig {
 	alwaysInvoke?: string[];
 	/** Memory layer instance to use for L2 facts / L3 episodes */
 	memory: MemoryLayerLike;
+}
+
+/**
+ * Workbench-derived agent weight hint. Positive boosts lift an agent up
+ * the routing order; negative boosts demote it. Magnitude is fractional
+ * (e.g. 0.5) and gets scaled by `WORKBENCH_HINT_MULTIPLIER` when applied.
+ */
+export interface AgentWeightHint {
+	agentId: string;
+	boost: number;
+	reason: string;
+}
+
+export interface AgentWeightHints {
+	boosts: AgentWeightHint[];
+	totalCompleted: number;
+	signalSummary: string;
 }
 
 /**

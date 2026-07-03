@@ -12,7 +12,9 @@ export {
 	applyFeedbackBoost,
 	applyStageBonus,
 	applyTopicMatch,
+	applyWorkbenchHints,
 	OrchestratorCore,
+	WORKBENCH_HINT_MULTIPLIER,
 } from "./orchestrator.js";
 export {
 	type Agent,
@@ -20,6 +22,8 @@ export {
 	type AgentReply,
 	type AgentStats,
 	type AgentTopic,
+	type AgentWeightHint,
+	type AgentWeightHints,
 	detectTopics,
 	type Feedback,
 	type FeedbackRating,
