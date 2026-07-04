@@ -97,3 +97,192 @@ export function genId(prefix: string = "id"): string {
 	const rand = Math.random().toString(36).slice(2, 8);
 	return `${prefix}_${ts}${rand}`;
 }
+
+// ─── Family collaboration (shared child profiles) ─────────────────────
+
+/**
+ * Caregiver roles control what a co-parent / grandparent can do in a
+ * shared child profile.
+ *   - "primary"  → full read/write, can add facts, episodes, feedback
+ *   - "caregiver"→ can read everything, can add episodes/feedback, no
+ *                  changes to milestones or vaccine history
+ *   - "viewer"   → read-only, cannot mutate the shared profile
+ */
+export type CaregiverRole = "primary" | "caregiver" | "viewer";
+
+export interface Caregiver {
+	id: string;
+	name: string;
+	role: CaregiverRole;
+	/** Optional contact (email/phone/WeChat) for share-link delivery. */
+	contact?: string;
+	addedAt: string;
+}
+
+export interface ChildSharePayload {
+	version: 1;
+	exportedAt: string;
+	exportedBy: string;
+	child: ChildProfile;
+	facts: Fact[];
+	episodes: Episode[];
+	caregivers: Caregiver[];
+}
+
+/**
+ * Permissions a CaregiverRole grants on a shared profile.
+ * Returns the set of operations a role can perform.
+ */
+export function caregiverPermissions(role: CaregiverRole): {
+	canEditChild: boolean;
+	canAddFacts: boolean;
+	canAddEpisodes: boolean;
+	canAddFeedback: boolean;
+	canExport: boolean;
+} {
+	switch (role) {
+		case "primary":
+			return {
+				canEditChild: true,
+				canAddFacts: true,
+				canAddEpisodes: true,
+				canAddFeedback: true,
+				canExport: true,
+			};
+		case "caregiver":
+			return {
+				canEditChild: false,
+				canAddFacts: false,
+				canAddEpisodes: true,
+				canAddFeedback: true,
+				canExport: true,
+			};
+		case "viewer":
+			return {
+				canEditChild: false,
+				canAddFacts: false,
+				canAddEpisodes: false,
+				canAddFeedback: false,
+				canExport: true,
+			};
+	}
+}
+
+/**
+ * Validate that a CaregiverRole can perform an action. Returns true
+ * if allowed, false if denied.
+ */
+export function canCaregiver(
+	role: CaregiverRole,
+	action:
+		| "editChild"
+		| "addFacts"
+		| "addEpisodes"
+		| "addFeedback"
+		| "export",
+): boolean {
+	const perms = caregiverPermissions(role);
+	switch (action) {
+		case "editChild":
+			return perms.canEditChild;
+		case "addFacts":
+			return perms.canAddFacts;
+		case "addEpisodes":
+			return perms.canAddEpisodes;
+		case "addFeedback":
+			return perms.canAddFeedback;
+		case "export":
+			return perms.canExport;
+	}
+}
+
+/**
+ * Strip metadata that should not be exported (e.g. internal flags).
+ * Returns a new child profile with only shareable fields.
+ */
+export function sanitizeChildForShare(
+	child: ChildProfile,
+): ChildProfile {
+	const { metadata, ...rest } = child;
+	// Drop the metadata bag; medical and contact data should never
+	// leave the device without explicit consent.
+	void metadata;
+	return { ...rest };
+}
+
+/**
+ * Build a shareable payload from a child + facts + episodes + caregivers.
+ * Pure function — caller supplies the data layer. The output is a
+ * deterministic JSON-serializable object suitable for QR code, deep
+ * link, or file export.
+ */
+export function buildChildSharePayload(input: {
+	child: ChildProfile;
+	facts: Fact[];
+	episodes: Episode[];
+	caregivers: Caregiver[];
+	exportedBy: string;
+}): ChildSharePayload {
+	return {
+		version: 1,
+		exportedAt: new Date().toISOString(),
+		exportedBy: input.exportedBy,
+		child: sanitizeChildForShare(input.child),
+		facts: [...input.facts],
+		episodes: [...input.episodes],
+		caregivers: [...input.caregivers],
+	};
+}
+
+/**
+ * Validate a share payload. Returns true if the payload is well-formed
+ * (version 1, child has required fields, all dates are valid).
+ */
+export function validateChildSharePayload(
+	payload: unknown,
+): payload is ChildSharePayload {
+	if (!payload || typeof payload !== "object") return false;
+	const p = payload as Partial<ChildSharePayload>;
+	if (p.version !== 1) return false;
+	if (!p.child || typeof p.child !== "object") return false;
+	const c = p.child as Partial<ChildProfile>;
+	if (!c.id || !c.name || !c.birthDate || !c.stage) return false;
+	if (typeof c.id !== "string") return false;
+	if (typeof c.name !== "string") return false;
+	if (typeof c.birthDate !== "string" || isNaN(Date.parse(c.birthDate)))
+		return false;
+	if (!Array.isArray(p.facts)) return false;
+	if (!Array.isArray(p.episodes)) return false;
+	if (!Array.isArray(p.caregivers)) return false;
+	if (typeof p.exportedBy !== "string") return false;
+	if (typeof p.exportedAt !== "string" || isNaN(Date.parse(p.exportedAt)))
+		return false;
+	return true;
+}
+
+/**
+ * Encode a share payload to a base64url string (URL-safe). Useful for
+ * embedding in a query string or QR code.
+ */
+export function encodeSharePayload(payload: ChildSharePayload): string {
+	const json = JSON.stringify(payload);
+	// Use base64url-safe encoding that works in URLs and QR codes.
+	return Buffer.from(json, "utf8").toString("base64url");
+}
+
+/**
+ * Decode a base64url string back into a share payload. Returns null
+ * if the input is not valid base64url or not a valid payload.
+ */
+export function decodeSharePayload(
+	encoded: string,
+): ChildSharePayload | null {
+	try {
+		const json = Buffer.from(encoded, "base64url").toString("utf8");
+		const parsed = JSON.parse(json);
+		if (!validateChildSharePayload(parsed)) return null;
+		return parsed;
+	} catch {
+		return null;
+	}
+}

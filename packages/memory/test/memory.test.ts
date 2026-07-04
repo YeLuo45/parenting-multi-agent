@@ -1,11 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChildProfile, ChildStage } from "../src/index.js";
 import {
+	buildChildSharePayload,
+	canCaregiver,
+	caregiverPermissions,
 	computeStage,
+	decodeSharePayload,
+	encodeSharePayload,
 	genId,
 	L0_RULES,
-	MemoryLayer,
 	matchL0Rule,
+	MemoryLayer,
+	sanitizeChildForShare,
+	validateChildSharePayload,
 } from "../src/index.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
@@ -613,5 +620,254 @@ describe("MemoryLayer", () => {
 			expect(id1).not.toBe(id2);
 			expect(id1.startsWith("test_")).toBe(true);
 		});
+	});
+});
+
+describe("caregiverPermissions", () => {
+	it("primary can do everything", () => {
+		const p = caregiverPermissions("primary");
+		expect(p.canEditChild).toBe(true);
+		expect(p.canAddFacts).toBe(true);
+		expect(p.canAddEpisodes).toBe(true);
+		expect(p.canAddFeedback).toBe(true);
+		expect(p.canExport).toBe(true);
+	});
+
+	it("caregiver can add episodes and feedback but not facts", () => {
+		const p = caregiverPermissions("caregiver");
+		expect(p.canEditChild).toBe(false);
+		expect(p.canAddFacts).toBe(false);
+		expect(p.canAddEpisodes).toBe(true);
+		expect(p.canAddFeedback).toBe(true);
+		expect(p.canExport).toBe(true);
+	});
+
+	it("viewer is read-only", () => {
+		const p = caregiverPermissions("viewer");
+		expect(p.canEditChild).toBe(false);
+		expect(p.canAddFacts).toBe(false);
+		expect(p.canAddEpisodes).toBe(false);
+		expect(p.canAddFeedback).toBe(false);
+		expect(p.canExport).toBe(true);
+	});
+});
+
+describe("canCaregiver", () => {
+	it("routes each action through the permission table", () => {
+		expect(canCaregiver("primary", "editChild")).toBe(true);
+		expect(canCaregiver("primary", "addFacts")).toBe(true);
+		expect(canCaregiver("primary", "addFeedback")).toBe(true);
+		expect(canCaregiver("caregiver", "editChild")).toBe(false);
+		expect(canCaregiver("caregiver", "addFacts")).toBe(false);
+		expect(canCaregiver("caregiver", "addFeedback")).toBe(true);
+		expect(canCaregiver("viewer", "addEpisodes")).toBe(false);
+		expect(canCaregiver("viewer", "addFeedback")).toBe(false);
+		expect(canCaregiver("viewer", "export")).toBe(true);
+	});
+});
+
+describe("sanitizeChildForShare", () => {
+	it("strips the metadata bag", () => {
+		const child: ChildProfile = {
+			id: "c1",
+			name: "Alice",
+			birthDate: "2024-01-01",
+			stage: "infant",
+			metadata: { allergies: ["peanut"], bloodType: "A+" },
+		};
+		const sanitized = sanitizeChildForShare(child);
+		expect(sanitized.metadata).toBeUndefined();
+		expect(sanitized.id).toBe("c1");
+	});
+
+	it("preserves all shareable fields when no metadata", () => {
+		const child: ChildProfile = {
+			id: "c1",
+			name: "Alice",
+			birthDate: "2024-01-01",
+			stage: "infant",
+		};
+		expect(sanitizeChildForShare(child)).toEqual(child);
+	});
+});
+
+describe("buildChildSharePayload", () => {
+	const child: ChildProfile = {
+		id: "c1",
+		name: "Alice",
+		birthDate: "2024-01-01",
+		stage: "infant",
+		metadata: { allergies: ["peanut"] },
+	};
+	const fact = {
+		id: "f1",
+		childId: "c1",
+		category: "vaccine" as const,
+		key: "mmr",
+		value: { dose: 1 },
+		createdAt: "2024-06-01T00:00:00.000Z",
+	};
+	const episode = {
+		id: "e1",
+		childId: "c1",
+		type: "qa" as const,
+		content: { question: "fever?" },
+		createdAt: "2024-06-02T00:00:00.000Z",
+	};
+	const caregiver = {
+		id: "g1",
+		name: "Dad",
+		role: "primary" as const,
+		addedAt: "2024-06-01T00:00:00.000Z",
+	};
+
+	it("strips metadata and copies arrays", () => {
+		const p = buildChildSharePayload({
+			child,
+			facts: [fact],
+			episodes: [episode],
+			caregivers: [caregiver],
+			exportedBy: "g1",
+		});
+		expect(p.version).toBe(1);
+		expect(p.child.metadata).toBeUndefined();
+		expect(p.facts).toEqual([fact]);
+		expect(p.episodes).toEqual([episode]);
+		expect(p.caregivers).toEqual([caregiver]);
+		expect(p.exportedBy).toBe("g1");
+		expect(typeof p.exportedAt).toBe("string");
+	});
+
+	it("returns a fresh arrays copy (caller mutations do not leak)", () => {
+		const facts = [fact];
+		const p = buildChildSharePayload({
+			child,
+			facts,
+			episodes: [],
+			caregivers: [],
+			exportedBy: "g1",
+		});
+		facts.push({ ...fact, id: "f2" });
+		expect(p.facts).toHaveLength(1);
+	});
+});
+
+describe("validateChildSharePayload", () => {
+	const valid = {
+		version: 1,
+		exportedAt: "2024-06-01T00:00:00.000Z",
+		exportedBy: "g1",
+		child: {
+			id: "c1",
+			name: "Alice",
+			birthDate: "2024-01-01",
+			stage: "infant",
+		},
+		facts: [],
+		episodes: [],
+		caregivers: [],
+	};
+
+	it("accepts a well-formed payload", () => {
+		expect(validateChildSharePayload(valid)).toBe(true);
+	});
+
+	it("rejects non-object inputs", () => {
+		expect(validateChildSharePayload(null)).toBe(false);
+		expect(validateChildSharePayload("string")).toBe(false);
+		expect(validateChildSharePayload(42)).toBe(false);
+	});
+
+	it("rejects wrong version", () => {
+		expect(validateChildSharePayload({ ...valid, version: 2 })).toBe(false);
+	});
+
+	it("rejects missing child fields", () => {
+		const c = { ...valid.child } as Record<string, unknown>;
+		delete c.id;
+		expect(validateChildSharePayload({ ...valid, child: c })).toBe(false);
+	});
+
+	it("rejects invalid birthDate", () => {
+		expect(
+			validateChildSharePayload({
+				...valid,
+				child: { ...valid.child, birthDate: "not-a-date" },
+			}),
+		).toBe(false);
+	});
+
+	it("rejects when facts/episodes/caregivers are not arrays", () => {
+		expect(validateChildSharePayload({ ...valid, facts: "x" })).toBe(false);
+		expect(validateChildSharePayload({ ...valid, episodes: 1 })).toBe(false);
+		expect(validateChildSharePayload({ ...valid, caregivers: null })).toBe(
+			false,
+		);
+	});
+
+	it("rejects when child is a non-object primitive", () => {
+		expect(validateChildSharePayload({ ...valid, child: "string" })).toBe(
+			false,
+		);
+		expect(validateChildSharePayload({ ...valid, child: 42 })).toBe(false);
+	});
+
+	it("rejects when child fields are wrong type", () => {
+		const c = { ...valid.child } as Record<string, unknown>;
+		c.id = 42;
+		expect(validateChildSharePayload({ ...valid, child: c })).toBe(false);
+		c.id = "c1";
+		c.name = 99;
+		expect(validateChildSharePayload({ ...valid, child: c })).toBe(false);
+	});
+
+	it("rejects when exportedBy is not a string", () => {
+		expect(validateChildSharePayload({ ...valid, exportedBy: 1 })).toBe(
+			false,
+		);
+	});
+});
+
+describe("encodeSharePayload + decodeSharePayload", () => {
+	const sample = {
+		version: 1 as const,
+		exportedAt: "2024-06-01T00:00:00.000Z",
+		exportedBy: "g1",
+		child: {
+			id: "c1",
+			name: "Alice",
+			birthDate: "2024-01-01",
+			stage: "infant" as const,
+		},
+		facts: [],
+		episodes: [],
+		caregivers: [],
+	};
+
+	it("round-trips through base64url", () => {
+		const encoded = encodeSharePayload(sample);
+		expect(typeof encoded).toBe("string");
+		expect(encoded).not.toMatch(/[+/=]/);
+		const decoded = decodeSharePayload(encoded);
+		expect(decoded).toEqual(sample);
+	});
+
+	it("returns null for invalid base64", () => {
+		expect(decodeSharePayload("not-base64-!!!")).toBeNull();
+	});
+
+	it("returns null for a decoded payload that is not valid", () => {
+		const bogus = Buffer.from("garbage", "utf8").toString("base64url");
+		expect(decodeSharePayload(bogus)).toBeNull();
+	});
+
+	it("returns null when exportedAt is invalid in the decoded payload", () => {
+		// round-trip with manually corrupted payload
+		const sample2 = {
+			...sample,
+			exportedAt: "not-a-date",
+		};
+		const encoded = encodeSharePayload(sample2 as Parameters<typeof encodeSharePayload>[0]);
+		expect(decodeSharePayload(encoded)).toBeNull();
 	});
 });

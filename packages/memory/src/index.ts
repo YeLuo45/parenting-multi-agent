@@ -34,7 +34,12 @@ export {
 	selectUnsyncedDeltas,
 } from "./sync.js";
 export {
+	type Caregiver,
+	type CaregiverRole,
+	caregiverPermissions,
+	canCaregiver,
 	type ChildProfile,
+	type ChildSharePayload,
 	type ChildStage,
 	computeStage,
 	type DeltaEntry,
@@ -45,6 +50,11 @@ export {
 	type FactCategory,
 	genId,
 	type Session,
+	sanitizeChildForShare,
+	buildChildSharePayload,
+	validateChildSharePayload,
+	encodeSharePayload,
+	decodeSharePayload,
 } from "./types.js";
 
 export const MEMORY_VERSION = "0.1.0";
