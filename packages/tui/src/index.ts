@@ -12,13 +12,18 @@ import {
 } from "@parenting/cli";
 import {
 	colorize,
+	isWorkbenchDirection,
 	renderChildTabs,
 	renderClearScreen,
 	renderGoodbye,
 	renderHistoryPage,
+	renderWorkbenchPanel,
 	type ChildTab,
 	type HistoryEntry,
 	type HistoryPageOptions,
+	type WorkbenchDirectionId,
+	type WorkbenchPanelState,
+	WORKBENCH_DIRECTIONS,
 } from "./ui.js";
 
 export const TUI_VERSION = "0.1.0";

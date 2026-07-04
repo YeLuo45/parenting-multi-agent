@@ -3,11 +3,14 @@ import {
 	CLEAR_SCREEN,
 	colorize,
 	completeTuiCommand,
+	isWorkbenchDirection,
 	paginateHistory,
 	renderChildTabs,
 	renderClearScreen,
 	renderGoodbye,
 	renderHistoryPage,
+	renderWorkbenchPanel,
+	WORKBENCH_DIRECTIONS,
 } from "../src/ui.js";
 
 describe("colorize", () => {
@@ -166,5 +169,88 @@ describe("renderClearScreen", () => {
 
 	it("returns an empty string when disabled", () => {
 		expect(renderClearScreen(false)).toBe("");
+	});
+});
+
+describe("renderWorkbenchPanel", () => {
+	const state = {
+		selectedChildId: "alice",
+		completedSteps: 2,
+		totalSteps: 4,
+		completedHorizons: 1,
+		totalHorizons: 3,
+		hintCount: 2,
+	};
+
+	it("renders the workbench header", () => {
+		expect(renderWorkbenchPanel(state)).toContain("Workbench 7 方向");
+	});
+
+	it("lists all 7 directions", () => {
+		const out = renderWorkbenchPanel(state);
+		for (const id of [
+			"scenario-intake",
+			"agent-collaboration",
+			"action-plan",
+			"growth-timeline",
+			"high-risk-safety",
+			"family-collaboration",
+			"retrospective",
+		]) {
+			expect(out).toContain(id);
+		}
+	});
+
+	it("shows the selected child id", () => {
+		expect(renderWorkbenchPanel(state)).toContain("alice");
+	});
+
+	it("shows the progress counters", () => {
+		const out = renderWorkbenchPanel(state);
+		expect(out).toContain("2/4"); // intake
+		expect(out).toContain("1/3"); // action board
+		expect(out).toContain("2"); // hint count
+	});
+
+	it("flags no child when selectedChildId is null", () => {
+		const out = renderWorkbenchPanel({ ...state, selectedChildId: null });
+		expect(out).toContain("(未选)");
+	});
+
+	it("omits ANSI when disabled", () => {
+		expect(renderWorkbenchPanel(state, false)).not.toContain("\x1b[");
+	});
+});
+
+describe("isWorkbenchDirection", () => {
+	it("accepts each canonical direction", () => {
+		for (const id of [
+			"scenario-intake",
+			"agent-collaboration",
+			"action-plan",
+			"growth-timeline",
+			"high-risk-safety",
+			"family-collaboration",
+			"retrospective",
+		]) {
+			expect(isWorkbenchDirection(id)).toBe(true);
+		}
+	});
+
+	it("rejects non-direction strings", () => {
+		expect(isWorkbenchDirection("nope")).toBe(false);
+		expect(isWorkbenchDirection("")).toBe(false);
+		expect(isWorkbenchDirection("scenario")).toBe(false);
+	});
+});
+
+describe("WORKBENCH_DIRECTIONS export", () => {
+	it("contains exactly 7 directions", () => {
+		expect(WORKBENCH_DIRECTIONS).toHaveLength(7);
+	});
+
+	it("is a readonly tuple", () => {
+		// as const — should be readonly
+		expect(Array.isArray(WORKBENCH_DIRECTIONS)).toBe(true);
 	});
 });

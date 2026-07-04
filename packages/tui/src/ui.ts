@@ -154,3 +154,58 @@ export const CLEAR_SCREEN = "\x1b[2J\x1b[H";
 export function renderClearScreen(enabled = true): string {
 	return enabled ? CLEAR_SCREEN : "";
 }
+
+// ─── Workbench 7-direction panel (TUI mirror of the web panel) ──────
+
+/**
+ * The 7 directions surfaced in both the web and TUI workbench. Kept
+ * here as a single source of truth so the two surfaces stay in sync.
+ */
+export const WORKBENCH_DIRECTIONS = [
+	"scenario-intake",
+	"agent-collaboration",
+	"action-plan",
+	"growth-timeline",
+	"high-risk-safety",
+	"family-collaboration",
+	"retrospective",
+] as const;
+
+export type WorkbenchDirectionId = (typeof WORKBENCH_DIRECTIONS)[number];
+
+export interface WorkbenchPanelState {
+	selectedChildId: string | null;
+	completedSteps: number;
+	totalSteps: number;
+	completedHorizons: number;
+	totalHorizons: number;
+	hintCount: number;
+}
+
+export function renderWorkbenchPanel(
+	state: WorkbenchPanelState,
+	enabled = true,
+): string {
+	const lines: string[] = [
+		colorize("─ Workbench 7 方向 ─", "magenta", enabled),
+	];
+	lines.push(
+		`孩子档案: ${state.selectedChildId ? colorize(state.selectedChildId, "cyan", enabled) : colorize("(未选)", "yellow", enabled)}`,
+	);
+	lines.push(
+		`问诊: ${state.completedSteps}/${state.totalSteps}  行动板: ${state.completedHorizons}/${state.totalHorizons}  Hints: ${state.hintCount}`,
+	);
+	lines.push("");
+	for (const id of WORKBENCH_DIRECTIONS) {
+		lines.push(`  • ${id}`);
+	}
+	lines.push("");
+	lines.push(
+		colorize("提示: 输入方向 ID 进入该方向，输入其它继续聊天。", "gray", enabled),
+	);
+	return lines.join("\n");
+}
+
+export function isWorkbenchDirection(input: string): input is WorkbenchDirectionId {
+	return (WORKBENCH_DIRECTIONS as readonly string[]).includes(input);
+}
