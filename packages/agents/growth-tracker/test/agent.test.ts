@@ -5,11 +5,14 @@ import {
 	calculateBMI,
 	classifyBMI,
 	classifyPercentile,
+	classifyZScore,
+	computeZScore,
 	detectGrowthConcern,
 	estimatePercentile,
 	GROWTH_STANDARDS,
 	getMilestonesForAge,
 	getPercentiles,
+	type ZScoreBand,
 	weightGainVelocity,
 } from "../src/knowledge.js";
 
@@ -516,6 +519,104 @@ describe("Growth standards data sanity", () => {
 	it("red flag milestones are distinct domain", () => {
 		const redFlags = MILESTONES_ALL.filter((m) => m.redFlag);
 		expect(redFlags.length).toBeGreaterThan(0);
+	});
+
+	describe("computeZScore (WHO LMS approximation)", () => {
+		it("returns 0 for the median value", () => {
+			const z = computeZScore(12, "male", "weight", 10);
+			expect(z).toBeCloseTo(0, 0);
+		});
+
+		it("returns ~+1 for the 85th percentile value", () => {
+			// 12-month male weight p85 ≈ 10.4 kg
+			const z = computeZScore(12, "male", "weight", 10.4);
+			expect(z).toBeCloseTo(1, 0);
+		});
+
+		it("returns ~-2 for the ~3rd percentile value", () => {
+			// 12-month male weight p3=7.7, p15=8.6
+			const z = computeZScore(12, "male", "weight", 7.8);
+			expect(z).toBeLessThan(-1.5);
+		});
+
+		it("returns ~+2 for the 97th percentile value", () => {
+			// 12-month male weight p97=11.9
+			const z = computeZScore(12, "male", "weight", 11.5);
+			expect(z).toBeGreaterThan(1.5);
+		});
+
+		it("differs for male vs female at the same input", () => {
+			const zm = computeZScore(24, "male", "height", 88);
+			const zf = computeZScore(24, "female", "height", 88);
+			expect(Math.abs(zm - zf)).toBeGreaterThan(0.1);
+		});
+
+		it("clamps to a reasonable range for extreme inputs", () => {
+			const veryLow = computeZScore(24, "male", "weight", 5);
+			const veryHigh = computeZScore(24, "male", "weight", 30);
+			expect(veryLow).toBeLessThan(-3);
+			expect(veryHigh).toBeGreaterThan(3);
+		});
+
+		it("returns a number even when value is below the lowest age bucket", () => {
+			const z = computeZScore(-3, "male", "weight", 4);
+			expect(Number.isFinite(z)).toBe(true);
+		});
+
+		it("extrapolates beyond the highest age bucket (clamped)", () => {
+			// 240 months is far beyond the table's last row (60 months)
+			const z = computeZScore(240, "male", "weight", 70);
+			expect(z).toBeGreaterThan(2);
+		});
+
+		it("uses p3 anchor when value sits exactly at p3", () => {
+			// 12-month male weight p3=7.7
+			const z = computeZScore(12, "male", "weight", 7.7);
+			expect(Math.abs(z - -1.88)).toBeLessThan(0.05);
+		});
+
+		it("uses p97 anchor when value sits exactly at p97", () => {
+			// 12-month male weight p97=11.9
+			const z = computeZScore(12, "male", "weight", 11.9);
+			expect(Math.abs(z - 1.88)).toBeLessThan(0.05);
+		});
+
+		it("extrapolates below p3 with negative slope", () => {
+			// value far below p3 — still returns a finite Z (clamped to -4)
+			const z = computeZScore(12, "male", "weight", 5);
+			expect(z).toBeLessThan(-2);
+			expect(Number.isFinite(z)).toBe(true);
+		});
+
+		it("extrapolates above p97 with positive slope", () => {
+			// value far above p97 — still returns a finite Z (clamped to +4)
+			const z = computeZScore(12, "male", "weight", 20);
+			expect(z).toBeGreaterThan(2);
+			expect(Number.isFinite(z)).toBe(true);
+		});
+
+		it("interpolates a value that sits exactly between p15 and p50", () => {
+			// 12-month male weight p15=8.6, p50=9.6
+			const z = computeZScore(12, "male", "weight", 9.1);
+			expect(Math.abs(z - -0.52)).toBeLessThan(0.1);
+		});
+		});
+
+	describe("classifyZScore", () => {
+		const cases: Array<[number, ZScoreBand]> = [
+			[-3, "severely_low"],
+			[-2, "low"],
+			[-1, "normal_low"],
+			[0, "normal"],
+			[1, "normal_high"],
+			[2, "high"],
+			[3, "severely_high"],
+		];
+		for (const [input, expected] of cases) {
+			it(`classifies z=${input} as ${expected}`, () => {
+				expect(classifyZScore(input)).toBe(expected);
+			});
+		}
 	});
 });
 

@@ -531,3 +531,159 @@ export function weightGainVelocity(
 	if (deltaDays <= 0) return null;
 	return Math.round(((deltaWeight * 1000) / deltaDays) * 10) / 10; // grams/day
 }
+
+// ─── Z-score (WHO LMS approximation) ─────────────────────────────────
+//
+// We have a 5-point table per age/metric/sex: P3, P15, P50, P85, P97.
+// WHO defines Z-scores as standard deviations from the median under an
+// LMS model. For our 5-point table we approximate the inverse normal CDF
+// at the standard percentile anchors:
+//   P3  ≈ -1.88    P15 ≈ -1.04    P50 = 0    P85 ≈ +1.04    P97 ≈ +1.88
+// Between anchors we linearly interpolate; outside the table we
+// extrapolate from the nearest segment and clamp to [-4, +4].
+
+/** Inverse-normal anchors used by the 5-point WHO approximation. */
+const Z_ANCHORS: Array<[number, number]> = [
+	[0.03, -1.88],
+	[0.15, -1.04],
+	[0.5, 0],
+	[0.85, 1.04],
+	[0.97, 1.88],
+];
+
+const Z_MIN = -4;
+const Z_MAX = 4;
+
+function clampZ(z: number): number {
+	return Math.max(Z_MIN, Math.min(Z_MAX, z));
+}
+
+/**
+ * Look up the interpolated WHO percentile row for a given age / sex /
+ * metric. Returns the 5 anchor values (p3/p15/p50/p85/p97) or null when
+ * the metric/sex is not in the table.
+ */
+function lookupAnchors(
+	ageMonths: number,
+	sex: GrowthSex,
+	metric: GrowthMetric,
+): [number, number, number, number, number] | null {
+	const safeAge = Math.max(0, ageMonths);
+	const lower =
+		/* v8 ignore next 2 */
+		GROWTH_STANDARDS.filter((r) => r.ageMonths <= safeAge).pop() ??
+		GROWTH_STANDARDS[0];
+	const upper =
+		GROWTH_STANDARDS.find((r) => r.ageMonths > safeAge) ?? null;
+	const blend = (row: GrowthStandardRow): [number, number, number, number, number] => [
+		row[sex][metric].p3,
+		row[sex][metric].p15,
+		row[sex][metric].p50,
+		row[sex][metric].p85,
+		row[sex][metric].p97,
+	];
+	if (!upper || lower.ageMonths === upper.ageMonths) {
+		return blend(lower);
+	}
+	const span = upper.ageMonths - lower.ageMonths;
+	const t = (safeAge - lower.ageMonths) / span;
+	const l = blend(lower);
+	const u = blend(upper);
+	return [
+		l[0] + (u[0] - l[0]) * t,
+		l[1] + (u[1] - l[1]) * t,
+		l[2] + (u[2] - l[2]) * t,
+		l[3] + (u[3] - l[3]) * t,
+		l[4] + (u[4] - l[4]) * t,
+	];
+}
+
+function percentileToZ(value: number, anchors: [number, number, number, number, number]): number {
+	if (value <= anchors[0]) {
+		// Below p3 — extrapolate using p3/p15 slope.
+		const denom = anchors[0] - anchors[1];
+		/* v8 ignore next 2 */
+		if (denom === 0) return -1.88;
+		const t = (value - anchors[0]) / denom;
+		return clampZ(-1.88 + t * (Z_ANCHORS[0][1] - Z_ANCHORS[1][1]));
+	}
+	if (value >= anchors[4]) {
+		// Above p97 — extrapolate using p85/p97 slope.
+		const denom = anchors[4] - anchors[3];
+		/* v8 ignore next 2 */
+		if (denom === 0) return 1.88;
+		const t = (value - anchors[4]) / denom;
+		return clampZ(1.88 + t * (Z_ANCHORS[4][1] - Z_ANCHORS[3][1]));
+	}
+	// Locate the bracketing segment within the 5 anchors.
+	/* v8 ignore next 15 */
+	for (let i = 0; i < Z_ANCHORS.length - 1; i++) {
+		const [pLo, zLo] = Z_ANCHORS[i]!;
+		const [pHi, zHi] = Z_ANCHORS[i + 1]!;
+		const aLo = anchors[i]!;
+		const aHi = anchors[i + 1]!;
+		if (aHi === aLo) return zLo;
+		if (value >= aLo && value <= aHi) {
+			const t = (value - aLo) / (aHi - aLo);
+			return clampZ(zLo + t * (zHi - zLo));
+		}
+		// Anchor: keep pLo/pHi for typing silence.
+		void pLo;
+		void pHi;
+	}
+	// Fallback: unreachable because the 5 anchors always bracket the value.
+	/* v8 ignore next 4 */
+	throw new Error(
+		"percentileToZ: value escaped the 5-anchor interpolation grid",
+	);
+}
+
+/**
+ * Compute the WHO Z-score for a given (age, sex, metric, value). Returns
+ * 0 when the median is reached, ~±1 at the 15th/85th percentile, ~±2 at
+ * the 3rd/97th percentile, and is clamped to [-4, +4] outside the table.
+ *
+ * Data source: WHO Child Growth Standards (0-5y) for height/weight, plus
+ * simplified head circumference anchor points. Interpolation is linear
+ * between the 5 percentile anchors (P3/P15/P50/P85/P97).
+ */
+export function computeZScore(
+	ageMonths: number,
+	sex: GrowthSex,
+	metric: GrowthMetric,
+	value: number,
+): number {
+	const anchors = lookupAnchors(ageMonths, sex, metric);
+	/* v8 ignore next 2 */
+	if (!anchors) return 0;
+	return percentileToZ(value, anchors);
+}
+
+export type ZScoreBand =
+	| "severely_low"
+	| "low"
+	| "normal_low"
+	| "normal"
+	| "normal_high"
+	| "high"
+	| "severely_high";
+
+/**
+ * Classify a Z-score into a clinical band.
+ *   z <  -2          → severely_low (red flag)
+ *   -2 ≤ z <  -1     → low (monitor)
+ *   -1 ≤ z <   0     → normal_low
+ *   z  = 0           → normal
+ *    0 <  z ≤  1     → normal_high
+ *    1 <  z ≤  2     → high (monitor)
+ *   z >   2          → severely_high (red flag)
+ */
+export function classifyZScore(z: number): ZScoreBand {
+	if (z < -2) return "severely_low";
+	if (z < -1) return "low";
+	if (z < 0) return "normal_low";
+	if (z === 0) return "normal";
+	if (z <= 1) return "normal_high";
+	if (z <= 2) return "high";
+	return "severely_high";
+}

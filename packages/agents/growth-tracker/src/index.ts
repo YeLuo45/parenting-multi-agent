@@ -14,6 +14,8 @@ export {
 	calculateBMI,
 	classifyBMI,
 	classifyPercentile,
+	classifyZScore,
+	computeZScore,
 	detectGrowthConcern,
 	estimatePercentile,
 	GROWTH_STANDARDS,
@@ -23,6 +25,7 @@ export {
 	getMilestonesForAge,
 	getPercentiles,
 	type Milestone,
+	type ZScoreBand,
 	weightGainVelocity,
 } from "./knowledge.js";
 
