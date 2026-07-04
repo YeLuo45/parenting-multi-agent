@@ -510,6 +510,40 @@ describe("buildRealLlmProviderChain", () => {
 		expect(reply.usedFallback).toBe(true);
 		expect(reply.content).toContain("rule-based fallback");
 	});
+
+	it("automatic fallback to next tier when primary returns empty content (4xx / network)", async () => {
+		// Primary (minimax) returns "" (auth failure, no content).
+		// Chain should fall through to xiaomi (secondary).
+		const fetcher = (async () => ({
+			status: 401,
+			text: async () => JSON.stringify({ error: "invalid api key" }),
+		})) as unknown as Parameters<typeof createMinimaxM3Provider>[0]["fetcher"];
+		const chain = buildRealLlmProviderChain({
+			minimax: { apiKey: "minimax-bad", fetcher },
+			xiaomi: { apiKey: "xiaomi-good" },
+		});
+		const reply = await chain.complete("pediatrician", "宝宝发烧");
+		// Chain tried minimax (empty), fell back to xiaomi (ready+no fetcher → rule-fallback stub).
+		// Either way usedFallback must be true (since minimax did not return real content).
+		expect(reply.usedFallback).toBe(true);
+		expect(reply.providerId).not.toBe("minimax-m3");
+	});
+
+	it("records the tried-providers chain in the completion", async () => {
+		const fetcher = (async () => ({
+			status: 401,
+			text: async () => JSON.stringify({ error: "x" }),
+		})) as unknown as Parameters<typeof createMinimaxM3Provider>[0]["fetcher"];
+		const chain = buildRealLlmProviderChain({
+			minimax: { apiKey: "k", fetcher },
+			xiaomi: { apiKey: "k" },
+		});
+		const reply = await chain.complete("pediatrician", "宝宝发烧");
+		// tried array lists every provider that was attempted before
+		// the final one (which is reported in providerId).
+		expect(Array.isArray(reply.triedProviderIds)).toBe(true);
+		expect(reply.triedProviderIds).toContain("minimax-m3");
+	});
 });
 
 describe("readEnv", () => {

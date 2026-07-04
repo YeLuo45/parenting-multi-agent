@@ -289,6 +289,12 @@ export interface WebLlmCompletion {
 	providerId: string;
 	content: string;
 	usedFallback: boolean;
+	/**
+	 * Provider IDs that were tried before the final one. Includes the
+	 * final provider too (for telemetry). Empty if the chain was a
+	 * single-step call.
+	 */
+	triedProviderIds: string[];
 }
 
 export interface WebLlmRegistry {
@@ -330,11 +336,32 @@ export function registerWebLlmProviders(
 			agentId: string,
 			prompt: string,
 		): Promise<WebLlmCompletion> {
-			const provider = primary?.ready ? primary : fallback;
+			// Automatic fallback: try each ready non-fallback provider in
+			// order; the first one to return non-empty content wins. The
+			// rule-fallback is the last-resort tail.
+			const tried: string[] = [];
+			for (const provider of nonFallback) {
+				if (!provider.ready) continue;
+				tried.push(provider.id);
+				const content = await provider.complete(agentId, prompt);
+				if (content) {
+					return {
+						providerId: provider.id,
+						content,
+						usedFallback: false,
+						triedProviderIds: tried,
+					};
+				}
+			}
+			// All real tiers returned empty (auth / rate-limit / network).
+			// Fall back to the rule stub.
+			tried.push(fallback.id);
+			const content = await fallback.complete(agentId, prompt);
 			return {
-				providerId: provider.id,
-				content: await provider.complete(agentId, prompt),
-				usedFallback: provider === fallback,
+				providerId: fallback.id,
+				content,
+				usedFallback: true,
+				triedProviderIds: tried,
 			};
 		},
 	};
