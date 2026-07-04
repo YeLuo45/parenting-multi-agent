@@ -90,6 +90,7 @@ export {
 	type LlmFetch,
 	type LlmApiFormat,
 } from "./web-convergence.js";
+export { loadDotenv, resolveEnvPath } from "./dotenv.js";
 export type {
 	DevelopmentDomain,
 	DevelopmentGraphEdge,
