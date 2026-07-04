@@ -5,7 +5,7 @@
  * Returns top-N matching knowledge entries with references.
  */
 
-import { type ChildProfile, computeStage } from "@parenting/memory";
+import { type ChildProfile, type ChildStage, computeStage } from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
@@ -22,6 +22,23 @@ import {
 
 export const KNOWLEDGE_DISCLAIMER =
 	"⚠️ 知识库内容仅供家长参考，不替代医生诊断。具体健康问题请咨询儿科医生或专科医师。";
+
+/**
+ * Minimal text-completion interface used by the RAG agent. Web/CLI/TUI
+ * environments wire this to their LLM registry (e.g. by adapting
+ * `WebLlmRegistry.complete()` to this signature). The agent makes
+ * no assumptions about the underlying provider chain.
+ */
+export type KnowledgeLlmGenerator = (
+	systemPrompt: string,
+	userPrompt: string,
+) => Promise<string>;
+
+export interface KnowledgeRAGOptions {
+	llmGenerator?: KnowledgeLlmGenerator;
+	/** Returns the list of provider IDs tried on the last call (telemetry). */
+	llmChainIds?: () => string[];
+}
 
 function evidenceLabel(level: EvidenceLevel): string {
 	switch (level) {
@@ -89,12 +106,19 @@ export class KnowledgeRAGAgent implements Agent {
 		"teen",
 		"young_adult",
 	] as const;
+	private llmGenerator?: KnowledgeLlmGenerator;
+	private llmChainIds?: () => string[];
+
+	constructor(options: KnowledgeRAGOptions = {}) {
+		this.llmGenerator = options.llmGenerator;
+		this.llmChainIds = options.llmChainIds;
+	}
 
 	async respond(
 		question: string,
 		child: ChildProfile,
 		_context: AgentContext,
-	): Promise<AgentReply> {
+	): Promise<AgentReply & { sourceChain?: string[] }> {
 		const stage = child.stage ?? computeStage(child.birthDate);
 		const intent = detectKnowledgeIntent(question);
 
@@ -146,6 +170,24 @@ export class KnowledgeRAGAgent implements Agent {
 
 		// Has matches. For specific intents (search/evidence), use formatted multi-result format
 		if (intent === "search" || intent === "evidence") {
+			const ragReply = await this.tryRagReply(question, matches, {
+				stage,
+				intent,
+			});
+			if (ragReply) {
+				const confidence =
+					/* v8 ignore next */
+					(matches[0] ? scoreEntry(question, matches[0]) : 0.7);
+				return {
+					agentId: this.id,
+					agentName: this.name,
+					content: ragReply.content,
+					confidence,
+					urgency: "info",
+					sourceChain: ragReply.sourceChain,
+				};
+			}
+			// LLM path unavailable/empty → fall back to formatted FAQ list.
 			const formatted = matches
 				.map((m, i) => formatEntry(m, i + 1))
 				.join("\n\n---\n\n");
@@ -184,10 +226,45 @@ export class KnowledgeRAGAgent implements Agent {
 			urgency: "info",
 		};
 	}
+
+	private async tryRagReply(
+		question: string,
+		matches: KnowledgeEntry[],
+		ctx: { stage: ChildStage; intent: ReturnType<typeof detectKnowledgeIntent> },
+	): Promise<{ content: string; sourceChain?: string[] } | null> {
+		if (!this.llmGenerator || matches.length === 0) return null;
+		const systemPrompt =
+			"你是一位循证医学导向的新手爸妈育儿助手，参考资料中每条 FAQ 都标注了来源（WHO/AAP/UpToDate 等）。请基于参考资料用简洁中文回答；如果参考资料不充分，请明确说明。回答末尾保留证据来源列表。";
+		const userPrompt = [
+			`问题：${question}`,
+			`孩子阶段：${ctx.stage}`,
+			"",
+			"参考资料：",
+			matches
+				.map(
+					(m, i) =>
+						`[${i + 1}] ${m.question}\n答案：${m.answer}\n来源：${m.references.map((r) => `${r.org} ${r.year}`).join(", ")}\n证据等级：${m.evidence}`,
+				)
+				.join("\n\n"),
+		].join("\n");
+		try {
+			const text = await this.llmGenerator(systemPrompt, userPrompt);
+			if (!text) return null;
+			const sourceChain = this.llmChainIds?.();
+			return {
+				content: text,
+				...(sourceChain ? { sourceChain } : {}),
+			};
+		} catch {
+			return null;
+		}
+	}
 }
 
-export function createKnowledgeRAGAgent(): KnowledgeRAGAgent {
-	return new KnowledgeRAGAgent();
+export function createKnowledgeRAGAgent(
+	options: KnowledgeRAGOptions = {},
+): KnowledgeRAGAgent {
+	return new KnowledgeRAGAgent(options);
 }
 
 export {

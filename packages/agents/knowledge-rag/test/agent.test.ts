@@ -718,3 +718,74 @@ describe("i18n: Traditional Chinese + Mixed CJK/English", () => {
 		expect(r.content).toMatch(/母乳/);
 	});
 });
+
+describe("KnowledgeRAGAgent — RAG with LLM", () => {
+	const child = {
+		id: "rag-child",
+		name: "RAG",
+		birthDate: "2024-01-01",
+		stage: "infant",
+	} as unknown as Parameters<KnowledgeRAGAgent["respond"]>[1];
+	const ctx = { memory: undefined } as unknown as Parameters<KnowledgeRAGAgent["respond"]>[2];
+
+	it("sends a RAG prompt containing the matched FAQ when an llm generator is wired", async () => {
+		const calls: Array<{ system: string; user: string }> = [];
+		const generator = async (system: string, user: string): Promise<string> => {
+			calls.push({ system, user });
+			return "llm-crafted answer about breastfeeding";
+		};
+		const agent = createKnowledgeRAGAgent({ llmGenerator: generator });
+		const r = await agent.respond("母乳喂养应该持续多久", child, ctx);
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.system).toContain("循证");
+		expect(calls[0]?.user).toContain("WHO");
+		expect(r.content).toBe("llm-crafted answer about breastfeeding");
+		expect(r.confidence).toBeGreaterThan(0.5);
+	});
+
+	it("falls back to the formatted FAQ display when the LLM returns empty", async () => {
+		const generator = async (): Promise<string> => "";
+		const agent = createKnowledgeRAGAgent({ llmGenerator: generator });
+		const r = await agent.respond("母乳喂养应该持续多久", child, ctx);
+		expect(r.content).toContain("WHO");
+	});
+
+	it("falls back to the formatted FAQ display when the LLM throws", async () => {
+		const generator = async (): Promise<string> => {
+			throw new Error("LLM unreachable");
+		};
+		const agent = createKnowledgeRAGAgent({ llmGenerator: generator });
+		const r = await agent.respond("母乳喂养应该持续多久", child, ctx);
+		expect(r.content).toContain("WHO");
+	});
+
+	it("falls back gracefully when no LLM generator is wired", async () => {
+		const agent = createKnowledgeRAGAgent();
+		const r = await agent.respond("母乳喂养应该持续多久", child, ctx);
+		expect(r.content).toContain("WHO");
+		expect(r.agentId).toBe("knowledge-rag");
+	});
+
+	it("records triedProviderIds in reply when llmChainIds is set", async () => {
+		const agent = createKnowledgeRAGAgent({
+			llmGenerator: async () => "ok",
+			llmChainIds: () => ["minimax-m3", "rule-fallback"],
+		});
+		// Intent must be `search` (or `evidence`) for the LLM RAG path to
+		// run, since the user wants a reference-backed answer rather than
+		// a general browse listing.
+		const r = await agent.respond("母乳喂养应该多久", child, ctx);
+		expect((r as unknown as { sourceChain?: string[] }).sourceChain ?? []).toEqual([
+			"minimax-m3",
+			"rule-fallback",
+		]);
+	});
+
+	it("omits sourceChain when llmChainIds is not provided", async () => {
+		const agent = createKnowledgeRAGAgent({
+			llmGenerator: async () => "ok",
+		});
+		const r = await agent.respond("母乳喂养应该多久", child, ctx);
+		expect((r as unknown as { sourceChain?: string[] }).sourceChain).toBeUndefined();
+	});
+});
