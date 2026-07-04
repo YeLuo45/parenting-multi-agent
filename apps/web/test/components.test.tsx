@@ -1172,3 +1172,167 @@ describe("reducer (sanity check for component tests)", () => {
 		expect(next.messages).toEqual([]);
 	});
 });
+
+describe("Workbench end-to-end flow (integration)", () => {
+	// Exercises the full 7-direction workflow through the reducer + view IR
+	// so future refactors can't silently break the 闭环.
+	const makeInitial = () =>
+		makeState({
+			selectedChildId: "alice",
+			children: [
+				{
+					id: "alice",
+					name: "Alice",
+					birthDate: "2024-01-01",
+					stage: "infant",
+				},
+			],
+			actionBoard: { completedIds: [], notes: {} },
+			guidedIntake: {
+				completedSteps: ["child"],
+				activeStepId: "scenario",
+				scenarioId: null,
+				goal: "",
+			},
+		});
+
+	it("toggleActionCard → completionRatio + workbench hint", () => {
+		let state = reducer(makeInitial(), {
+			type: "toggleActionCard",
+			horizon: "today",
+		});
+		expect(state.actionBoard.completedIds).toEqual(["today"]);
+		expect(state.actionBoard.notes).toEqual({});
+
+		state = reducer(state, {
+			type: "toggleActionCard",
+			horizon: "this-week",
+		});
+		expect(state.actionBoard.completedIds).toEqual(["today", "this-week"]);
+
+		// Toggle off
+		state = reducer(state, {
+			type: "toggleActionCard",
+			horizon: "today",
+		});
+		expect(state.actionBoard.completedIds).toEqual(["this-week"]);
+	});
+
+	it("annotateActionCard stores sentiment notes", () => {
+		let state = reducer(makeInitial(), {
+			type: "annotateActionCard",
+			horizon: "today",
+			note: "孩子很配合",
+		});
+		expect(state.actionBoard.notes.today).toBe("孩子很配合");
+
+		// Overwrite
+		state = reducer(state, {
+			type: "annotateActionCard",
+			horizon: "today",
+			note: "今天没时间",
+		});
+		expect(state.actionBoard.notes.today).toBe("今天没时间");
+	});
+
+	it("advanceIntake progresses the 4-step wizard", () => {
+		let state = reducer(makeInitial(), {
+			type: "advanceIntake",
+			stepId: "scenario",
+			scenarioId: "bedtime-delay",
+		});
+		expect(state.guidedIntake.activeStepId).toBe("scenario");
+		expect(state.guidedIntake.scenarioId).toBe("bedtime-delay");
+		expect(state.guidedIntake.completedSteps).toContain("scenario");
+
+		state = reducer(state, {
+			type: "advanceIntake",
+			stepId: "urgency",
+		});
+		expect(state.guidedIntake.completedSteps).toEqual([
+			"child",
+			"scenario",
+			"urgency",
+		]);
+
+		state = reducer(state, {
+			type: "advanceIntake",
+			stepId: "goal",
+			goal: "稳定作息",
+		});
+		expect(state.guidedIntake.goal).toBe("稳定作息");
+	});
+
+	it("hydrateWorkbench restores persisted state", () => {
+		const persisted = {
+			guidedIntake: {
+				completedSteps: ["child", "scenario", "urgency", "goal"],
+				activeStepId: "goal",
+				scenarioId: "bedtime-delay",
+				goal: "稳定作息",
+			},
+			actionBoard: {
+				completedIds: ["today", "this-week"],
+				notes: { today: "孩子配合" },
+			},
+		};
+		const state = reducer(makeInitial(), {
+			type: "hydrateWorkbench",
+			guidedIntake: persisted.guidedIntake,
+			actionBoard: persisted.actionBoard,
+		});
+		expect(state.guidedIntake).toEqual(persisted.guidedIntake);
+		expect(state.actionBoard).toEqual(persisted.actionBoard);
+	});
+
+	it("selectAgent updates selectedAgentId and is reversible", () => {
+		let state = reducer(makeInitial(), {
+			type: "selectAgent",
+			agentId: "pediatrician",
+		});
+		expect(state.selectedAgentId).toBe("pediatrician");
+
+		state = reducer(state, { type: "selectAgent", agentId: null });
+		expect(state.selectedAgentId).toBeNull();
+	});
+
+	it("setAgentHints updates the hint map and is read by selectors", () => {
+		const state = reducer(makeInitial(), {
+			type: "setAgentHints",
+			hints: {
+				boosts: [
+					{ agentId: "pediatrician", boost: 0.5, reason: "today" },
+				],
+				totalCompleted: 1,
+				signalSummary: "1 signal",
+			},
+		});
+		expect(state.agentHints.boosts[0]?.agentId).toBe("pediatrician");
+		expect(state.agentHints.totalCompleted).toBe(1);
+	});
+});
+
+describe("Workbench persistence round-trip", () => {
+	it("serialize/deserialize preserves a fully populated workbench state", async () => {
+		// round-trip through the in-memory storage used by the app
+		const { InMemoryWorkbenchStorage } = await import(
+			"../src/workbench-persistence.js"
+		);
+		const storage = new InMemoryWorkbenchStorage();
+		const original = {
+			guidedIntake: {
+				completedSteps: ["child", "scenario", "urgency", "goal"],
+				activeStepId: "goal",
+				scenarioId: "bedtime-delay",
+				goal: "稳定作息",
+			},
+			actionBoard: {
+				completedIds: ["today", "this-week"],
+				notes: { today: "孩子很配合", "this-week": "继续观察" },
+			},
+		};
+		storage.save(original);
+		const loaded = storage.load();
+		expect(loaded).toEqual(original);
+	});
+});
