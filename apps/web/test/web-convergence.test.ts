@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildE2eMainPathReport,
+	buildRealLlmProviderChain,
 	buildWebConvergenceSnapshot,
+	createAnthropicCompatibleProvider,
+	createMinimaxM3Provider,
+	createOpenAICompatibleProvider,
 	createRuleFallbackProvider,
 	createWebLlmProvider,
+	createXiaomiMiMoProvider,
 	IndexedDbMemoryLayer,
+	readEnv,
 	registerWebLlmProviders,
 } from "../src/index.js";
 import { createFakeBackend } from "./_idb-fake.js";
@@ -223,5 +229,291 @@ describe("web convergence facade", () => {
 			"llm-fallback",
 		]);
 		expect(report.steps.every((step) => step.ok)).toBe(true);
+	});
+});
+
+describe("createOpenAICompatibleProvider", () => {
+	const openAiReply = (content: string) => ({
+		choices: [{ message: { content } }],
+	});
+
+	it("posts to /chat/completions and reads choices[0].message.content", async () => {
+		const calls: Array<{ url: string; body: unknown }> = [];
+		const fetcher = (async (
+			input: string | URL,
+			init?: { method?: string; headers?: Record<string, string>; body?: string },
+		) => {
+			calls.push({
+				url: String(input),
+				body: JSON.parse(init?.body ?? "{}"),
+			});
+			return {
+				status: 200,
+				text: async () => JSON.stringify(openAiReply("来自 OpenAI 的回答")),
+			};
+		}) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		const provider = createOpenAICompatibleProvider({
+			id: "test-openai",
+			endpoint: "https://llm.example/v1",
+			apiKey: "sk-test",
+			model: "gpt-x",
+			systemPrompt: "You are helpful.",
+			fetcher,
+		});
+		expect(provider.ready).toBe(true);
+		const reply = await provider.complete("pediatrician", "宝宝发烧");
+		expect(reply).toBe("来自 OpenAI 的回答");
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.url).toBe("https://llm.example/v1/chat/completions");
+		const body = calls[0]?.body as {
+			model: string;
+			messages: Array<{ role: string; content: string }>;
+		};
+		expect(body.model).toBe("gpt-x");
+		expect(body.messages[0]?.role).toBe("system");
+		expect(body.messages[1]?.content).toBe("宝宝发烧");
+	});
+
+	it("returns empty string on 4xx errors (caller can fall back)", async () => {
+		const fetcher = (async () => ({
+			status: 401,
+			text: async () => JSON.stringify({ error: "invalid api key" }),
+		})) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		const provider = createOpenAICompatibleProvider({
+			id: "test-openai",
+			endpoint: "https://llm.example/v1",
+			apiKey: "sk-bad",
+			model: "gpt-x",
+			fetcher,
+		});
+		expect(await provider.complete("pediatrician", "hi")).toBe("");
+	});
+
+	it("returns empty string when the response body is not JSON", async () => {
+		const fetcher = (async () => ({
+			status: 200,
+			text: async () => "<html>oops</html>",
+		})) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		const provider = createOpenAICompatibleProvider({
+			id: "test-openai",
+			endpoint: "https://llm.example/v1",
+			apiKey: "sk-test",
+			model: "gpt-x",
+			fetcher,
+		});
+		expect(await provider.complete("pediatrician", "hi")).toBe("");
+	});
+
+	it("returns empty string when the fetcher throws (network error)", async () => {
+		const fetcher = (async () => {
+			throw new Error("ECONNREFUSED");
+		}) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		const provider = createOpenAICompatibleProvider({
+			id: "test-openai",
+			endpoint: "https://llm.example/v1",
+			apiKey: "sk-test",
+			model: "gpt-x",
+			fetcher,
+		});
+		expect(await provider.complete("pediatrician", "hi")).toBe("");
+	});
+
+	it("reports ready: false when the api key is missing", () => {
+		const provider = createOpenAICompatibleProvider({
+			id: "test-openai",
+			endpoint: "https://llm.example/v1",
+			model: "gpt-x",
+		});
+		expect(provider.ready).toBe(false);
+	});
+
+	it("returns empty string when no api key is set even after construction", async () => {
+		const fetcher = (async () => {
+			throw new Error("should not be called");
+		}) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		const provider = createOpenAICompatibleProvider({
+			id: "test-openai",
+			endpoint: "https://llm.example/v1",
+			model: "gpt-x",
+			fetcher,
+		});
+		expect(await provider.complete("pediatrician", "hi")).toBe("");
+	});
+});
+
+describe("createAnthropicCompatibleProvider", () => {
+	const anthropicReply = (text: string) => ({
+		content: [{ type: "text", text }],
+	});
+
+	it("posts to /messages and reads content[0].text", async () => {
+		const calls: Array<{ url: string; body: unknown; headers: Record<string, string> }> = [];
+		const fetcher = (async (
+			input: string | URL,
+			init?: { method?: string; headers?: Record<string, string>; body?: string },
+		) => {
+			calls.push({
+				url: String(input),
+				body: JSON.parse(init?.body ?? "{}"),
+				headers: (init?.headers ?? {}) as Record<string, string>,
+			});
+			return {
+				status: 200,
+				text: async () => JSON.stringify(anthropicReply("minimax-m3 的回答")),
+			};
+		}) as unknown as Parameters<typeof createAnthropicCompatibleProvider>[0]["fetcher"];
+		const provider = createAnthropicCompatibleProvider({
+			id: "minimax-m3",
+			endpoint: "https://api.minimaxi.com/v1",
+			apiKey: "minimax-key",
+			model: "MiniMax-M3",
+			fetcher,
+		});
+		expect(provider.ready).toBe(true);
+		const reply = await provider.complete("pediatrician", "宝宝发烧");
+		expect(reply).toBe("minimax-m3 的回答");
+		expect(calls[0]?.url).toBe("https://api.minimaxi.com/v1/messages");
+		expect(calls[0]?.headers["x-api-key"]).toBe("minimax-key");
+		expect(calls[0]?.headers["anthropic-version"]).toBe("2023-06-01");
+		const body = calls[0]?.body as {
+			model: string;
+			messages: Array<{ role: string; content: string }>;
+		};
+		expect(body.model).toBe("MiniMax-M3");
+		expect(body.messages[0]?.role).toBe("user");
+	});
+
+	it("returns empty string on 4xx", async () => {
+		const fetcher = (async () => ({
+			status: 429,
+			text: async () => JSON.stringify({ error: "rate limit" }),
+		})) as unknown as Parameters<typeof createAnthropicCompatibleProvider>[0]["fetcher"];
+		const provider = createAnthropicCompatibleProvider({
+			id: "minimax-m3",
+			endpoint: "https://api.minimaxi.com/v1",
+			apiKey: "minimax-key",
+			model: "MiniMax-M3",
+			fetcher,
+		});
+		expect(await provider.complete("pediatrician", "hi")).toBe("");
+	});
+});
+
+describe("createMinimaxM3Provider", () => {
+	it("defaults to MiniMax-M3 model and the minimaxi.com endpoint", () => {
+		const provider = createMinimaxM3Provider({ apiKey: "minimax-key" });
+		expect(provider.id).toBe("minimax-m3");
+		expect(provider.ready).toBe(true);
+	});
+
+	it("sends an Anthropic-format request with the parenting system prompt", async () => {
+		const calls: Array<{ url: string; body: unknown }> = [];
+		const fetcher = (async (
+			input: string | URL,
+			init?: { method?: string; headers?: Record<string, string>; body?: string },
+		) => {
+			calls.push({
+				url: String(input),
+				body: JSON.parse(init?.body ?? "{}"),
+			});
+			return {
+				status: 200,
+				text: async () =>
+					JSON.stringify({
+						content: [{ type: "text", text: "minimax-m3 测试回答" }],
+					}),
+			};
+		}) as unknown as Parameters<typeof createMinimaxM3Provider>[0]["fetcher"];
+		const provider = createMinimaxM3Provider({
+			apiKey: "minimax-key",
+			fetcher,
+		});
+		const reply = await provider.complete("pediatrician", "宝宝发烧");
+		expect(reply).toBe("minimax-m3 测试回答");
+		expect(calls[0]?.url).toContain("/v1/messages");
+		const body = calls[0]?.body as { system: string };
+		expect(body.system).toContain("育儿助手");
+	});
+
+	it("reports ready: false when MINIMAX_CN_API_KEY is missing", () => {
+		// explicitly do not pass apiKey
+		const provider = createMinimaxM3Provider({});
+		expect(provider.ready).toBe(false);
+	});
+});
+
+describe("createXiaomiMiMoProvider", () => {
+	it("defaults to xiaomi-mimo id and the xiaomimimo endpoint", () => {
+		const provider = createXiaomiMiMoProvider({ apiKey: "xiaomi-key" });
+		expect(provider.id).toBe("xiaomi-mimo");
+		expect(provider.ready).toBe(true);
+	});
+
+	it("posts to /chat/completions (OpenAI-compatible)", async () => {
+		const calls: Array<{ url: string }> = [];
+		const fetcher = (async (input: string | URL) => {
+			calls.push({ url: String(input) });
+			return {
+				status: 200,
+				text: async () =>
+					JSON.stringify({
+						choices: [{ message: { content: "xiaomi 回答" } }],
+					}),
+			};
+		}) as unknown as Parameters<typeof createXiaomiMiMoProvider>[0]["fetcher"];
+		const provider = createXiaomiMiMoProvider({
+			apiKey: "xiaomi-key",
+			fetcher,
+		});
+		expect(await provider.complete("pediatrician", "宝宝发烧")).toBe(
+			"xiaomi 回答",
+		);
+		expect(calls[0]?.url).toContain("/v1/chat/completions");
+	});
+});
+
+describe("buildRealLlmProviderChain", () => {
+	it("skips tiers without an api key", () => {
+		const chain = buildRealLlmProviderChain({
+			minimax: {}, // no api key
+			xiaomi: {}, // no api key
+		});
+		expect(chain.status.primaryProviderId).toBeNull();
+		expect(chain.status.fallbackProviderId).toBe("rule-fallback");
+	});
+
+	it("uses minimax-m3 as primary when its key is available", () => {
+		const chain = buildRealLlmProviderChain({
+			minimax: { apiKey: "minimax-key" },
+			xiaomi: { apiKey: "xiaomi-key" },
+		});
+		expect(chain.status.primaryProviderId).toBe("minimax-m3");
+		expect(chain.status.fallbackProviderId).toBe("rule-fallback");
+		expect(chain.status.ready).toBe(true);
+	});
+
+	it("falls back to xiaomi when minimax is not configured", () => {
+		const chain = buildRealLlmProviderChain({
+			minimax: {}, // no key
+			xiaomi: { apiKey: "xiaomi-key" },
+		});
+		expect(chain.status.primaryProviderId).toBe("xiaomi-mimo");
+	});
+
+	it("complete() always returns the rule-fallback content when no key is set", async () => {
+		const chain = buildRealLlmProviderChain({
+			minimax: {},
+			xiaomi: {},
+		});
+		const reply = await chain.complete("pediatrician", "宝宝发烧");
+		expect(reply.providerId).toBe("rule-fallback");
+		expect(reply.usedFallback).toBe(true);
+		expect(reply.content).toContain("rule-based fallback");
+	});
+});
+
+describe("readEnv", () => {
+	it("returns undefined when the env var is missing", () => {
+		expect(readEnv("__PARENTING_TEST_DEFINITELY_MISSING__")).toBeUndefined();
 	});
 });

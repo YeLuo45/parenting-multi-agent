@@ -76,10 +76,19 @@ export type {
 } from "./web-convergence.js";
 export {
 	buildE2eMainPathReport,
+	buildRealLlmProviderChain,
 	buildWebConvergenceSnapshot,
+	createAnthropicCompatibleProvider,
+	createMinimaxM3Provider,
+	createOpenAICompatibleProvider,
 	createRuleFallbackProvider,
 	createWebLlmProvider,
+	createXiaomiMiMoProvider,
+	readEnv,
 	registerWebLlmProviders,
+	type RemoteLlmProviderOptions,
+	type LlmFetch,
+	type LlmApiFormat,
 } from "./web-convergence.js";
 export type {
 	DevelopmentDomain,
