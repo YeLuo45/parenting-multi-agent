@@ -650,3 +650,361 @@ export function triageSeverity(
 	if (urgentKeywords.test(s)) return "urgent";
 	return "routine";
 }
+
+// ─── Emergency Protocols (P0/P1/P2) ──────────────────────────────────
+//
+// Each protocol is a structured response for a first-aid scenario. Steps
+// are ordered 1..N, and the call-script is a copy-ready line for the
+// 120 (CN) or 911 (US) dispatcher.
+
+export type EmergencyLevel = "P0" | "P1" | "P2";
+
+export interface EmergencyStep {
+	order: number;
+	action: string;
+	durationSeconds?: number;
+	warning?: string;
+}
+
+export interface EmergencyProtocol {
+	topic: FirstAidTopic | "safety-check";
+	level: EmergencyLevel;
+	summary: string;
+	steps: EmergencyStep[];
+	callScript: string;
+	hospitalAdvice: string;
+}
+
+export const EMERGENCY_PROTOCOLS: EmergencyProtocol[] = [
+	{
+		topic: "choking",
+		level: "P0",
+		summary: "气道异物窒息 — 黄金 4 分钟",
+		steps: [
+			{
+				order: 1,
+				action: "立即拨打 120（中国）或 911（美国），开启免提",
+				durationSeconds: 30,
+			},
+			{
+				order: 2,
+				action: "1 岁以下：5 次拍背（肩胛骨之间）+ 5 次胸推（胸骨下半段），交替",
+				durationSeconds: 60,
+				warning: "不要盲目用手指抠，可能把异物推更深",
+			},
+			{
+				order: 3,
+				action: "1 岁以上：海姆立克急救法（环抱腹部向上冲击）",
+				durationSeconds: 60,
+			},
+			{
+				order: 4,
+				action: "若失去意识：开始心肺复苏 (CPR)，30 次胸按 + 2 次人工呼吸",
+			},
+			{
+				order: 5,
+				action: "即使症状缓解，仍需急诊评估",
+			},
+		],
+		callScript:
+			"我家孩子 [年龄] 出现气道异物窒息，我已实施 [拍背/海姆立克] 急救，目前 [意识清醒/失去意识]。请尽快派救护车到 [地址]。",
+		hospitalAdvice: "立即前往最近的三级综合医院急诊或儿童专科医院",
+	},
+	{
+		topic: "cpr",
+		level: "P0",
+		summary: "心肺骤停 — 黄金 4 分钟",
+		steps: [
+			{ order: 1, action: "立即拨打 120 并大声呼救" },
+			{
+				order: 2,
+				action: "确认环境安全，孩子仰卧在硬平面上",
+				durationSeconds: 5,
+			},
+			{
+				order: 3,
+				action: "检查呼吸和脉搏（< 10 秒）",
+				durationSeconds: 10,
+			},
+			{
+				order: 4,
+				action: "无呼吸/无脉搏：开始 CPR。30 次胸按（深度 1/3 胸廓）+ 2 次人工呼吸",
+			},
+			{
+				order: 5,
+				action: "持续直到专业救援到达或孩子恢复意识",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子失去意识，没有呼吸。我已开始 CPR。请立即派救护车到 [地址]，并电话指导我继续操作。",
+		hospitalAdvice: "由救护车送至最近三级医院，途中持续 CPR",
+	},
+	{
+		topic: "bleeding",
+		level: "P0",
+		summary: "大出血",
+		steps: [
+			{ order: 1, action: "立即拨打 120" },
+			{
+				order: 2,
+				action: "用干净纱布/衣物直接按压出血点 5-10 分钟",
+				durationSeconds: 600,
+				warning: "不要反复松开查看",
+			},
+			{
+				order: 3,
+				action: "如果血渗透覆盖物，加盖后再按压",
+			},
+			{
+				order: 4,
+				action: "抬高出血部位高于心脏",
+			},
+			{
+				order: 5,
+				action: "出现失血性休克（苍白、冷汗、嗜睡）保持平卧、盖被保温",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子出现大出血，部位在 [位置]，我已直接按压 [X] 分钟。请立即派救护车。",
+		hospitalAdvice: "救护车送至三级医院急诊",
+	},
+	{
+		topic: "burn",
+		level: "P1",
+		summary: "烫伤/烧伤",
+		steps: [
+			{
+				order: 1,
+				action: "立即脱离热源，剪开/脱去非粘连衣物",
+				durationSeconds: 30,
+			},
+			{
+				order: 2,
+				action: "凉水冲洗 15-20 分钟（不是冰水！）",
+				durationSeconds: 1200,
+				warning: "不要涂牙膏、酱油、紫药水等",
+			},
+			{
+				order: 3,
+				action: "用干净纱布覆盖，不要包扎过紧",
+			},
+			{
+				order: 4,
+				action: "评估烧伤面积：手掌法（孩子手掌=1% 体表）",
+			},
+			{
+				order: 5,
+				action: "面积 >5% 或面/颈/会阴/关节 → 立即急诊",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子被 [热液/火焰] 烫伤，面积约 [X]%，部位 [位置]，已凉水冲洗。请判断是否需要救护车。",
+		hospitalAdvice: "中重度烫伤送烧伤专科或三级医院",
+	},
+	{
+		topic: "fever",
+		level: "P1",
+		summary: "高热",
+		steps: [
+			{
+				order: 1,
+				action: "测体温：腋温 ≥38.5°C 为高热",
+				durationSeconds: 60,
+			},
+			{
+				order: 2,
+				action: "3 月龄以下任何发烧立即急诊，不喂退烧药",
+			},
+			{
+				order: 3,
+				action: "3 月龄以上：按体重给对乙酰氨基酚（泰诺林）或布洛芬（美林）",
+			},
+			{
+				order: 4,
+				action: "物理降温：温水擦浴（不是酒精/冰水）",
+			},
+			{
+				order: 5,
+				action: "精神差、抽搐、皮疹、呼吸困难立即急诊",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子发烧 [X]°C，[月龄] 个月，已用 [退烧药]。目前精神 [好/差]，是否需要立即就诊？",
+		hospitalAdvice: "高热持续 24h+ 或 3 月龄以下 → 立即儿科急诊",
+	},
+	{
+		topic: "head_injury",
+		level: "P1",
+		summary: "头部外伤",
+		steps: [
+			{
+				order: 1,
+				action: "立即冰敷伤处 15-20 分钟（用布包冰块）",
+				durationSeconds: 1200,
+			},
+			{
+				order: 2,
+				action: "观察 24-48 小时：呕吐、嗜睡、抽搐、瞳孔不等大立即急诊",
+			},
+			{
+				order: 3,
+				action: "不要自行给孩子服止痛药（可能掩盖症状）",
+			},
+			{
+				order: 4,
+				action: "伤后 2 小时内不要进食（可能要麻醉）",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子从 [高度] 摔到头，[撞击位置]，目前 [清醒/嗜睡/呕吐]。是否需要立即送医？",
+		hospitalAdvice: "任何意识变化或反复呕吐 → 三级医院急诊 + 头颅 CT",
+	},
+	{
+		topic: "allergen",
+		level: "P0",
+		summary: "严重过敏反应 (过敏性休克)",
+		steps: [
+			{ order: 1, action: "立即拨打 120" },
+			{
+				order: 2,
+				action: "如已知严重过敏，使用肾上腺素自动注射器 (EpiPen)",
+				durationSeconds: 30,
+			},
+			{
+				order: 3,
+				action: "平卧，抬高双腿（改善回心血量）",
+				warning: "如有呼吸困难可半坐位",
+			},
+			{
+				order: 4,
+				action: "如果呕吐，把头侧偏防窒息",
+			},
+			{
+				order: 5,
+				action: "即使症状缓解，救护车送至急诊观察 ≥6 小时（可能双相反应）",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子接触 [过敏原] 后出现 [荨麻疹/呼吸困难/肿胀]，已使用 EpiPen。请立即派救护车。",
+		hospitalAdvice: "三级医院急诊，住院观察 ≥ 6 小时",
+	},
+	{
+		topic: "drowning",
+		level: "P0",
+		summary: "溺水",
+		steps: [
+			{ order: 1, action: "立即拨打 120" },
+			{
+				order: 2,
+				action: "把孩子从水中救出（救者注意自身安全）",
+				durationSeconds: 30,
+			},
+			{
+				order: 3,
+				action: "检查呼吸，擦干身体，无呼吸立即 CPR",
+				durationSeconds: 10,
+			},
+			{
+				order: 4,
+				action: "保暖：脱去湿衣，用干毯子包裹",
+			},
+			{
+				order: 5,
+				action: "即使恢复意识，必须送医评估（可能二次溺水）",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子在 [浴缸/泳池] 溺水，被救起 [X] 分钟。我已 [拍背/控水/CPR]。请立即派救护车。",
+		hospitalAdvice: "三级医院急诊 + 住院观察 ≥ 24 小时（防二次溺水）",
+	},
+	{
+		topic: "poisoning",
+		level: "P0",
+		summary: "中毒/误食",
+		steps: [
+			{ order: 1, action: "立即拨打 120（中国）/ 1-800-222-1222（美国 Poison Control）" },
+			{
+				order: 2,
+				action: "不要催吐（强酸强碱/石油制品会二次损伤）",
+				warning: "除非毒物控制中心明确指示",
+			},
+			{
+				order: 3,
+				action: "不要喂水/喂奶/喂食物（影响医院判断）",
+			},
+			{
+				order: 4,
+				action: "保留原包装/呕吐物带去医院",
+			},
+			{
+				order: 5,
+				action: "昏迷或抽搐 → 侧卧位防窒息，立即 CPR 准备",
+			},
+		],
+		callScript:
+			"我家 [年龄] 孩子误食 [药品名/化学品名]，约 [X] 分钟前，目前 [清醒/嗜睡/抽搐]。我已 [处理]。",
+		hospitalAdvice: "三级医院急诊，需带原包装",
+	},
+];
+
+/**
+ * Build an emergency protocol for a free-form symptom description. Returns
+ * the highest-priority matching protocol (P0 > P1 > P2), or a generic
+ * safety-check protocol when nothing matches.
+ */
+export function buildEmergencyProtocol(symptom: string): EmergencyProtocol {
+	const s = symptom.toLowerCase();
+	// Helper to look up a protocol by topic
+	const lookup = (topic: EmergencyProtocol["topic"]): EmergencyProtocol => {
+		const found = EMERGENCY_PROTOCOLS.find((p) => p.topic === topic);
+		/* v8 ignore next 2 */
+		if (!found)
+			throw new Error(`buildEmergencyProtocol: topic ${topic} not in table`);
+		return found;
+	};
+	// P0 keywords — life-threatening
+	if (
+		/(窒息|choking|卡住|没呼吸|no.breath|停止呼吸|unconscious|没意识|昏迷|抽搐|seizure|大出血|溺|nearly.drown|过敏|allergen|荨麻疹|中毒|poison|误食|药物|没脉搏|no.pulse)/i.test(
+			s,
+		)
+	) {
+		if (/(窒息|choking|卡住)/i.test(s)) return lookup("choking");
+		if (/(没意识|昏迷|unconscious|no.breath|没呼吸|停止呼吸|没脉搏|no.pulse)/i.test(s))
+			return lookup("cpr");
+		if (/(抽搐|seizure)/i.test(s)) return lookup("cpr");
+		if (/(大出血)/i.test(s)) return lookup("bleeding");
+		if (/(溺|nearly.drown)/i.test(s)) return lookup("drowning");
+		if (/(过敏|allergen|荨麻疹)/i.test(s)) return lookup("allergen");
+		if (/(中毒|poison|误食)/i.test(s)) return lookup("poisoning");
+		return lookup("cpr"); // defensive: P0 keywords are exhaustive
+	}
+	// P1 keywords — urgent care within hours
+	if (/(烫伤|burn|发高烧|高烧|40度|41度|42度|摸不到脉|head.*injur|头部外伤|摔到头)/i.test(s)) {
+		// Check fever BEFORE burn so "发高烧" doesn't match "烧"
+		if (/(发高烧|高烧|40度|41度|42度|发烧.*月龄|3.*月.*烧)/i.test(s))
+			return lookup("fever");
+		if (/(烫伤|烫|烧伤|burn)/i.test(s)) return lookup("burn");
+		if (/(摔到头|head.*injur|头部外伤|撞到头)/i.test(s))
+			return lookup("head_injury");
+		return lookup("burn"); // defensive: P1 keywords are exhaustive
+	}
+	// P2 — non-urgent, schedule a clinic visit
+	return {
+		topic: "safety-check",
+		level: "P2",
+		summary: "非紧急情况 — 24 小时内儿科门诊评估",
+		steps: [
+			{
+				order: 1,
+				action: "观察孩子精神状态、食欲、尿量",
+				durationSeconds: 3600,
+			},
+			{ order: 2, action: "如有恶化立即重新评估" },
+			{ order: 3, action: "记录症状起始时间、持续时长、伴随症状" },
+			{ order: 4, action: "24 小时内预约儿科门诊或电话咨询家庭医生" },
+		],
+		callScript:
+			"我家 [年龄] 孩子出现 [症状]，已 [X] 小时。目前精神 [好/差]，食欲 [正常/下降]。想咨询是否需要面诊。",
+		hospitalAdvice: "儿科门诊或社区卫生服务中心",
+	};
+}

@@ -11,6 +11,11 @@ export {
 } from "./agent.js";
 
 export {
+	buildEmergencyProtocol,
+	type EmergencyLevel,
+	type EmergencyProtocol,
+	type EmergencyStep,
+	EMERGENCY_PROTOCOLS,
 	FIRST_AID_GUIDES,
 	type FirstAidGuide,
 	type FirstAidStep,
