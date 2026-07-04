@@ -99,6 +99,30 @@ Verified result in this workspace:
 - Full workspace pass rate: 100%
 - Lowest overall workspace coverage: `@parenting/web` branch coverage 95.19%, lines 98.79%, statements 98.79%, functions 97.94%
 
+## Real LLM Provider Setup
+
+The Web/TUI/CLI shells default to the rule-fallback (deterministic
+placeholder). To enable real large-language-models, copy
+`apps/web/.env.example` to `apps/web/.env` and fill in API keys:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+# edit apps/web/.env with real API keys
+```
+
+The provider chain (priority order):
+
+| Tier | Provider       | Wire format       | Env var             |
+|-----:|----------------|-------------------|---------------------|
+| 1    | minimax-m3     | Anthropic         | `MINIMAX_CN_API_KEY` |
+| 2    | xiaomi-mimo    | OpenAI-compatible| `XIAOMI_API_KEY`     |
+| 3    | rule-fallback  | (deterministic)   | — (always present)   |
+
+- Tier 1/2 are only added to the chain if their env var is set.
+- The same `WebLlmRegistry` instance is shared across web, CLI, and TUI.
+- `chain.complete()` returns `triedProviderIds` so the UI can surface
+  which providers were attempted before the final answer.
+
 ## Verified Commands
 
 All commands below were executed successfully in `/home/hermes/projects/parenting-multi-agent`.

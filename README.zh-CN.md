@@ -99,6 +99,29 @@ NODE_ENV=development npm run test:coverage
 - 全 workspace 通过率：100%
 - 最低整体 workspace 覆盖率：`@parenting/web` 分支覆盖率 95.22%，行覆盖率 99.35%，语句覆盖率 99.35%，函数覆盖率 98.39%
 
+## 真实 LLM Provider 配置
+
+Web/TUI/CLI 默认走 rule-fallback（确定性规则占位）。要启用真实大模型，从 `apps/web/.env.example` 复制到 `apps/web/.env` 填入 API key：
+
+```bash
+cp apps/web/.env.example apps/web/.env
+# 编辑 apps/web/.env，把真实 API key 填入
+```
+
+支持的 provider chain（按优先级）：
+
+| Tier | Provider       | Wire format       | Env var             |
+|-----:|----------------|-------------------|---------------------|
+| 1    | minimax-m3     | Anthropic         | `MINIMAX_CN_API_KEY` |
+| 2    | xiaomi-mimo    | OpenAI-compatible| `XIAOMI_API_KEY`     |
+| 3    | rule-fallback  | (deterministic)   | — (always present)   |
+
+行为：
+
+- tier 1/2 任一 key 存在就启用；都没有就回到 rule-fallback（永远在 chain 末尾作为安全网）
+- 同一份 `WebLlmRegistry` 实例被 web 主入口、CLI REPL、TUI 三端共享，所以 `.env` 一次配置三端生效
+- `chain.complete()` 返回值带 `triedProviderIds` 数组，便于 UI 显示「主 provider 失败 → 切 secondary」链路
+
 ## 已验证命令清单
 
 以下命令均已在 `/home/hermes/projects/parenting-multi-agent` 实际执行并通过。
