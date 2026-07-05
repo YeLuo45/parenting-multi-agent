@@ -100,6 +100,26 @@ export function WorkbenchPanel({
 			data-testid="workbench-panel"
 		>
 			<strong>Workbench</strong>
+			<span
+				className="llm-status-badge"
+				data-testid="llm-status-badge"
+				data-ready={String(state.llmStatus.ready)}
+				data-primary={state.llmStatus.primaryProviderId ?? ""}
+			>
+				<span className="llm-status-dot" aria-hidden="true" />
+				{state.llmStatus.primaryProviderId
+					? `LLM → ${state.llmStatus.primaryProviderId}`
+					: "LLM → rule-fallback"}
+				{state.lastLlmTriedChain && state.lastLlmTriedChain.length > 0 ? (
+					<span
+						className="llm-status-chain"
+						title={state.lastLlmTriedChain.join(" → ")}
+					>
+						{" "}
+						(last tried: {state.lastLlmTriedChain.join(" → ")})
+					</span>
+				) : null}
+			</span>
 			<span data-testid="workbench-summary">{workbench.summary}</span>
 			<div
 				className="scenario-pack"

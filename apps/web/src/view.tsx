@@ -73,6 +73,7 @@ export interface AppState {
 	memoryStats: MemoryStats;
 	convergence: WebConvergenceSnapshot | null;
 	llmStatus: WebLlmRegistry["status"];
+	lastLlmTriedChain?: string[];
 	e2eReport: E2eMainPathReport;
 	iterationSuite: IterationSuiteSnapshot;
 	providerConfig: ProviderConfigSnapshot;
@@ -98,7 +99,8 @@ export type Action =
 	| { type: "setChildren"; children: ChildProfile[] }
 	| { type: "selectChild"; childId: string }
 	| { type: "askStart" }
-	| { type: "askDone"; messages: ChatMessage[] }
+	| { type: "askDone"; messages: ChatMessage[]; triedProviderIds?: string[] }
+	| { type: "setLastLlmTriedChain"; chain: string[] }
 	| { type: "askError"; error: string }
 	| { type: "feedbackDone"; messageId: string; feedback: "up" | "down" }
 	| { type: "setMemoryStats"; memoryStats: MemoryStats }
@@ -140,6 +142,7 @@ export const initialState: AppState = {
 		fallbackProviderId: "rule-fallback",
 		ready: false,
 	},
+	lastLlmTriedChain: undefined,
 	e2eReport: buildE2eMainPathReport({
 		children: 0,
 		messages: 0,
@@ -198,7 +201,10 @@ export function reducer(state: AppState, action: Action): AppState {
 				pending: false,
 				messages: action.messages,
 				question: "",
+				lastLlmTriedChain: action.triedProviderIds ?? state.lastLlmTriedChain,
 			};
+		case "setLastLlmTriedChain":
+			return { ...state, lastLlmTriedChain: action.chain };
 		case "askError":
 			return { ...state, pending: false, error: action.error };
 		case "feedbackDone":
