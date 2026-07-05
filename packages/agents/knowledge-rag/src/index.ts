@@ -1,9 +1,9 @@
 export {
 	createKnowledgeRAGAgent,
-	type KnowledgeLlmGenerator,
-	type KnowledgeRAGOptions,
 	KNOWLEDGE_DISCLAIMER,
+	type KnowledgeLlmGenerator,
 	KnowledgeRAGAgent,
+	type KnowledgeRAGOptions,
 } from "./agent.js";
 
 export {
@@ -12,8 +12,8 @@ export {
 	type EvidenceLevel,
 	formatReferences,
 	type HanTokenIndex,
-	type KnowledgeEntry,
 	KNOWLEDGE_BASE,
+	type KnowledgeEntry,
 	knowledgeStats,
 	queryIndex,
 	type Reference,

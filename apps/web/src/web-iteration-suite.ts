@@ -1813,8 +1813,9 @@ export interface ParentingCompletionPack {
 export function buildParentingCompletionPack(
 	input: ParentingCompletionPackInput,
 ): ParentingCompletionPack {
-	const selectedChild =
-		input.children.find((child) => child.id === input.selectedChildId) ??
+	const selectedChild = input.children.find(
+		(child) => child.id === input.selectedChildId,
+	) ??
 		input.children[0] ?? {
 			id: "default",
 			name: "示例宝宝",
@@ -1868,7 +1869,8 @@ export function buildParentingCompletionPack(
 		},
 	];
 	const offlineCoach: OfflineCoachMode = {
-		status: input.memory.unsyncedDeltas > 0 ? "offline-ready" : "sync-first",
+		status:
+			input.memory.unsyncedDeltas > 0 ? "offline-ready" : "sync-first",
 		queueSummary: `${input.memory.unsyncedDeltas} pending sync deltas`,
 		recoveryPrompt:
 			input.memory.unsyncedDeltas > 0
@@ -1947,7 +1949,9 @@ export function buildParentingCompletionPack(
 		{
 			id: "run-stress-intervention",
 			label: "Stress intervention",
-			prompt: stressIntervention.steps.map((step) => step.prompt).join(" → "),
+			prompt: stressIntervention.steps
+				.map((step) => step.prompt)
+				.join(" → "),
 			ready: true,
 		},
 		{
@@ -2179,11 +2183,18 @@ export function buildWebInteractionWorkbench(input: {
 	children: { id: string }[];
 	selectedChildId?: string;
 	memory: { feedback: number; unsyncedDeltas: number };
-	provider: { primaryProviderId: string | null; fallbackProviderId: string; ready: boolean };
+	provider: {
+		primaryProviderId: string | null;
+		fallbackProviderId: string;
+		ready: boolean;
+	};
 	lastFeedbackRating?: number;
 }): WebInteractionWorkbench {
 	const primaryAgentId = inferPrimaryAgentId(input.question);
-	const consultedAgents = inferConsultedAgents(input.question, primaryAgentId);
+	const consultedAgents = inferConsultedAgents(
+		input.question,
+		primaryAgentId,
+	);
 	const safetyMode = detectHighRiskMode(input.question);
 	const steps: WebInteractionWorkbench["collaboration"]["steps"] = [
 		{ kind: "primary", label: `Primary ${primaryAgentId}` },
@@ -2195,21 +2206,23 @@ export function buildWebInteractionWorkbench(input: {
 	if (safetyMode !== "normal-loop") {
 		steps.push({ kind: "guardrail", label: "Safety guardrail" });
 	}
-	const directions: WebInteractionDirection[] = DEFAULT_WORKBENCH_DIRECTIONS.map(
-		(id) => ({
+	const directions: WebInteractionDirection[] =
+		DEFAULT_WORKBENCH_DIRECTIONS.map((id) => ({
 			id,
 			title: WORKBENCH_DIRECTION_TITLES[id],
 			status: "ready",
 			hint: WORKBENCH_DIRECTION_HINTS[id],
-		}),
-	);
+		}));
 	return {
 		directions,
 		summary: `7 directions · primary=${primaryAgentId}, mode=${safetyMode}`,
 		collaboration: { primaryAgentId, steps },
 		safety: {
 			mode: safetyMode,
-			reason: safetyMode === "normal-loop" ? "" : "high-risk keyword detected",
+			reason:
+				safetyMode === "normal-loop"
+					? ""
+					: "high-risk keyword detected",
 		},
 		actionCards: buildActionCardsForMode(safetyMode),
 		selectedAgentShortcut: {
@@ -2251,9 +2264,7 @@ function inferConsultedAgents(question: string, primary: string): string[] {
 	return [...consulted].slice(0, 2);
 }
 
-function detectHighRiskMode(
-	question: string,
-): "normal-loop" | "high-risk" {
+function detectHighRiskMode(question: string): "normal-loop" | "high-risk" {
 	const q = question.toLowerCase();
 	const dangerKeywords = [
 		"抽搐",
@@ -2265,7 +2276,9 @@ function detectHighRiskMode(
 		"溺水",
 		"自残",
 	];
-	return dangerKeywords.some((k) => q.includes(k)) ? "high-risk" : "normal-loop";
+	return dangerKeywords.some((k) => q.includes(k))
+		? "high-risk"
+		: "normal-loop";
 }
 
 function buildActionCardsForMode(
@@ -2335,10 +2348,17 @@ export function buildGuidedIntakeWizard(input: {
 	scenarioId: string | null;
 	goal: string;
 }): GuidedIntakeWizard {
-	const order: GuidedIntakeStepId[] = ["child", "scenario", "urgency", "goal"];
+	const order: GuidedIntakeStepId[] = [
+		"child",
+		"scenario",
+		"urgency",
+		"goal",
+	];
 	const hasChild = input.children.length > 0;
 	const effectiveCompleted = new Set<GuidedIntakeStepId>(
-		hasChild ? input.completedSteps : input.completedSteps.filter((s) => s !== "child"),
+		hasChild
+			? input.completedSteps
+			: input.completedSteps.filter((s) => s !== "child"),
 	);
 	const steps: GuidedIntakeStep[] = order.map((id) => ({
 		id,
@@ -2347,12 +2367,17 @@ export function buildGuidedIntakeWizard(input: {
 		complete: effectiveCompleted.has(id),
 		active: id === input.activeStepId,
 	}));
-	const currentStep = order.find(
-		(s) => !effectiveCompleted.has(s),
-	) as GuidedIntakeStepId | undefined;
+	const currentStep = order.find((s) => !effectiveCompleted.has(s)) as
+		| GuidedIntakeStepId
+		| undefined;
 	const progressRatio = effectiveCompleted.size / order.length;
 	const canAdvance = order.indexOf(input.activeStepId) < order.length - 1;
-	return { steps, currentStep: currentStep ?? null, progressRatio, canAdvance };
+	return {
+		steps,
+		currentStep: currentStep ?? null,
+		progressRatio,
+		canAdvance,
+	};
 }
 
 export function buildAgentCollaborationDag(input: {
@@ -2397,8 +2422,8 @@ export function buildAgentCollaborationDag(input: {
 	}
 	const xs = nodes.map((n) => n.x);
 	const ys = nodes.map((n) => n.y);
-	const width = Math.max(240, (Math.max(...xs) - Math.min(...xs)) + 200);
-	const height = Math.max(120, (Math.max(...ys) - Math.min(...ys)) + 120);
+	const width = Math.max(240, Math.max(...xs) - Math.min(...xs) + 200);
+	const height = Math.max(120, Math.max(...ys) - Math.min(...ys) + 120);
 	return { nodes, edges: edgeList, width, height };
 }
 
@@ -2435,7 +2460,9 @@ export function buildSelectedAgentHint(
 ): SelectedAgentHint | null {
 	if (!selectedAgentId) return null;
 	const boost = hints.boosts.find((b) => b.agentId === selectedAgentId);
-	const boostText = boost ? `+${boost.boost} boost · ${boost.reason}` : "no boost";
+	const boostText = boost
+		? `+${boost.boost} boost · ${boost.reason}`
+		: "no boost";
 	return {
 		hint: `${selectedAgentId}: ${boostText}`,
 		shortcut: selectedAgentId,
@@ -2452,13 +2479,19 @@ export function buildDagAgentShortcut(input: {
 	const reply = [...input.messages]
 		.reverse()
 		.find((m) => m.role === "agent" && m.content.includes(input.agentId));
-	const fallback = [...input.messages].reverse().find((m) => m.role === "agent");
+	const fallback = [...input.messages]
+		.reverse()
+		.find((m) => m.role === "agent");
 	return {
 		agentId: input.agentId,
 		lastReply: reply
 			? { id: reply.id, content: reply.content, ts: reply.ts }
 			: fallback
-				? { id: fallback.id, content: fallback.content, ts: fallback.ts }
+				? {
+						id: fallback.id,
+						content: fallback.content,
+						ts: fallback.ts,
+					}
 				: null,
 	};
 }
@@ -2518,7 +2551,9 @@ export function buildAgentWeightHints(input: {
 	return { boosts, totalCompleted, signalSummary: summary };
 }
 
-export function serializeWorkbenchState(state: WorkbenchPersistedState): string {
+export function serializeWorkbenchState(
+	state: WorkbenchPersistedState,
+): string {
 	return JSON.stringify({
 		v: 1,
 		g: {
@@ -2546,7 +2581,10 @@ export function deserializeWorkbenchState(
 				s: string | null;
 				o: string;
 			};
-			b: { c: ActionPlanHorizon[]; n: Partial<Record<ActionPlanHorizon, string>> };
+			b: {
+				c: ActionPlanHorizon[];
+				n: Partial<Record<ActionPlanHorizon, string>>;
+			};
 		};
 		if (obj.v !== 1) return null;
 		return {
@@ -2579,4 +2617,3 @@ export function applyActionPlanNote(
 ): Partial<Record<ActionPlanHorizon, string>> {
 	return { ...notes, [horizon]: note };
 }
-

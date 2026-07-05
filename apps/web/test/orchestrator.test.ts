@@ -33,9 +33,9 @@ afterEach(() => {
 });
 
 describe("createWebOrchestrator", () => {
-	it("registers all 18 specialist agents", () => {
+	it("registers all 19 specialist agents", () => {
 		const agents = stack.orchestrator.listAgents();
-		expect(agents.length).toBe(18);
+		expect(agents.length).toBe(19);
 	});
 
 	it("exposes the agent id list for the UI", () => {
@@ -52,7 +52,7 @@ describe("createWebOrchestrator", () => {
 		expect(ids).toContain("habit-builder");
 		expect(ids).toContain("knowledge-rag");
 		expect(ids).toContain("safety-guard");
-		expect(ids.length).toBe(18);
+		expect(ids.length).toBe(19);
 	});
 
 	it("starts with no children in the in-memory store", () => {

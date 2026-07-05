@@ -9,6 +9,7 @@
 
 import { createCareerAgent } from "@parenting/agent-career";
 import { createCollegePrepAgent } from "@parenting/agent-college-prep";
+import { createCryDecoderAgent } from "@parenting/agent-cry-decoder";
 import { createEducatorAgent } from "@parenting/agent-educator";
 import { createFamilyMediatorAgent } from "@parenting/agent-family-mediator";
 import { createFinanceAgent } from "@parenting/agent-finance";
@@ -29,12 +30,12 @@ import type { ChildProfile } from "@parenting/memory";
 import type { AgentStats, Feedback } from "@parenting/orchestrator";
 import { OrchestratorCore } from "@parenting/orchestrator";
 import { IndexedDbMemoryLayer } from "./memory-indexeddb.js";
-import type { WebLlmRegistry } from "./web-convergence.js";
 import {
 	type MemoryLayerLike,
 	type MemoryStats,
 	WebMemoryLayer,
 } from "./memory-web.js";
+import type { WebLlmRegistry } from "./web-convergence.js";
 
 export interface WebOrchestrator {
 	orchestrator: OrchestratorCore;
@@ -93,6 +94,7 @@ export function listWebAgentIds(): string[] {
 		"school-readiness",
 		"college-prep",
 		"career",
+		"cry-decoder",
 	];
 }
 
@@ -105,21 +107,20 @@ export async function createWebOrchestratorWithPersistence(
 	dbName?: string,
 	options?: { llmRegistry?: WebLlmRegistry },
 ): Promise<WebOrchestrator> {
-	const memory = new IndexedDbMemoryLayer({ dbName: dbName ?? "parenting-memory" });
+	const memory = new IndexedDbMemoryLayer({
+		dbName: dbName ?? "parenting-memory",
+	});
 	await memory.ready();
-	const stack = { memory, orchestrator: new OrchestratorCore({ memory, maxAgentsPerAsk: 3, minConfidence: 0.3 }) };
+	const stack = {
+		memory,
+		orchestrator: new OrchestratorCore({
+			memory,
+			maxAgentsPerAsk: 3,
+			minConfidence: 0.3,
+		}),
+	};
 	registerWebAgents(stack.orchestrator, options?.llmRegistry);
 	return wireStack(stack.orchestrator, stack.memory);
-}
-
-function wireOrchestrator(memory: MemoryLayerLike): WebOrchestrator {
-	const orchestrator = new OrchestratorCore({
-		memory,
-		maxAgentsPerAsk: 3,
-		minConfidence: 0.3,
-	});
-	registerWebAgents(orchestrator);
-	return wireStack(orchestrator, memory);
 }
 
 function registerWebAgents(
@@ -139,28 +140,29 @@ function registerWebAgents(
 	// Wire the LLM registry (if provided) into the knowledge-rag agent
 	// so its "search" / "evidence" answers go through the provider
 	// chain instead of just listing FAQ entries.
-	const llmAdapter: Parameters<typeof createKnowledgeRAGAgent>[0] | undefined =
-		llmRegistry
-			? {
-					llmGenerator: async (
-						systemPrompt: string,
-						userPrompt: string,
-					): Promise<string> => {
-						const r = await llmRegistry.complete(
-							"knowledge-rag",
-							`${systemPrompt}\n\n${userPrompt}`,
-						);
-						return r.content;
-					},
-					llmChainIds: () => {
-						const s = llmRegistry.status;
-						const ids: string[] = [];
-						if (s.primaryProviderId) ids.push(s.primaryProviderId);
-						ids.push(s.fallbackProviderId);
-						return ids;
-					},
-				}
-			: undefined;
+	const llmAdapter:
+		| Parameters<typeof createKnowledgeRAGAgent>[0]
+		| undefined = llmRegistry
+		? {
+				llmGenerator: async (
+					systemPrompt: string,
+					userPrompt: string,
+				): Promise<string> => {
+					const r = await llmRegistry.complete(
+						"knowledge-rag",
+						`${systemPrompt}\n\n${userPrompt}`,
+					);
+					return r.content;
+				},
+				llmChainIds: () => {
+					const s = llmRegistry.status;
+					const ids: string[] = [];
+					if (s.primaryProviderId) ids.push(s.primaryProviderId);
+					ids.push(s.fallbackProviderId);
+					return ids;
+				},
+			}
+		: undefined;
 	orchestrator.registerAgent(createKnowledgeRAGAgent(llmAdapter));
 	orchestrator.registerAgent(createSafetyGuardAgent());
 	orchestrator.registerAgent(createSocialAgent());
@@ -169,6 +171,7 @@ function registerWebAgents(
 	orchestrator.registerAgent(createCareerAgent());
 	orchestrator.registerAgent(createLegalAgent());
 	orchestrator.registerAgent(createSiblingAgent());
+	orchestrator.registerAgent(createCryDecoderAgent());
 }
 
 function wireStack(

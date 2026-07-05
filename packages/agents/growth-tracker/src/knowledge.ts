@@ -573,9 +573,10 @@ function lookupAnchors(
 		/* v8 ignore next 2 */
 		GROWTH_STANDARDS.filter((r) => r.ageMonths <= safeAge).pop() ??
 		GROWTH_STANDARDS[0];
-	const upper =
-		GROWTH_STANDARDS.find((r) => r.ageMonths > safeAge) ?? null;
-	const blend = (row: GrowthStandardRow): [number, number, number, number, number] => [
+	const upper = GROWTH_STANDARDS.find((r) => r.ageMonths > safeAge) ?? null;
+	const blend = (
+		row: GrowthStandardRow,
+	): [number, number, number, number, number] => [
 		row[sex][metric].p3,
 		row[sex][metric].p15,
 		row[sex][metric].p50,
@@ -598,7 +599,10 @@ function lookupAnchors(
 	];
 }
 
-function percentileToZ(value: number, anchors: [number, number, number, number, number]): number {
+function percentileToZ(
+	value: number,
+	anchors: [number, number, number, number, number],
+): number {
 	if (value <= anchors[0]) {
 		// Below p3 — extrapolate using p3/p15 slope.
 		const denom = anchors[0] - anchors[1];

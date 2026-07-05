@@ -63,7 +63,10 @@ export class InMemoryWorkbenchStorage implements WorkbenchStorage {
 	save(state: WorkbenchPersistedState): void {
 		this.value = {
 			guidedIntake: { ...state.guidedIntake },
-			actionBoard: { ...state.actionBoard, notes: { ...state.actionBoard.notes } },
+			actionBoard: {
+				...state.actionBoard,
+				notes: { ...state.actionBoard.notes },
+			},
 		};
 	}
 

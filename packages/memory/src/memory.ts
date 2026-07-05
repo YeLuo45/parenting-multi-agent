@@ -13,6 +13,7 @@
  */
 
 import Database from "better-sqlite3";
+import { computeFeverTrend } from "./symptom.js";
 import {
 	type ChildProfile,
 	type ChildStage,
@@ -23,13 +24,12 @@ import {
 	type EpisodeType,
 	type Fact,
 	type FactCategory,
+	type FeverTrend,
 	genId,
 	type Session,
 	type SymptomLog,
 	type SymptomType,
-	type FeverTrend,
 } from "./types.js";
-import { computeFeverTrend } from "./symptom.js";
 
 export const MEMORY_SCHEMA_VERSION = 1;
 
@@ -638,14 +638,14 @@ export class MemoryLayer {
 				`SELECT * FROM symptom_logs WHERE child_id = ? ORDER BY created_at DESC`,
 			)
 			.all(childId) as Array<{
-				id: string;
-				child_id: string;
-				type: string;
-				value: number;
-				unit: string | null;
-				note: string | null;
-				created_at: string;
-			}>;
+			id: string;
+			child_id: string;
+			type: string;
+			value: number;
+			unit: string | null;
+			note: string | null;
+			created_at: string;
+		}>;
 		return rows.map((row) => ({
 			id: row.id,
 			childId: row.child_id,
@@ -670,14 +670,14 @@ export class MemoryLayer {
 				 ORDER BY created_at ASC`,
 			)
 			.all(childId, sinceIso) as Array<{
-				id: string;
-				child_id: string;
-				type: string;
-				value: number;
-				unit: string | null;
-				note: string | null;
-				created_at: string;
-			}>;
+			id: string;
+			child_id: string;
+			type: string;
+			value: number;
+			unit: string | null;
+			note: string | null;
+			created_at: string;
+		}>;
 		return rows.map((row) => ({
 			id: row.id,
 			childId: row.child_id,
@@ -700,7 +700,9 @@ export class MemoryLayer {
 		hours: number,
 		asOf: Date = new Date(),
 	): FeverTrend {
-		const since = new Date(asOf.getTime() - hours * 60 * 60 * 1000).toISOString();
+		const since = new Date(
+			asOf.getTime() - hours * 60 * 60 * 1000,
+		).toISOString();
 		const readings = this.recentFeverBy(childId, since);
 		return computeFeverTrend(readings);
 	}

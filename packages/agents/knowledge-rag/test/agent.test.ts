@@ -726,11 +726,16 @@ describe("KnowledgeRAGAgent — RAG with LLM", () => {
 		birthDate: "2024-01-01",
 		stage: "infant",
 	} as unknown as Parameters<KnowledgeRAGAgent["respond"]>[1];
-	const ctx = { memory: undefined } as unknown as Parameters<KnowledgeRAGAgent["respond"]>[2];
+	const ctx = { memory: undefined } as unknown as Parameters<
+		KnowledgeRAGAgent["respond"]
+	>[2];
 
 	it("sends a RAG prompt containing the matched FAQ when an llm generator is wired", async () => {
 		const calls: Array<{ system: string; user: string }> = [];
-		const generator = async (system: string, user: string): Promise<string> => {
+		const generator = async (
+			system: string,
+			user: string,
+		): Promise<string> => {
 			calls.push({ system, user });
 			return "llm-crafted answer about breastfeeding";
 		};
@@ -775,10 +780,9 @@ describe("KnowledgeRAGAgent — RAG with LLM", () => {
 		// run, since the user wants a reference-backed answer rather than
 		// a general browse listing.
 		const r = await agent.respond("母乳喂养应该多久", child, ctx);
-		expect((r as unknown as { sourceChain?: string[] }).sourceChain ?? []).toEqual([
-			"minimax-m3",
-			"rule-fallback",
-		]);
+		expect(
+			(r as unknown as { sourceChain?: string[] }).sourceChain ?? [],
+		).toEqual(["minimax-m3", "rule-fallback"]);
 	});
 
 	it("omits sourceChain when llmChainIds is not provided", async () => {
@@ -786,6 +790,8 @@ describe("KnowledgeRAGAgent — RAG with LLM", () => {
 			llmGenerator: async () => "ok",
 		});
 		const r = await agent.respond("母乳喂养应该多久", child, ctx);
-		expect((r as unknown as { sourceChain?: string[] }).sourceChain).toBeUndefined();
+		expect(
+			(r as unknown as { sourceChain?: string[] }).sourceChain,
+		).toBeUndefined();
 	});
 });

@@ -181,7 +181,7 @@ export class PediatricianAgent implements Agent {
 				return {
 					agentId: this.id,
 					agentName: this.name,
-					content: `${rule.advice}${trendLine ? "\n\n" + trendLine : ""}\n\n${PEDIATRICIAN_DISCLAIMER}`,
+					content: `${rule.advice}${trendLine ? `\n\n${trendLine}` : ""}\n\n${PEDIATRICIAN_DISCLAIMER}`,
 					confidence: 0.9,
 					urgency: escalated,
 					redFlag: isRedFlag
@@ -274,10 +274,7 @@ export class PediatricianAgent implements Agent {
 	 * hook, or no fever readings — in all of those cases the parent
 	 * simply gets the triage advice without any trend overlay.
 	 */
-	private appendTrendLine(
-		context: AgentContext,
-		childId: string,
-	): string {
+	private appendTrendLine(context: AgentContext, childId: string): string {
 		const memory = context.memory;
 		if (!memory?.computeFeverTrend) return "";
 		const trend = memory.computeFeverTrend(childId, 24);

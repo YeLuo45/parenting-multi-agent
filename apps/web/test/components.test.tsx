@@ -1117,8 +1117,14 @@ describe("MemoryPanel", () => {
 		]) {
 			expect(screen.getByTestId(`completion-action-${id}`)).toBeEnabled();
 		}
-		fireEvent.click(screen.getByTestId("completion-action-open-caregiver-handoff"));
-		fireEvent.click(screen.getByTestId("completion-action-open-delivery-evidence-center"));
+		fireEvent.click(
+			screen.getByTestId("completion-action-open-caregiver-handoff"),
+		);
+		fireEvent.click(
+			screen.getByTestId(
+				"completion-action-open-delivery-evidence-center",
+			),
+		);
 		expect(dispatch).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: "setQuestion",

@@ -15,7 +15,9 @@ describe("cmdLlmStatus", () => {
 	it("reports no real LLM wired when both env vars are missing", () => {
 		delete process.env.MINIMAX_CN_API_KEY;
 		delete process.env.XIAOMI_API_KEY;
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
 		try {
 			cmdLlmStatus();
 			expect(log).toHaveBeenCalledTimes(1);
@@ -32,7 +34,9 @@ describe("cmdLlmStatus", () => {
 	it("reports minimax configured when MINIMAX_CN_API_KEY is set", () => {
 		process.env.MINIMAX_CN_API_KEY = "minimax-test-key";
 		delete process.env.XIAOMI_API_KEY;
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
 		try {
 			cmdLlmStatus();
 			const out = log.mock.calls[0]?.[0] as string;
@@ -47,7 +51,9 @@ describe("cmdLlmStatus", () => {
 	it("falls back to xiaomi when only XIAOMI_API_KEY is set", () => {
 		delete process.env.MINIMAX_CN_API_KEY;
 		process.env.XIAOMI_API_KEY = "xiaomi-test-key";
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
 		try {
 			cmdLlmStatus();
 			const out = log.mock.calls[0]?.[0] as string;
@@ -61,7 +67,9 @@ describe("cmdLlmStatus", () => {
 	it("detects both keys as configured", () => {
 		process.env.MINIMAX_CN_API_KEY = "minimax-test-key";
 		process.env.XIAOMI_API_KEY = "xiaomi-test-key";
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
 		try {
 			cmdLlmStatus();
 			const out = log.mock.calls[0]?.[0] as string;
@@ -75,7 +83,9 @@ describe("cmdLlmStatus", () => {
 	it("handles whitespace-only env vars as missing", () => {
 		process.env.MINIMAX_CN_API_KEY = "   ";
 		delete process.env.XIAOMI_API_KEY;
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
 		try {
 			cmdLlmStatus();
 			const out = log.mock.calls[0]?.[0] as string;
@@ -90,8 +100,12 @@ describe("runCli llm-status command", () => {
 	it("returns 0 from the llm-status case (no key configured)", async () => {
 		delete process.env.MINIMAX_CN_API_KEY;
 		delete process.env.XIAOMI_API_KEY;
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-		const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
+		const err = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
 		try {
 			const code = await runCli(["llm-status"]);
 			expect(code).toBe(0);
@@ -104,8 +118,12 @@ describe("runCli llm-status command", () => {
 	it("shows the minimax primary when its key is the only one set", async () => {
 		process.env.MINIMAX_CN_API_KEY = "minimax-test-key";
 		delete process.env.XIAOMI_API_KEY;
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-		const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const log = vi
+			.spyOn(console, "log")
+			.mockImplementation(() => undefined);
+		const err = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
 		try {
 			const code = await runCli(["llm-status"]);
 			expect(code).toBe(0);

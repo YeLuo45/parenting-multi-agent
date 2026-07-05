@@ -5,8 +5,9 @@
  * Vite's DOM. The view is intentionally a pure render function that takes
  * state + dispatch so the same code can be unit-tested without jsdom.
  */
-import { loadDotenv } from "./dotenv.js";
+
 import { createRoot } from "react-dom/client";
+import { loadDotenv } from "./dotenv.js";
 import { WEB_VERSION } from "./version.js";
 import { createParentingApp } from "./view.js";
 import "./styles.css";

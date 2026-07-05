@@ -90,11 +90,7 @@ export interface SymptomLog {
  * Computed by `MemoryLayer.computeFeverTrend()`.
  */
 export type FeverDirection = "rising" | "stable" | "falling" | "unknown";
-export type FeverActionFlag =
-	| "none"
-	| "watch"
-	| "see-doctor"
-	| "urgent";
+export type FeverActionFlag = "none" | "watch" | "see-doctor" | "urgent";
 
 export interface FeverTrend {
 	count: number;
@@ -228,12 +224,7 @@ export function caregiverPermissions(role: CaregiverRole): {
  */
 export function canCaregiver(
 	role: CaregiverRole,
-	action:
-		| "editChild"
-		| "addFacts"
-		| "addEpisodes"
-		| "addFeedback"
-		| "export",
+	action: "editChild" | "addFacts" | "addEpisodes" | "addFeedback" | "export",
 ): boolean {
 	const perms = caregiverPermissions(role);
 	switch (action) {
@@ -254,9 +245,7 @@ export function canCaregiver(
  * Strip metadata that should not be exported (e.g. internal flags).
  * Returns a new child profile with only shareable fields.
  */
-export function sanitizeChildForShare(
-	child: ChildProfile,
-): ChildProfile {
+export function sanitizeChildForShare(child: ChildProfile): ChildProfile {
 	const { metadata, ...rest } = child;
 	// Drop the metadata bag; medical and contact data should never
 	// leave the device without explicit consent.
@@ -303,13 +292,19 @@ export function validateChildSharePayload(
 	if (!c.id || !c.name || !c.birthDate || !c.stage) return false;
 	if (typeof c.id !== "string") return false;
 	if (typeof c.name !== "string") return false;
-	if (typeof c.birthDate !== "string" || isNaN(Date.parse(c.birthDate)))
+	if (
+		typeof c.birthDate !== "string" ||
+		Number.isNaN(Date.parse(c.birthDate))
+	)
 		return false;
 	if (!Array.isArray(p.facts)) return false;
 	if (!Array.isArray(p.episodes)) return false;
 	if (!Array.isArray(p.caregivers)) return false;
 	if (typeof p.exportedBy !== "string") return false;
-	if (typeof p.exportedAt !== "string" || isNaN(Date.parse(p.exportedAt)))
+	if (
+		typeof p.exportedAt !== "string" ||
+		Number.isNaN(Date.parse(p.exportedAt))
+	)
 		return false;
 	return true;
 }
@@ -328,9 +323,7 @@ export function encodeSharePayload(payload: ChildSharePayload): string {
  * Decode a base64url string back into a share payload. Returns null
  * if the input is not valid base64url or not a valid payload.
  */
-export function decodeSharePayload(
-	encoded: string,
-): ChildSharePayload | null {
+export function decodeSharePayload(encoded: string): ChildSharePayload | null {
 	try {
 		const json = Buffer.from(encoded, "base64url").toString("utf8");
 		const parsed = JSON.parse(json);

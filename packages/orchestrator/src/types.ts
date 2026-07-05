@@ -24,7 +24,8 @@ export type AgentTopic =
 	| "growth"
 	| "habits"
 	| "safety"
-	| "social";
+	| "social"
+	| "cry";
 
 export type UrgencyLevel = "info" | "low" | "medium" | "high" | "emergency";
 
@@ -124,9 +125,7 @@ export interface MemoryLayerLike {
 		options?: { unit?: string; note?: string; createdAt?: string },
 	): import("@parenting/memory").SymptomLog;
 	/** Optional: list all symptom readings for a child. */
-	listSymptoms?(
-		childId: string,
-	): import("@parenting/memory").SymptomLog[];
+	listSymptoms?(childId: string): import("@parenting/memory").SymptomLog[];
 	/** Optional: aggregate a fever trend (min/max/delta/direction/action). */
 	computeFeverTrend?(
 		childId: string,

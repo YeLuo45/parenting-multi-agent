@@ -1,7 +1,8 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { existsSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+// @vitest-environment node
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadDotenv, resolveEnvPath } from "../src/index.js";
 
 describe("loadDotenv", () => {

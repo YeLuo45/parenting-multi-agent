@@ -5,7 +5,11 @@
  * Returns top-N matching knowledge entries with references.
  */
 
-import { type ChildProfile, type ChildStage, computeStage } from "@parenting/memory";
+import {
+	type ChildProfile,
+	type ChildStage,
+	computeStage,
+} from "@parenting/memory";
 import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 
 import {
@@ -177,7 +181,7 @@ export class KnowledgeRAGAgent implements Agent {
 			if (ragReply) {
 				const confidence =
 					/* v8 ignore next */
-					(matches[0] ? scoreEntry(question, matches[0]) : 0.7);
+					matches[0] ? scoreEntry(question, matches[0]) : 0.7;
 				return {
 					agentId: this.id,
 					agentName: this.name,
@@ -230,7 +234,10 @@ export class KnowledgeRAGAgent implements Agent {
 	private async tryRagReply(
 		question: string,
 		matches: KnowledgeEntry[],
-		ctx: { stage: ChildStage; intent: ReturnType<typeof detectKnowledgeIntent> },
+		ctx: {
+			stage: ChildStage;
+			intent: ReturnType<typeof detectKnowledgeIntent>;
+		},
 	): Promise<{ content: string; sourceChain?: string[] } | null> {
 		if (!this.llmGenerator || matches.length === 0) return null;
 		const systemPrompt =

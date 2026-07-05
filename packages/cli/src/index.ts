@@ -11,6 +11,7 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { createCareerAgent } from "@parenting/agent-career";
 import { createCollegePrepAgent } from "@parenting/agent-college-prep";
+import { createCryDecoderAgent } from "@parenting/agent-cry-decoder";
 import { createEducatorAgent } from "@parenting/agent-educator";
 import { createFamilyMediatorAgent } from "@parenting/agent-family-mediator";
 import { createFinanceAgent } from "@parenting/agent-finance";
@@ -45,8 +46,9 @@ const CLI_VERSION = "0.1.0";
  * key is configured.
  */
 function readEnv(name: string): string | undefined {
-	const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-		.process;
+	const proc = (
+		globalThis as { process?: { env?: Record<string, string | undefined> } }
+	).process;
 	return proc?.env?.[name]?.trim() || undefined;
 }
 
@@ -61,8 +63,12 @@ export function cmdLlmStatus(): void {
 	const lines: string[] = [];
 	lines.push(`parenting CLI (v${CLI_VERSION}) — LLM provider chain status`);
 	lines.push("");
-	lines.push(`  primary    minimax-m3   ${min ? "configured" : "missing key"}  (env MINIMAX_CN_API_KEY)`);
-	lines.push(`  secondary  xiaomi-mimo  ${xiaomi ? "configured" : "missing key"}  (env XIAOMI_API_KEY)`);
+	lines.push(
+		`  primary    minimax-m3   ${min ? "configured" : "missing key"}  (env MINIMAX_CN_API_KEY)`,
+	);
+	lines.push(
+		`  secondary  xiaomi-mimo  ${xiaomi ? "configured" : "missing key"}  (env XIAOMI_API_KEY)`,
+	);
 	lines.push(`  fallback   rule-fallback always-ready (deterministic)`);
 	lines.push("");
 	const count = (min ? 1 : 0) + (xiaomi ? 1 : 0);
@@ -139,6 +145,7 @@ export function createOrchestrator(memory: MemoryLayer): OrchestratorCore {
 	orch.registerAgent(createCareerAgent());
 	orch.registerAgent(createLegalAgent());
 	orch.registerAgent(createSiblingAgent());
+	orch.registerAgent(createCryDecoderAgent());
 	return orch;
 }
 

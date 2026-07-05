@@ -241,7 +241,11 @@ describe("createOpenAICompatibleProvider", () => {
 		const calls: Array<{ url: string; body: unknown }> = [];
 		const fetcher = (async (
 			input: string | URL,
-			init?: { method?: string; headers?: Record<string, string>; body?: string },
+			init?: {
+				method?: string;
+				headers?: Record<string, string>;
+				body?: string;
+			},
 		) => {
 			calls.push({
 				url: String(input),
@@ -249,9 +253,12 @@ describe("createOpenAICompatibleProvider", () => {
 			});
 			return {
 				status: 200,
-				text: async () => JSON.stringify(openAiReply("来自 OpenAI 的回答")),
+				text: async () =>
+					JSON.stringify(openAiReply("来自 OpenAI 的回答")),
 			};
-		}) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		}) as unknown as Parameters<
+			typeof createOpenAICompatibleProvider
+		>[0]["fetcher"];
 		const provider = createOpenAICompatibleProvider({
 			id: "test-openai",
 			endpoint: "https://llm.example/v1",
@@ -278,7 +285,9 @@ describe("createOpenAICompatibleProvider", () => {
 		const fetcher = (async () => ({
 			status: 401,
 			text: async () => JSON.stringify({ error: "invalid api key" }),
-		})) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		})) as unknown as Parameters<
+			typeof createOpenAICompatibleProvider
+		>[0]["fetcher"];
 		const provider = createOpenAICompatibleProvider({
 			id: "test-openai",
 			endpoint: "https://llm.example/v1",
@@ -293,7 +302,9 @@ describe("createOpenAICompatibleProvider", () => {
 		const fetcher = (async () => ({
 			status: 200,
 			text: async () => "<html>oops</html>",
-		})) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		})) as unknown as Parameters<
+			typeof createOpenAICompatibleProvider
+		>[0]["fetcher"];
 		const provider = createOpenAICompatibleProvider({
 			id: "test-openai",
 			endpoint: "https://llm.example/v1",
@@ -307,7 +318,9 @@ describe("createOpenAICompatibleProvider", () => {
 	it("returns empty string when the fetcher throws (network error)", async () => {
 		const fetcher = (async () => {
 			throw new Error("ECONNREFUSED");
-		}) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		}) as unknown as Parameters<
+			typeof createOpenAICompatibleProvider
+		>[0]["fetcher"];
 		const provider = createOpenAICompatibleProvider({
 			id: "test-openai",
 			endpoint: "https://llm.example/v1",
@@ -330,7 +343,9 @@ describe("createOpenAICompatibleProvider", () => {
 	it("returns empty string when no api key is set even after construction", async () => {
 		const fetcher = (async () => {
 			throw new Error("should not be called");
-		}) as unknown as Parameters<typeof createOpenAICompatibleProvider>[0]["fetcher"];
+		}) as unknown as Parameters<
+			typeof createOpenAICompatibleProvider
+		>[0]["fetcher"];
 		const provider = createOpenAICompatibleProvider({
 			id: "test-openai",
 			endpoint: "https://llm.example/v1",
@@ -347,10 +362,18 @@ describe("createAnthropicCompatibleProvider", () => {
 	});
 
 	it("posts to /messages and reads content[0].text", async () => {
-		const calls: Array<{ url: string; body: unknown; headers: Record<string, string> }> = [];
+		const calls: Array<{
+			url: string;
+			body: unknown;
+			headers: Record<string, string>;
+		}> = [];
 		const fetcher = (async (
 			input: string | URL,
-			init?: { method?: string; headers?: Record<string, string>; body?: string },
+			init?: {
+				method?: string;
+				headers?: Record<string, string>;
+				body?: string;
+			},
 		) => {
 			calls.push({
 				url: String(input),
@@ -359,9 +382,12 @@ describe("createAnthropicCompatibleProvider", () => {
 			});
 			return {
 				status: 200,
-				text: async () => JSON.stringify(anthropicReply("minimax-m3 的回答")),
+				text: async () =>
+					JSON.stringify(anthropicReply("minimax-m3 的回答")),
 			};
-		}) as unknown as Parameters<typeof createAnthropicCompatibleProvider>[0]["fetcher"];
+		}) as unknown as Parameters<
+			typeof createAnthropicCompatibleProvider
+		>[0]["fetcher"];
 		const provider = createAnthropicCompatibleProvider({
 			id: "minimax-m3",
 			endpoint: "https://api.minimaxi.com/v1",
@@ -387,7 +413,9 @@ describe("createAnthropicCompatibleProvider", () => {
 		const fetcher = (async () => ({
 			status: 429,
 			text: async () => JSON.stringify({ error: "rate limit" }),
-		})) as unknown as Parameters<typeof createAnthropicCompatibleProvider>[0]["fetcher"];
+		})) as unknown as Parameters<
+			typeof createAnthropicCompatibleProvider
+		>[0]["fetcher"];
 		const provider = createAnthropicCompatibleProvider({
 			id: "minimax-m3",
 			endpoint: "https://api.minimaxi.com/v1",
@@ -410,7 +438,11 @@ describe("createMinimaxM3Provider", () => {
 		const calls: Array<{ url: string; body: unknown }> = [];
 		const fetcher = (async (
 			input: string | URL,
-			init?: { method?: string; headers?: Record<string, string>; body?: string },
+			init?: {
+				method?: string;
+				headers?: Record<string, string>;
+				body?: string;
+			},
 		) => {
 			calls.push({
 				url: String(input),
@@ -420,10 +452,14 @@ describe("createMinimaxM3Provider", () => {
 				status: 200,
 				text: async () =>
 					JSON.stringify({
-						content: [{ type: "text", text: "minimax-m3 测试回答" }],
+						content: [
+							{ type: "text", text: "minimax-m3 测试回答" },
+						],
 					}),
 			};
-		}) as unknown as Parameters<typeof createMinimaxM3Provider>[0]["fetcher"];
+		}) as unknown as Parameters<
+			typeof createMinimaxM3Provider
+		>[0]["fetcher"];
 		const provider = createMinimaxM3Provider({
 			apiKey: "minimax-key",
 			fetcher,
@@ -460,7 +496,9 @@ describe("createXiaomiMiMoProvider", () => {
 						choices: [{ message: { content: "xiaomi 回答" } }],
 					}),
 			};
-		}) as unknown as Parameters<typeof createXiaomiMiMoProvider>[0]["fetcher"];
+		}) as unknown as Parameters<
+			typeof createXiaomiMiMoProvider
+		>[0]["fetcher"];
 		const provider = createXiaomiMiMoProvider({
 			apiKey: "xiaomi-key",
 			fetcher,
@@ -517,7 +555,9 @@ describe("buildRealLlmProviderChain", () => {
 		const fetcher = (async () => ({
 			status: 401,
 			text: async () => JSON.stringify({ error: "invalid api key" }),
-		})) as unknown as Parameters<typeof createMinimaxM3Provider>[0]["fetcher"];
+		})) as unknown as Parameters<
+			typeof createMinimaxM3Provider
+		>[0]["fetcher"];
 		const chain = buildRealLlmProviderChain({
 			minimax: { apiKey: "minimax-bad", fetcher },
 			xiaomi: { apiKey: "xiaomi-good" },
@@ -533,7 +573,9 @@ describe("buildRealLlmProviderChain", () => {
 		const fetcher = (async () => ({
 			status: 401,
 			text: async () => JSON.stringify({ error: "x" }),
-		})) as unknown as Parameters<typeof createMinimaxM3Provider>[0]["fetcher"];
+		})) as unknown as Parameters<
+			typeof createMinimaxM3Provider
+		>[0]["fetcher"];
 		const chain = buildRealLlmProviderChain({
 			minimax: { apiKey: "k", fetcher },
 			xiaomi: { apiKey: "k" },
@@ -548,6 +590,8 @@ describe("buildRealLlmProviderChain", () => {
 
 describe("readEnv", () => {
 	it("returns undefined when the env var is missing", () => {
-		expect(readEnv("__PARENTING_TEST_DEFINITELY_MISSING__")).toBeUndefined();
+		expect(
+			readEnv("__PARENTING_TEST_DEFINITELY_MISSING__"),
+		).toBeUndefined();
 	});
 });

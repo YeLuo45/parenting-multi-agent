@@ -17,8 +17,7 @@ import type {
 	FactCategory,
 	Session,
 } from "@parenting/memory";
-	import type { Feedback } from "@parenting/orchestrator";
-	import type { AgentWeightHints } from "./web-iteration-suite.js";
+import type { Feedback } from "@parenting/orchestrator";
 import type { FeedbackAnalyticsRow, SyncSnapshot } from "./memory-helpers.js";
 import {
 	buildFeedbackAnalytics,
@@ -26,6 +25,7 @@ import {
 	computeWebStage,
 	genWebId,
 } from "./memory-helpers.js";
+import type { AgentWeightHints } from "./web-iteration-suite.js";
 
 export interface MemoryStats {
 	children: number;

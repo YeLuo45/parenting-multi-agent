@@ -922,7 +922,10 @@ export const EMERGENCY_PROTOCOLS: EmergencyProtocol[] = [
 		level: "P0",
 		summary: "中毒/误食",
 		steps: [
-			{ order: 1, action: "立即拨打 120（中国）/ 1-800-222-1222（美国 Poison Control）" },
+			{
+				order: 1,
+				action: "立即拨打 120（中国）/ 1-800-222-1222（美国 Poison Control）",
+			},
 			{
 				order: 2,
 				action: "不要催吐（强酸强碱/石油制品会二次损伤）",
@@ -959,7 +962,9 @@ export function buildEmergencyProtocol(symptom: string): EmergencyProtocol {
 		const found = EMERGENCY_PROTOCOLS.find((p) => p.topic === topic);
 		/* v8 ignore next 2 */
 		if (!found)
-			throw new Error(`buildEmergencyProtocol: topic ${topic} not in table`);
+			throw new Error(
+				`buildEmergencyProtocol: topic ${topic} not in table`,
+			);
 		return found;
 	};
 	// P0 keywords — life-threatening
@@ -969,24 +974,40 @@ export function buildEmergencyProtocol(symptom: string): EmergencyProtocol {
 		)
 	) {
 		if (/(窒息|choking|卡住)/i.test(s)) return lookup("choking");
-		if (/(没意识|昏迷|unconscious|no.breath|没呼吸|停止呼吸|没脉搏|no.pulse)/i.test(s))
+		if (
+			/(没意识|昏迷|unconscious|no.breath|没呼吸|停止呼吸|没脉搏|no.pulse)/i.test(
+				s,
+			)
+		)
 			return lookup("cpr");
 		if (/(抽搐|seizure)/i.test(s)) return lookup("cpr");
 		if (/(大出血)/i.test(s)) return lookup("bleeding");
 		if (/(溺|nearly.drown)/i.test(s)) return lookup("drowning");
 		if (/(过敏|allergen|荨麻疹)/i.test(s)) return lookup("allergen");
 		if (/(中毒|poison|误食)/i.test(s)) return lookup("poisoning");
-		return lookup("cpr"); // defensive: P0 keywords are exhaustive
+		// Unreachable in practice — the P0 keyword regex above is exhaustive.
+		/* v8 ignore next 2 */
+		throw new Error(
+			"buildEmergencyProtocol: P0 keyword branch fell through",
+		);
 	}
 	// P1 keywords — urgent care within hours
-	if (/(烫伤|burn|发高烧|高烧|40度|41度|42度|摸不到脉|head.*injur|头部外伤|摔到头)/i.test(s)) {
+	if (
+		/(烫伤|burn|发高烧|高烧|40度|41度|42度|摸不到脉|head.*injur|头部外伤|摔到头)/i.test(
+			s,
+		)
+	) {
 		// Check fever BEFORE burn so "发高烧" doesn't match "烧"
 		if (/(发高烧|高烧|40度|41度|42度|发烧.*月龄|3.*月.*烧)/i.test(s))
 			return lookup("fever");
 		if (/(烫伤|烫|烧伤|burn)/i.test(s)) return lookup("burn");
 		if (/(摔到头|head.*injur|头部外伤|撞到头)/i.test(s))
 			return lookup("head_injury");
-		return lookup("burn"); // defensive: P1 keywords are exhaustive
+		// Unreachable in practice — the P1 keyword regex above is exhaustive.
+		/* v8 ignore next 2 */
+		throw new Error(
+			"buildEmergencyProtocol: P1 keyword branch fell through",
+		);
 	}
 	// P2 — non-urgent, schedule a clinic visit
 	return {

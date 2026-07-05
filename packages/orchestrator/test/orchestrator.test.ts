@@ -9,7 +9,6 @@ import {
 	detectTopics,
 	MessageBus,
 	OrchestratorCore,
-	WORKBENCH_HINT_MULTIPLIER,
 } from "../src/index.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
@@ -1079,7 +1078,9 @@ describe("feedback & self-evolution", () => {
 				setAgentHints: vi.fn((childId: string, h: any) => {
 					hints.set(childId, h);
 				}),
-				getAgentHints: vi.fn((childId: string) => hints.get(childId) ?? null),
+				getAgentHints: vi.fn(
+					(childId: string) => hints.get(childId) ?? null,
+				),
 				_feedback: feedback,
 				_hints: hints,
 			} as any,
@@ -1223,8 +1224,20 @@ describe("feedback & self-evolution", () => {
 	it("routing applies workbench hints to lift the boosted agent", async () => {
 		const { memory } = makeMockMemory();
 		const orch = new OrchestratorCore({ memory });
-		orch.registerAgent(makeAgent({ id: "pediatrician", topics: ["illness"], stages: ["infant"] }));
-		orch.registerAgent(makeAgent({ id: "psychologist", topics: ["emotion"], stages: ["infant"] }));
+		orch.registerAgent(
+			makeAgent({
+				id: "pediatrician",
+				topics: ["illness"],
+				stages: ["infant"],
+			}),
+		);
+		orch.registerAgent(
+			makeAgent({
+				id: "psychologist",
+				topics: ["emotion"],
+				stages: ["infant"],
+			}),
+		);
 		orch.setAgentHints("c1", {
 			boosts: [{ agentId: "pediatrician", boost: 0.5, reason: "today" }],
 			totalCompleted: 1,
@@ -1237,8 +1250,20 @@ describe("feedback & self-evolution", () => {
 	it("routing tolerates an empty hint list", async () => {
 		const { memory } = makeMockMemory();
 		const orch = new OrchestratorCore({ memory });
-		orch.registerAgent(makeAgent({ id: "pediatrician", topics: ["illness"], stages: ["infant"] }));
-		orch.registerAgent(makeAgent({ id: "psychologist", topics: ["emotion"], stages: ["infant"] }));
+		orch.registerAgent(
+			makeAgent({
+				id: "pediatrician",
+				topics: ["illness"],
+				stages: ["infant"],
+			}),
+		);
+		orch.registerAgent(
+			makeAgent({
+				id: "psychologist",
+				topics: ["emotion"],
+				stages: ["infant"],
+			}),
+		);
 		orch.setAgentHints("c1", {
 			boosts: [],
 			totalCompleted: 0,
@@ -1298,7 +1323,13 @@ describe("applyWorkbenchHints", () => {
 	it("boosts an agent when hints include its id with positive boost", () => {
 		const scores = new Map<string, number>([["pediatrician", 10]]);
 		applyWorkbenchHints(scores, {
-			boosts: [{ agentId: "pediatrician", boost: 0.5, reason: "today plan completed" }],
+			boosts: [
+				{
+					agentId: "pediatrician",
+					boost: 0.5,
+					reason: "today plan completed",
+				},
+			],
 			totalCompleted: 1,
 			signalSummary: "1 signal",
 		});
@@ -1308,7 +1339,13 @@ describe("applyWorkbenchHints", () => {
 	it("penalizes an agent when hints include a negative boost", () => {
 		const scores = new Map<string, number>([["sleep-coach", 10]]);
 		applyWorkbenchHints(scores, {
-			boosts: [{ agentId: "sleep-coach", boost: -0.3, reason: "negative note" }],
+			boosts: [
+				{
+					agentId: "sleep-coach",
+					boost: -0.3,
+					reason: "negative note",
+				},
+			],
 			totalCompleted: 0,
 			signalSummary: "1 signal",
 		});

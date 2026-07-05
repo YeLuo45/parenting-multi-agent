@@ -110,7 +110,7 @@ export function createOpenAICompatibleProvider(
 	return {
 		id: options.id,
 		ready: Boolean(options.endpoint && options.apiKey),
-		async complete(agentId, prompt) {
+		async complete(_agentId, prompt) {
 			if (!options.apiKey) return "";
 			const body = {
 				model: options.model,
@@ -165,7 +165,7 @@ export function createAnthropicCompatibleProvider(
 	return {
 		id: options.id,
 		ready: Boolean(options.endpoint && options.apiKey),
-		async complete(agentId, prompt) {
+		async complete(_agentId, prompt) {
 			if (!options.apiKey) return "";
 			const body = {
 				model: options.model,
@@ -196,7 +196,8 @@ export function createAnthropicCompatibleProvider(
 					content?: Array<{ type?: string; text?: string }>;
 				} | null;
 				const content =
-					json?.content?.find((block) => block.type === "text")?.text ?? "";
+					json?.content?.find((block) => block.type === "text")
+						?.text ?? "";
 				return content;
 			} catch {
 				return "";
@@ -263,8 +264,11 @@ export function createXiaomiMiMoProvider(
 export function readEnv(name: string): string | undefined {
 	if (typeof globalThis !== "undefined") {
 		// Node 20+ exposes process.env on globalThis in some shims.
-		const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-			.process;
+		const proc = (
+			globalThis as {
+				process?: { env?: Record<string, string | undefined> };
+			}
+		).process;
 		if (proc?.env?.[name]) return proc.env[name];
 	}
 	if (typeof process !== "undefined" && process.env?.[name]) {

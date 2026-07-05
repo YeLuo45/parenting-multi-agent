@@ -1,53 +1,53 @@
 import { describe, expect, it } from "vitest";
 import {
+	applyActionPlanNote,
+	applyActionPlanToggle,
 	buildAcceptanceEvidence,
+	buildActionPlanBoard,
 	buildActionPlanGenerator,
 	buildAgentCollaborationDag,
+	buildAgentCollaborationExplanation,
 	buildAgentNodeActions,
 	buildAgentWeightHints,
-	buildActionPlanBoard,
-	buildDagAgentShortcut,
-	buildGuidedIntakeWizard,
-	buildSelectedAgentHint,
-	buildWebInteractionWorkbench,
-	serializeWorkbenchState,
-	deserializeWorkbenchState,
-	applyActionPlanToggle,
-	applyActionPlanNote,
-	buildAgentCollaborationExplanation,
 	buildAllDirectionsProductHub,
 	buildBilingualKnowledgeBase,
 	buildClosedLoopEvidenceLedger,
+	buildDagAgentShortcut,
 	buildDeliveryReportExport,
 	buildE2eDrill,
 	buildFamilyProfileCenter,
 	buildFamilyTimelineFilters,
 	buildFeedbackRepairLoop,
+	buildGuidedIntakeWizard,
 	buildIterationSuite,
 	buildLlmProviderConfigForm,
 	buildLongitudinalDevelopmentInsightGraph,
-	buildParentingCompletionPack,
 	buildMedicalSafetyEscalation,
 	buildMemoryTimeline,
 	buildMultiChildContextSwitcher,
 	buildOfflineSyncOperations,
+	buildOrchestratorHintBoosts,
 	buildParentingClosedLoopPlan,
+	buildParentingCompletionPack,
 	buildParentingExecutionCenter,
 	buildParentProgressDashboard,
 	buildProviderConfigSnapshot,
 	buildProviderModeOptions,
 	buildReleaseGatePlan,
-	buildOrchestratorHintBoosts,
 	buildRuntimeDashboardSnapshot,
 	buildSafetyFirstMode,
 	buildScenarioPack,
 	buildScenarioTemplateLibrary,
 	buildScenarioWorkflow,
+	buildSelectedAgentHint,
 	buildSevenDirectionClosureCenter,
 	buildSyncConflictResolution,
 	buildSyncQueueActions,
 	buildSyncQueueOperationPlan,
+	buildWebInteractionWorkbench,
 	buildWeeklyCoachingStressPlan,
+	deserializeWorkbenchState,
+	serializeWorkbenchState,
 } from "../src/index.js";
 
 describe("web unattended iteration suite", () => {
@@ -1063,7 +1063,9 @@ describe("web unattended iteration suite", () => {
 			"reflect",
 			"adjust",
 		]);
-		expect(pack.deliveryEvidence.gates.every((gate) => gate.pass)).toBe(true);
+		expect(pack.deliveryEvidence.gates.every((gate) => gate.pass)).toBe(
+			true,
+		);
 		expect(pack.actions.map((action) => action.id)).toEqual([
 			"open-caregiver-handoff",
 			"review-evidence-confidence",
@@ -1122,7 +1124,9 @@ describe("buildWebInteractionWorkbench", () => {
 		expect(wb.directions).toHaveLength(7);
 		expect(wb.collaboration.primaryAgentId).toBe("pediatrician");
 		expect(wb.safety.mode).toBe("high-risk");
-		expect(wb.collaboration.steps.some((s) => s.kind === "guardrail")).toBe(true);
+		expect(wb.collaboration.steps.some((s) => s.kind === "guardrail")).toBe(
+			true,
+		);
 	});
 
 	it("infers sleep-coach for sleep keywords and stays in normal-loop", () => {
@@ -1153,7 +1157,9 @@ describe("buildWebInteractionWorkbench", () => {
 			memory: baseMemory,
 			provider: baseProvider,
 		});
-		const consults = wb.collaboration.steps.filter((s) => s.kind === "consult");
+		const consults = wb.collaboration.steps.filter(
+			(s) => s.kind === "consult",
+		);
 		expect(consults.length).toBeLessThanOrEqual(2);
 	});
 });
@@ -1194,7 +1200,9 @@ describe("buildAgentCollaborationDag", () => {
 			consultedAgentIds: ["nutritionist", "sleep-coach"],
 			safetyGuardrail: false,
 		});
-		expect(dag.nodes.find((n) => n.kind === "primary")?.id).toBe("pediatrician");
+		expect(dag.nodes.find((n) => n.kind === "primary")?.id).toBe(
+			"pediatrician",
+		);
 		expect(dag.nodes.filter((n) => n.kind === "consult")).toHaveLength(2);
 		expect(dag.edges).toHaveLength(2);
 	});
@@ -1212,9 +1220,30 @@ describe("buildAgentCollaborationDag", () => {
 
 describe("buildActionPlanBoard", () => {
 	const baseCards = [
-		{ horizon: "today" as const, title: "T1", summary: "S1", tips: ["a"], completed: false, note: "" },
-		{ horizon: "this-week" as const, title: "T2", summary: "S2", tips: ["b"], completed: false, note: "" },
-		{ horizon: "this-month" as const, title: "T3", summary: "S3", tips: ["c"], completed: false, note: "" },
+		{
+			horizon: "today" as const,
+			title: "T1",
+			summary: "S1",
+			tips: ["a"],
+			completed: false,
+			note: "",
+		},
+		{
+			horizon: "this-week" as const,
+			title: "T2",
+			summary: "S2",
+			tips: ["b"],
+			completed: false,
+			note: "",
+		},
+		{
+			horizon: "this-month" as const,
+			title: "T3",
+			summary: "S3",
+			tips: ["c"],
+			completed: false,
+			note: "",
+		},
 	];
 
 	it("computes completion ratio and merges notes", () => {
@@ -1255,7 +1284,12 @@ describe("buildAgentNodeActions + buildSelectedAgentHint + buildDagAgentShortcut
 	});
 
 	it("returns null when no agent is selected", () => {
-		expect(buildSelectedAgentHint({ boosts: [], totalCompleted: 0, signalSummary: "" }, null)).toBeNull();
+		expect(
+			buildSelectedAgentHint(
+				{ boosts: [], totalCompleted: 0, signalSummary: "" },
+				null,
+			),
+		).toBeNull();
 	});
 
 	it("builds a shortcut that surfaces the latest agent reply", () => {
@@ -1264,7 +1298,12 @@ describe("buildAgentNodeActions + buildSelectedAgentHint + buildDagAgentShortcut
 			messages: [
 				{ id: "1", role: "user", content: "发烧", ts: 1 },
 				{ id: "2", role: "agent", content: "建议多喝水", ts: 2 },
-				{ id: "3", role: "agent", content: "pediatrician: 用退烧药", ts: 3 },
+				{
+					id: "3",
+					role: "agent",
+					content: "pediatrician: 用退烧药",
+					ts: 3,
+				},
 			],
 		});
 		expect(shortcut.lastReply?.content).toContain("pediatrician");
@@ -1344,7 +1383,9 @@ describe("applyActionPlanToggle + applyActionPlanNote", () => {
 	});
 
 	it("applies a note without mutating the original map", () => {
-		const original: Partial<Record<"today" | "this-week" | "this-month", string>> = {};
+		const original: Partial<
+			Record<"today" | "this-week" | "this-month", string>
+		> = {};
 		const updated = applyActionPlanNote(original, "today", "棒");
 		expect(updated.today).toBe("棒");
 		expect(original.today).toBeUndefined();

@@ -6,7 +6,9 @@
  * pure workbench builders from web-iteration-suite.ts.
  */
 import type { ReactElement } from "react";
+import type { Action, AppState } from "./view.js";
 import {
+	type AgentDagNodeKind,
 	buildActionPlanBoard,
 	buildAgentCollaborationDag,
 	buildAgentNodeActions,
@@ -15,9 +17,7 @@ import {
 	buildGuidedIntakeWizard,
 	buildSelectedAgentHint,
 	buildWebInteractionWorkbench,
-	type AgentDagNodeKind,
 } from "./web-iteration-suite.js";
-import type { Action, AppState } from "./view.js";
 
 export interface WorkbenchPanelProps {
 	state: AppState;
@@ -40,8 +40,7 @@ export function WorkbenchPanel({
 		selectedChildId: state.selectedChildId ?? undefined,
 		memory: state.memoryStats,
 		provider: state.llmStatus,
-		lastFeedbackRating:
-			state.memoryStats.feedback > 0 ? -1 : undefined,
+		lastFeedbackRating: state.memoryStats.feedback > 0 ? -1 : undefined,
 	});
 	const guidedIntake = buildGuidedIntakeWizard({
 		children: state.children,
@@ -65,10 +64,12 @@ export function WorkbenchPanel({
 		completedIds: state.actionBoard.completedIds,
 		notes: state.actionBoard.notes,
 	});
-	const agentNodeActions = buildAgentNodeActions(agentDag).map((node, idx) => ({
-		...node,
-		kind: agentDag.nodes[idx]?.kind ?? ("primary" as AgentDagNodeKind),
-	}));
+	const agentNodeActions = buildAgentNodeActions(agentDag).map(
+		(node, idx) => ({
+			...node,
+			kind: agentDag.nodes[idx]?.kind ?? ("primary" as AgentDagNodeKind),
+		}),
+	);
 	const selectedHintModel = buildSelectedAgentHint(
 		state.agentHints,
 		state.selectedAgentId,
@@ -95,10 +96,7 @@ export function WorkbenchPanel({
 	});
 
 	return (
-		<div
-			className="dashboard-card"
-			data-testid="workbench-panel"
-		>
+		<div className="dashboard-card" data-testid="workbench-panel">
 			<strong>Workbench</strong>
 			<span
 				className="llm-status-badge"
@@ -110,7 +108,8 @@ export function WorkbenchPanel({
 				{state.llmStatus.primaryProviderId
 					? `LLM → ${state.llmStatus.primaryProviderId}`
 					: "LLM → rule-fallback"}
-				{state.lastLlmTriedChain && state.lastLlmTriedChain.length > 0 ? (
+				{state.lastLlmTriedChain &&
+				state.lastLlmTriedChain.length > 0 ? (
 					<span
 						className="llm-status-chain"
 						title={state.lastLlmTriedChain.join(" → ")}
@@ -121,10 +120,7 @@ export function WorkbenchPanel({
 				) : null}
 			</span>
 			<span data-testid="workbench-summary">{workbench.summary}</span>
-			<div
-				className="scenario-pack"
-				data-testid="workbench-directions"
-			>
+			<div className="scenario-pack" data-testid="workbench-directions">
 				{workbench.directions.map((direction) => (
 					<button
 						key={direction.id}
@@ -161,7 +157,8 @@ export function WorkbenchPanel({
 							dispatch({
 								type: "advanceIntake",
 								stepId: step.id,
-								scenarioId: state.guidedIntake.scenarioId ?? "default",
+								scenarioId:
+									state.guidedIntake.scenarioId ?? "default",
 								goal: state.guidedIntake.goal || "default",
 							})
 						}
@@ -173,10 +170,7 @@ export function WorkbenchPanel({
 			<p data-testid="workbench-guided-progress">
 				{Math.round(guidedIntake.progressRatio * 100)}%
 			</p>
-			<div
-				className="scenario-pack"
-				data-testid="workbench-dag-buttons"
-			>
+			<div className="scenario-pack" data-testid="workbench-dag-buttons">
 				{agentNodeActions.map((node) => {
 					const isPrimary = node.kind === "primary";
 					return (
@@ -185,7 +179,9 @@ export function WorkbenchPanel({
 							type="button"
 							data-testid={`workbench-dag-btn-${node.agentId}`}
 							data-node-kind={node.kind}
-							aria-pressed={state.selectedAgentId === node.agentId}
+							aria-pressed={
+								state.selectedAgentId === node.agentId
+							}
 							onClick={() =>
 								dispatch({
 									type: "selectAgent",
@@ -202,12 +198,8 @@ export function WorkbenchPanel({
 			<p data-testid="workbench-dag-summary">
 				{`DAG ${agentDag.nodes.length} nodes / ${agentDag.edges.length} edges`}
 			</p>
-			<p data-testid="workbench-selected-hint">
-				{selectedHintText}
-			</p>
-			<p data-testid="workbench-dag-shortcut">
-				{dagShortcutContent}
-			</p>
+			<p data-testid="workbench-selected-hint">{selectedHintText}</p>
+			<p data-testid="workbench-dag-shortcut">{dagShortcutContent}</p>
 			<p data-testid="workbench-dag-shortcut-count">
 				{dagShortcut.lastReply ? "1 reply" : "0 replies"}
 			</p>
@@ -220,12 +212,11 @@ export function WorkbenchPanel({
 			>
 				clear
 			</button>
-			<div
-				className="scenario-pack"
-				data-testid="workbench-action-board"
-			>
+			<div className="scenario-pack" data-testid="workbench-action-board">
 				{actionBoard.cards.map((card) => {
-					const done = state.actionBoard.completedIds.includes(card.horizon);
+					const done = state.actionBoard.completedIds.includes(
+						card.horizon,
+					);
 					return (
 						<span
 							key={card.horizon}
@@ -248,7 +239,9 @@ export function WorkbenchPanel({
 								type="text"
 								data-testid={`workbench-action-note-${card.horizon}`}
 								placeholder="备注"
-								value={state.actionBoard.notes[card.horizon] ?? ""}
+								value={
+									state.actionBoard.notes[card.horizon] ?? ""
+								}
 								onChange={(event) =>
 									dispatch({
 										type: "annotateActionCard",

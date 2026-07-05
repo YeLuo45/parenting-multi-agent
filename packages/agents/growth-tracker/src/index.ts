@@ -25,8 +25,8 @@ export {
 	getMilestonesForAge,
 	getPercentiles,
 	type Milestone,
-	type ZScoreBand,
 	weightGainVelocity,
+	type ZScoreBand,
 } from "./knowledge.js";
 
 export const GROWTH_TRACKER_VERSION = "0.1.0";

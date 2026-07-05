@@ -61,7 +61,9 @@ self.addEventListener("fetch", (event) => {
 				// Refresh in the background; return cached immediately.
 				event.waitUntil(
 					fetch(request)
-						.then((response) => cache.put(request, response.clone()))
+						.then((response) =>
+							cache.put(request, response.clone()),
+						)
 						.catch(() => undefined),
 				);
 				return cached;
@@ -73,7 +75,10 @@ self.addEventListener("fetch", (event) => {
 				}
 				return response;
 			} catch {
-				return new Response("Offline", { status: 503, statusText: "offline" });
+				return new Response("Offline", {
+					status: 503,
+					statusText: "offline",
+				});
 			}
 		})(),
 	);

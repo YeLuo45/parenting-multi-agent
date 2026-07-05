@@ -34,18 +34,21 @@ export {
 	selectUnsyncedDeltas,
 } from "./sync.js";
 export {
+	buildChildSharePayload,
 	type Caregiver,
 	type CaregiverRole,
-	caregiverPermissions,
-	canCaregiver,
 	type ChildProfile,
 	type ChildSharePayload,
 	type ChildStage,
+	canCaregiver,
+	caregiverPermissions,
 	computeStage,
 	type DeltaEntry,
 	type DeltaOp,
+	decodeSharePayload,
 	type Episode,
 	type EpisodeType,
+	encodeSharePayload,
 	type Fact,
 	type FactCategory,
 	type FeverActionFlag,
@@ -54,17 +57,10 @@ export {
 	genId,
 	type Session,
 	sanitizeChildForShare,
-	buildChildSharePayload,
 	validateChildSharePayload,
-	encodeSharePayload,
-	decodeSharePayload,
 } from "./types.js";
 
 export const MEMORY_VERSION = "0.1.0";
-export {
-	type SymptomLog,
-	type SymptomType,
-} from "./types.js";
 export {
 	classifyFeverAction,
 	classifyFeverDirection,
@@ -74,3 +70,7 @@ export {
 	FEVER_STABLE_THRESHOLD_C,
 	formatFeverTrendLine,
 } from "./symptom.js";
+export type {
+	SymptomLog,
+	SymptomType,
+} from "./types.js";

@@ -79,7 +79,9 @@ async function readDir(
  */
 export function loadDotenv(
 	options: { dir?: string; override?: boolean } = {},
-): Promise<{ loaded: string[]; keys: string[] }> | { loaded: string[]; keys: string[] } {
+):
+	| Promise<{ loaded: string[]; keys: string[] }>
+	| { loaded: string[]; keys: string[] } {
 	if (!isNode()) {
 		return { loaded: [], keys: [] };
 	}

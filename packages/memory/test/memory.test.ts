@@ -9,8 +9,8 @@ import {
 	encodeSharePayload,
 	genId,
 	L0_RULES,
-	matchL0Rule,
 	MemoryLayer,
+	matchL0Rule,
 	sanitizeChildForShare,
 	validateChildSharePayload,
 } from "../src/index.js";
@@ -799,7 +799,9 @@ describe("validateChildSharePayload", () => {
 
 	it("rejects when facts/episodes/caregivers are not arrays", () => {
 		expect(validateChildSharePayload({ ...valid, facts: "x" })).toBe(false);
-		expect(validateChildSharePayload({ ...valid, episodes: 1 })).toBe(false);
+		expect(validateChildSharePayload({ ...valid, episodes: 1 })).toBe(
+			false,
+		);
 		expect(validateChildSharePayload({ ...valid, caregivers: null })).toBe(
 			false,
 		);
@@ -867,7 +869,9 @@ describe("encodeSharePayload + decodeSharePayload", () => {
 			...sample,
 			exportedAt: "not-a-date",
 		};
-		const encoded = encodeSharePayload(sample2 as Parameters<typeof encodeSharePayload>[0]);
+		const encoded = encodeSharePayload(
+			sample2 as Parameters<typeof encodeSharePayload>[0],
+		);
 		expect(decodeSharePayload(encoded)).toBeNull();
 	});
 });
@@ -891,8 +895,12 @@ describe("SymptomLog (time series)", () => {
 	it("listSymptoms returns chronological desc for a child", () => {
 		const t0 = "2024-01-01T10:00:00.000Z";
 		const a = layer.addSymptom("alice", "fever", 38.5, { createdAt: t0 });
-		const b = layer.addSymptom("alice", "cough", 0, { createdAt: "2024-01-02T10:00:00.000Z" });
-		const c = layer.addSymptom("alice", "rash", 0, { createdAt: "2024-01-03T10:00:00.000Z" });
+		const b = layer.addSymptom("alice", "cough", 0, {
+			createdAt: "2024-01-02T10:00:00.000Z",
+		});
+		const c = layer.addSymptom("alice", "rash", 0, {
+			createdAt: "2024-01-03T10:00:00.000Z",
+		});
 		const all = layer.listSymptoms("alice");
 		expect(all).toHaveLength(3);
 		// latest first
@@ -912,9 +920,15 @@ describe("SymptomLog (time series)", () => {
 	});
 
 	it("recentFeverBy returns only fever readings within the time window", () => {
-		layer.addSymptom("alice", "fever", 38.0, { createdAt: "2024-01-01T10:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 38.5, { createdAt: "2024-01-02T10:00:00.000Z" });
-		layer.addSymptom("alice", "cough", 0, { createdAt: "2024-01-02T11:00:00.000Z" });
+		layer.addSymptom("alice", "fever", 38.0, {
+			createdAt: "2024-01-01T10:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 38.5, {
+			createdAt: "2024-01-02T10:00:00.000Z",
+		});
+		layer.addSymptom("alice", "cough", 0, {
+			createdAt: "2024-01-02T11:00:00.000Z",
+		});
 		const since = new Date("2024-01-01T00:00:00.000Z").toISOString();
 		const recent = layer.recentFeverBy("alice", since);
 		expect(recent).toHaveLength(2);
@@ -924,9 +938,15 @@ describe("SymptomLog (time series)", () => {
 	it("computeFeverTrend returns slope + direction for recent readings", () => {
 		// higher temp at t+1 than t => 'rising'
 		const asOf = new Date("2024-01-02T00:00:00.000Z");
-		layer.addSymptom("alice", "fever", 37.5, { createdAt: "2024-01-01T08:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 38.0, { createdAt: "2024-01-01T12:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 38.5, { createdAt: "2024-01-01T16:00:00.000Z" });
+		layer.addSymptom("alice", "fever", 37.5, {
+			createdAt: "2024-01-01T08:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 38.0, {
+			createdAt: "2024-01-01T12:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 38.5, {
+			createdAt: "2024-01-01T16:00:00.000Z",
+		});
 		const trend = layer.computeFeverTrend("alice", 24, asOf);
 		expect(trend.count).toBe(3);
 		expect(trend.direction).toBe("rising");
@@ -937,8 +957,12 @@ describe("SymptomLog (time series)", () => {
 
 	it("computeFeverTrend returns flat direction for constant readings", () => {
 		const asOf = new Date("2024-01-02T00:00:00.000Z");
-		layer.addSymptom("alice", "fever", 38.0, { createdAt: "2024-01-01T08:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 38.0, { createdAt: "2024-01-01T12:00:00.000Z" });
+		layer.addSymptom("alice", "fever", 38.0, {
+			createdAt: "2024-01-01T08:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 38.0, {
+			createdAt: "2024-01-01T12:00:00.000Z",
+		});
 		const trend = layer.computeFeverTrend("alice", 24, asOf);
 		expect(trend.direction).toBe("stable");
 		expect(trend.delta).toBe(0);
@@ -946,9 +970,15 @@ describe("SymptomLog (time series)", () => {
 
 	it("computeFeverTrend returns falling direction when temperature drops", () => {
 		const asOf = new Date("2024-01-02T00:00:00.000Z");
-		layer.addSymptom("alice", "fever", 39.0, { createdAt: "2024-01-01T08:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 38.0, { createdAt: "2024-01-01T12:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 37.5, { createdAt: "2024-01-01T16:00:00.000Z" });
+		layer.addSymptom("alice", "fever", 39.0, {
+			createdAt: "2024-01-01T08:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 38.0, {
+			createdAt: "2024-01-01T12:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 37.5, {
+			createdAt: "2024-01-01T16:00:00.000Z",
+		});
 		const trend = layer.computeFeverTrend("alice", 24, asOf);
 		expect(trend.direction).toBe("falling");
 		expect(trend.delta).toBeCloseTo(-1.5, 5);
@@ -962,9 +992,15 @@ describe("SymptomLog (time series)", () => {
 
 	it("computeFeverTrend flags fever-duration when readings span > 72h", () => {
 		const asOf = new Date("2024-01-05T00:00:00.000Z");
-		layer.addSymptom("alice", "fever", 38.0, { createdAt: "2024-01-01T08:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 38.5, { createdAt: "2024-01-02T08:00:00.000Z" });
-		layer.addSymptom("alice", "fever", 39.0, { createdAt: "2024-01-04T08:00:00.000Z" });
+		layer.addSymptom("alice", "fever", 38.0, {
+			createdAt: "2024-01-01T08:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 38.5, {
+			createdAt: "2024-01-02T08:00:00.000Z",
+		});
+		layer.addSymptom("alice", "fever", 39.0, {
+			createdAt: "2024-01-04T08:00:00.000Z",
+		});
 		const trend = layer.computeFeverTrend("alice", 24 * 7, asOf);
 		expect(trend.durationHours).toBeGreaterThanOrEqual(72);
 		expect(trend.actionFlag).toBe("see-doctor");
@@ -974,9 +1010,48 @@ describe("SymptomLog (time series)", () => {
 		const s = layer.addSymptom("alice", "rash", 0);
 		expect(s.unit).toBeUndefined();
 	});
+
+	it("addSymptom persists note when provided", () => {
+		const s = layer.addSymptom("alice", "fever", 39.0, {
+			note: "after nap",
+		});
+		expect(s.note).toBe("after nap");
+	});
+
+	it("listSymptoms: rows with NULL unit/note omit those keys", () => {
+		const s = layer.addSymptom("alice", "cough", 0);
+		const all = layer.listSymptoms("alice");
+		const found = all.find((r) => r.id === s.id);
+		expect(found).toBeDefined();
+		expect(found?.unit).toBeUndefined();
+		expect(found?.note).toBeUndefined();
+	});
+
+	it("listSymptoms: rows with unit/note set round-trip those keys", () => {
+		const s = layer.addSymptom("alice", "rash", 0, {
+			unit: "count",
+			note: "on arm",
+		});
+		const all = layer.listSymptoms("alice");
+		const found = all.find((r) => r.id === s.id);
+		expect(found?.unit).toBe("count");
+		expect(found?.note).toBe("on arm");
+	});
+
+	it("recentFeverBy round-trips unit and note when set", () => {
+		layer.addSymptom("alice", "fever", 38.5, {
+			unit: "C",
+			note: "morning",
+			createdAt: "2024-01-01T08:00:00.000Z",
+		});
+		const rows = layer.recentFeverBy("alice", "2024-01-01T00:00:00.000Z");
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.unit).toBe("C");
+		expect(rows[0]?.note).toBe("morning");
+	});
 });
 
-describe("symptom pure functions", () => {
+describe("Symptom analytics (pure)", () => {
 	it("classifyFeverDirection: within stable threshold is 'stable'", async () => {
 		const { classifyFeverDirection } = await import("../src/symptom.js");
 		expect(classifyFeverDirection(0)).toBe("stable");
@@ -1019,9 +1094,27 @@ describe("symptom pure functions", () => {
 	it("computeFeverTrend: handles unsorted readings", async () => {
 		const { computeFeverTrend } = await import("../src/symptom.js");
 		const readings = [
-			{ id: "s3", childId: "c", type: "fever" as const, value: 38.5, createdAt: "2024-01-01T16:00:00.000Z" },
-			{ id: "s1", childId: "c", type: "fever" as const, value: 37.5, createdAt: "2024-01-01T08:00:00.000Z" },
-			{ id: "s2", childId: "c", type: "fever" as const, value: 38.0, createdAt: "2024-01-01T12:00:00.000Z" },
+			{
+				id: "s3",
+				childId: "c",
+				type: "fever" as const,
+				value: 38.5,
+				createdAt: "2024-01-01T16:00:00.000Z",
+			},
+			{
+				id: "s1",
+				childId: "c",
+				type: "fever" as const,
+				value: 37.5,
+				createdAt: "2024-01-01T08:00:00.000Z",
+			},
+			{
+				id: "s2",
+				childId: "c",
+				type: "fever" as const,
+				value: 38.0,
+				createdAt: "2024-01-01T12:00:00.000Z",
+			},
 		];
 		const trend = computeFeverTrend(readings);
 		expect(trend.count).toBe(3);
@@ -1032,16 +1125,64 @@ describe("symptom pure functions", () => {
 	});
 	it("formatFeverTrendLine: empty/unknown returns chinese placeholder", async () => {
 		const { formatFeverTrendLine } = await import("../src/symptom.js");
-		expect(formatFeverTrendLine({
-			count: 0, min: 0, max: 0, avg: 0, delta: 0,
-			direction: "unknown", durationHours: 0, actionFlag: "none",
-		})).toContain("尚未记录");
+		expect(
+			formatFeverTrendLine({
+				count: 0,
+				min: 0,
+				max: 0,
+				avg: 0,
+				delta: 0,
+				direction: "unknown",
+				durationHours: 0,
+				actionFlag: "none",
+			}),
+		).toContain("尚未记录");
 	});
 	it("formatFeverTrendLine: rising includes 上升", async () => {
 		const { formatFeverTrendLine } = await import("../src/symptom.js");
-		expect(formatFeverTrendLine({
-			count: 3, min: 37.5, max: 38.5, avg: 38.0, delta: 1.0,
-			direction: "rising", durationHours: 8, actionFlag: "none",
-		})).toContain("上升");
+		expect(
+			formatFeverTrendLine({
+				count: 3,
+				min: 37.5,
+				max: 38.5,
+				avg: 38.0,
+				delta: 1.0,
+				direction: "rising",
+				durationHours: 8,
+				actionFlag: "none",
+			}),
+		).toContain("上升");
+	});
+
+	it("formatFeverTrendLine: falling includes 下降", async () => {
+		const { formatFeverTrendLine } = await import("../src/symptom.js");
+		expect(
+			formatFeverTrendLine({
+				count: 3,
+				min: 37.0,
+				max: 38.5,
+				avg: 37.8,
+				delta: -0.7,
+				direction: "falling",
+				durationHours: 8,
+				actionFlag: "none",
+			}),
+		).toContain("下降");
+	});
+
+	it("formatFeverTrendLine: stable (delta ≈ 0, direction stable) includes 稳定", async () => {
+		const { formatFeverTrendLine } = await import("../src/symptom.js");
+		expect(
+			formatFeverTrendLine({
+				count: 3,
+				min: 38.0,
+				max: 38.1,
+				avg: 38.05,
+				delta: 0.05,
+				direction: "stable",
+				durationHours: 8,
+				actionFlag: "none",
+			}),
+		).toContain("稳定");
 	});
 });

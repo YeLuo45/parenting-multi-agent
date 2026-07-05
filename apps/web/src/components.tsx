@@ -12,16 +12,15 @@ import type { FormEvent, ReactElement } from "react";
 import { LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeSwitcher } from "./theme.js";
 import type { Action, AppState, ChatMessage } from "./view.js";
-	import { WorkbenchPanel } from "./workbench-panel.js";
 import {
 	buildAllDirectionsProductHub,
 	buildBilingualKnowledgeBase,
 	buildDeliveryReportExport,
 	buildLlmProviderConfigForm,
 	buildLongitudinalDevelopmentInsightGraph,
-	buildParentingCompletionPack,
 	buildMedicalSafetyEscalation,
 	buildParentingClosedLoopPlan,
+	buildParentingCompletionPack,
 	buildParentingExecutionCenter,
 	buildRuntimeDashboardSnapshot,
 	buildScenarioPack,
@@ -32,6 +31,7 @@ import {
 	buildSyncQueueOperationPlan,
 	buildWeeklyCoachingStressPlan,
 } from "./web-iteration-suite.js";
+import { WorkbenchPanel } from "./workbench-panel.js";
 
 /** Header: app title + agent count + theme switcher + language switcher. */
 export function Header({ state }: { state: AppState }): ReactElement {
@@ -874,8 +874,8 @@ export function MemoryPanel({
 				))}
 			</dl>
 
-		<WorkbenchPanel state={state} dispatch={dispatch} />
-			</aside>
+			<WorkbenchPanel state={state} dispatch={dispatch} />
+		</aside>
 	);
 }
 

@@ -417,7 +417,11 @@ describe("agent hints persistence", () => {
 		const layer = new WebMemoryLayer();
 		const hints = {
 			boosts: [
-				{ agentId: "sleep-coach", boost: 2, reason: "today plan completed" },
+				{
+					agentId: "sleep-coach",
+					boost: 2,
+					reason: "today plan completed",
+				},
 				{ agentId: "psychologist", boost: 1, reason: "positive note" },
 			],
 			totalCompleted: 2,

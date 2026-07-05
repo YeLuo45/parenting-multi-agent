@@ -20,6 +20,7 @@
 		"packages/agents/social",
 		"packages/agents/school-readiness",
 		"packages/agents/college-prep",
+		"packages/agents/cry-decoder",
 		"packages/agents/career",
 		"packages/agents/legal",
 		"packages/agents/sibling",

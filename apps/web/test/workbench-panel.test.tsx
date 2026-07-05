@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import { WorkbenchPanel, createParentingApp } from "../src/index.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createParentingApp, WorkbenchPanel } from "../src/index.js";
 import { initialState } from "../src/view.js";
 
 let container: HTMLDivElement;

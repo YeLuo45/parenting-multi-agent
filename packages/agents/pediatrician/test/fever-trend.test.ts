@@ -62,8 +62,16 @@ describe("PediatricianAgent — fever-trend awareness", () => {
 		const stub = makeMemoryStub({
 			trend,
 			readings: [
-				{ type: "fever", value: 39.0, createdAt: "2026-06-18T08:00:00Z" },
-				{ type: "fever", value: 37.5, createdAt: "2026-06-18T16:00:00Z" },
+				{
+					type: "fever",
+					value: 39.0,
+					createdAt: "2026-06-18T08:00:00Z",
+				},
+				{
+					type: "fever",
+					value: 37.5,
+					createdAt: "2026-06-18T16:00:00Z",
+				},
 			],
 		});
 		const reply = await agent.respond("宝宝发烧了", child, {
@@ -120,7 +128,13 @@ describe("PediatricianAgent — fever-trend awareness", () => {
 		});
 		const stub = makeMemoryStub({
 			trend,
-			readings: [{ type: "fever", value: 38.1, createdAt: "2026-06-18T18:00:00Z" }],
+			readings: [
+				{
+					type: "fever",
+					value: 38.1,
+					createdAt: "2026-06-18T18:00:00Z",
+				},
+			],
 		});
 		const reply = await agent.respond("宝宝发烧了", child, {
 			memory: stub,
@@ -141,7 +155,13 @@ describe("PediatricianAgent — fever-trend awareness", () => {
 		});
 		const stub = makeMemoryStub({
 			trend,
-			readings: [{ type: "fever", value: 38.0, createdAt: "2026-06-18T18:00:00Z" }],
+			readings: [
+				{
+					type: "fever",
+					value: 38.0,
+					createdAt: "2026-06-18T18:00:00Z",
+				},
+			],
 		});
 		const reply = await agent.respond("宝宝发烧了", child, {
 			memory: stub,
@@ -161,7 +181,13 @@ describe("PediatricianAgent — fever-trend awareness", () => {
 		});
 		const stub = makeMemoryStub({
 			trend,
-			readings: [{ type: "fever", value: 39.4, createdAt: "2026-06-18T20:00:00Z" }],
+			readings: [
+				{
+					type: "fever",
+					value: 39.4,
+					createdAt: "2026-06-18T20:00:00Z",
+				},
+			],
 		});
 		const reply = await agent.respond("宝宝发烧了", child, {
 			memory: stub,
@@ -181,7 +207,13 @@ describe("PediatricianAgent — fever-trend awareness", () => {
 		});
 		const stub = makeMemoryStub({
 			trend,
-			readings: [{ type: "fever", value: 39.6, createdAt: "2026-06-18T20:00:00Z" }],
+			readings: [
+				{
+					type: "fever",
+					value: 39.6,
+					createdAt: "2026-06-18T20:00:00Z",
+				},
+			],
 		});
 		const reply = await agent.respond("宝宝发烧了", child, {
 			memory: stub,

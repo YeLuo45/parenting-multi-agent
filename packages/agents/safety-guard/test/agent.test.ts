@@ -7,10 +7,8 @@ import {
 } from "../src/agent.js";
 import {
 	buildEmergencyProtocol,
-	type EmergencyProtocol,
 	EMERGENCY_PROTOCOLS,
 	FIRST_AID_GUIDES,
-	type FirstAidTopic,
 	getAllFirstAidTopics,
 	getCriticalHazards,
 	getFirstAidGuide,
@@ -708,5 +706,24 @@ describe("buildEmergencyProtocol", () => {
 		// dedicated test for poisoning sub-match
 		const p = buildEmergencyProtocol("孩子中毒了");
 		expect(p.topic).toBe("poisoning");
+	});
+
+	it("P0 outer matches via 药物 alone (no 中毒|poison|误食) — falls through P0 inner cascade", () => {
+		// Outer P0 regex includes `药物` but the inner `(中毒|poison|误食)` branch does
+		// not, so this exercises the not-taken arm of the poisoning sub-if and
+		// reaches the P0 throw.
+		// NOTE: "误服" deliberately avoids "误食" so the inner regex does not match.
+		expect(() => buildEmergencyProtocol("孩子误服了一些药物")).toThrow(
+			/buildEmergencyProtocol: P0/,
+		);
+	});
+
+	it("P1 outer matches via 摸不到脉 (no fever/burn/head sub-match) — falls through P1 inner cascade", () => {
+		// Outer P1 regex includes `摸不到脉` but the inner fevers/burn/head sub-IFs
+		// do not, so this exercises the not-taken arm of the head_injury sub-if
+		// and reaches the P1 throw.
+		expect(() => buildEmergencyProtocol("孩子脉搏虚弱摸不到脉")).toThrow(
+			/buildEmergencyProtocol: P1/,
+		);
 	});
 });

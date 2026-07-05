@@ -12,8 +12,8 @@ import {
 	GROWTH_STANDARDS,
 	getMilestonesForAge,
 	getPercentiles,
-	type ZScoreBand,
 	weightGainVelocity,
+	type ZScoreBand,
 } from "../src/knowledge.js";
 
 function makeChild(ageMonths: number): ChildProfile {
@@ -600,7 +600,7 @@ describe("Growth standards data sanity", () => {
 			const z = computeZScore(12, "male", "weight", 9.1);
 			expect(Math.abs(z - -0.52)).toBeLessThan(0.1);
 		});
-		});
+	});
 
 	describe("classifyZScore", () => {
 		const cases: Array<[number, ZScoreBand]> = [

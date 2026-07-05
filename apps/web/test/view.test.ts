@@ -281,7 +281,9 @@ describe("reducer", () => {
 			stepId: "urgency",
 			scenarioId: "bedtime-delay",
 		});
-		expect(s2.guidedIntake.completedSteps.filter((id) => id === "urgency")).toHaveLength(1);
+		expect(
+			s2.guidedIntake.completedSteps.filter((id) => id === "urgency"),
+		).toHaveLength(1);
 	});
 
 	it("setMemoryStats replaces the memory stats field", () => {
@@ -800,8 +802,6 @@ describe("unattended iteration visibility", () => {
 		expect(serialized).toContain("npm run release:gate");
 	});
 });
-
-import { recordMessageFeedback } from "../src/view.js";
 
 describe("recordMessageFeedback helper", () => {
 	it("dispatches feedbackDone when message and child are valid", () => {
