@@ -29,6 +29,7 @@ import type { ChildProfile } from "@parenting/memory";
 import type { AgentStats, Feedback } from "@parenting/orchestrator";
 import { OrchestratorCore } from "@parenting/orchestrator";
 import { IndexedDbMemoryLayer } from "./memory-indexeddb.js";
+import type { WebLlmRegistry } from "./web-convergence.js";
 import {
 	type MemoryLayerLike,
 	type MemoryStats,
@@ -58,14 +59,16 @@ export interface WebOrchestrator {
 /** Create a fully-wired web orchestrator. Each call returns an isolated
  *  in-memory stack — no cross-test pollution. Uses WebMemoryLayer (pure
  *  in-memory Map) so no better-sqlite3 native module is needed. */
-export function createWebOrchestrator(): WebOrchestrator {
+export function createWebOrchestrator(options?: {
+	llmRegistry?: WebLlmRegistry;
+}): WebOrchestrator {
 	const memory = new WebMemoryLayer();
 	const orchestrator = new OrchestratorCore({
 		memory,
 		maxAgentsPerAsk: 3,
 		minConfidence: 0.3,
 	});
-	registerWebAgents(orchestrator);
+	registerWebAgents(orchestrator, options?.llmRegistry);
 	return wireStack(orchestrator, memory);
 }
 
@@ -99,11 +102,14 @@ export function listWebAgentIds(): string[] {
  * Falls back to a plain in-memory layer if IDB is unavailable (e.g. SSR).
  */
 export async function createWebOrchestratorWithPersistence(
-	dbName = "parenting-memory",
+	dbName?: string,
+	options?: { llmRegistry?: WebLlmRegistry },
 ): Promise<WebOrchestrator> {
-	const memory = new IndexedDbMemoryLayer({ dbName });
+	const memory = new IndexedDbMemoryLayer({ dbName: dbName ?? "parenting-memory" });
 	await memory.ready();
-	return wireOrchestrator(memory);
+	const stack = { memory, orchestrator: new OrchestratorCore({ memory, maxAgentsPerAsk: 3, minConfidence: 0.3 }) };
+	registerWebAgents(stack.orchestrator, options?.llmRegistry);
+	return wireStack(stack.orchestrator, stack.memory);
 }
 
 function wireOrchestrator(memory: MemoryLayerLike): WebOrchestrator {
@@ -116,7 +122,10 @@ function wireOrchestrator(memory: MemoryLayerLike): WebOrchestrator {
 	return wireStack(orchestrator, memory);
 }
 
-function registerWebAgents(orchestrator: OrchestratorCore): void {
+function registerWebAgents(
+	orchestrator: OrchestratorCore,
+	llmRegistry?: WebLlmRegistry,
+): void {
 	orchestrator.registerAgent(createPediatricianAgent());
 	orchestrator.registerAgent(createPsychologistAgent());
 	orchestrator.registerAgent(createEducatorAgent());
@@ -127,7 +136,32 @@ function registerWebAgents(orchestrator: OrchestratorCore): void {
 	orchestrator.registerAgent(createParentSupportAgent());
 	orchestrator.registerAgent(createGrowthTrackerAgent());
 	orchestrator.registerAgent(createHabitBuilderAgent());
-	orchestrator.registerAgent(createKnowledgeRAGAgent());
+	// Wire the LLM registry (if provided) into the knowledge-rag agent
+	// so its "search" / "evidence" answers go through the provider
+	// chain instead of just listing FAQ entries.
+	const llmAdapter: Parameters<typeof createKnowledgeRAGAgent>[0] | undefined =
+		llmRegistry
+			? {
+					llmGenerator: async (
+						systemPrompt: string,
+						userPrompt: string,
+					): Promise<string> => {
+						const r = await llmRegistry.complete(
+							"knowledge-rag",
+							`${systemPrompt}\n\n${userPrompt}`,
+						);
+						return r.content;
+					},
+					llmChainIds: () => {
+						const s = llmRegistry.status;
+						const ids: string[] = [];
+						if (s.primaryProviderId) ids.push(s.primaryProviderId);
+						ids.push(s.fallbackProviderId);
+						return ids;
+					},
+				}
+			: undefined;
+	orchestrator.registerAgent(createKnowledgeRAGAgent(llmAdapter));
 	orchestrator.registerAgent(createSafetyGuardAgent());
 	orchestrator.registerAgent(createSocialAgent());
 	orchestrator.registerAgent(createSchoolReadinessAgent());
