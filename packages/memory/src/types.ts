@@ -55,6 +55,60 @@ export interface Session {
 	context: Record<string, unknown>;
 }
 
+// ─── L2.5: Symptom Time Series ────────────────────────────────────────
+
+/**
+ * Closed vocabulary of symptom signals parents can log. Adding to this
+ * list is a deliberate API change (the persistence layer treats it as
+ * `CHECK` in newer schema versions, but the current schema is loose).
+ */
+export type SymptomType =
+	| "fever"
+	| "cough"
+	| "vomit"
+	| "diarrhea"
+	| "rash"
+	| "appetite"
+	| "sleep"
+	| "mood"
+	| "other";
+
+export interface SymptomLog {
+	id: string;
+	childId: string;
+	type: SymptomType;
+	/** Numeric magnitude. Free-form (Celsius for fever, count for vomit, etc.). */
+	value: number;
+	/** Display unit such as "C", "°F", "次", "mmol/L". Optional. */
+	unit?: string;
+	note?: string;
+	createdAt: string;
+}
+
+/**
+ * Result of a fever trend analysis over the recent N hours.
+ * Computed by `MemoryLayer.computeFeverTrend()`.
+ */
+export type FeverDirection = "rising" | "stable" | "falling" | "unknown";
+export type FeverActionFlag =
+	| "none"
+	| "watch"
+	| "see-doctor"
+	| "urgent";
+
+export interface FeverTrend {
+	count: number;
+	min: number;
+	max: number;
+	avg: number;
+	/** Latest value - earliest value (positive = rising). */
+	delta: number;
+	direction: FeverDirection;
+	/** Span of the readings in hours (max ts - min ts). */
+	durationHours: number;
+	actionFlag: FeverActionFlag;
+}
+
 export type DeltaOp = "insert" | "update" | "upsert" | "delete";
 
 export interface DeltaEntry {

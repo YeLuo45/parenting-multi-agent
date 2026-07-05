@@ -25,7 +25,11 @@ import {
 	type FactCategory,
 	genId,
 	type Session,
+	type SymptomLog,
+	type SymptomType,
+	type FeverTrend,
 } from "./types.js";
+import { computeFeverTrend } from "./symptom.js";
 
 export const MEMORY_SCHEMA_VERSION = 1;
 
@@ -81,6 +85,18 @@ CREATE TABLE IF NOT EXISTS delta_log (
 );
 CREATE INDEX IF NOT EXISTS idx_delta_synced ON delta_log(synced_at);
 CREATE INDEX IF NOT EXISTS idx_delta_created ON delta_log(created_at);
+
+CREATE TABLE IF NOT EXISTS symptom_logs (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  value REAL NOT NULL,
+  unit TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_symptom_child_time ON symptom_logs(child_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_symptom_child_type ON symptom_logs(child_id, type);
 
 CREATE TABLE IF NOT EXISTS schema_meta (
   key TEXT PRIMARY KEY,
@@ -564,6 +580,129 @@ export class MemoryLayer {
 			byOp[row.op] = row.cnt;
 		}
 		return { total, unsynced, byTable, byOp };
+	}
+
+	// ─── Symptom time series (fever curve etc.) ────────────────────────────
+
+	/**
+	 * Insert a symptom reading. Pass `createdAt` in options to backfill
+	 * historical readings (e.g. when a parent logs yesterday's fever
+	 * after the fact).
+	 */
+	addSymptom(
+		childId: string,
+		type: SymptomType,
+		value: number,
+		options: { unit?: string; note?: string; createdAt?: string } = {},
+	): SymptomLog {
+		const log: SymptomLog = {
+			id: genId("sym"),
+			childId,
+			type,
+			value,
+			createdAt: options.createdAt ?? new Date().toISOString(),
+			...(options.unit !== undefined ? { unit: options.unit } : {}),
+			...(options.note !== undefined ? { note: options.note } : {}),
+		};
+		this.db
+			.prepare(
+				`INSERT INTO symptom_logs (id, child_id, type, value, unit, note, created_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			)
+			.run(
+				log.id,
+				log.childId,
+				log.type,
+				log.value,
+				log.unit ?? null,
+				log.note ?? null,
+				log.createdAt,
+			);
+		this.recordDelta("symptom_logs", log.id, "insert", {
+			childId: log.childId,
+			type: log.type,
+			value: log.value,
+			unit: log.unit ?? null,
+			note: log.note ?? null,
+			createdAt: log.createdAt,
+		});
+		return log;
+	}
+
+	/**
+	 * All readings for a child, sorted newest-first.
+	 */
+	listSymptoms(childId: string): SymptomLog[] {
+		const rows = this.db
+			.prepare(
+				`SELECT * FROM symptom_logs WHERE child_id = ? ORDER BY created_at DESC`,
+			)
+			.all(childId) as Array<{
+				id: string;
+				child_id: string;
+				type: string;
+				value: number;
+				unit: string | null;
+				note: string | null;
+				created_at: string;
+			}>;
+		return rows.map((row) => ({
+			id: row.id,
+			childId: row.child_id,
+			type: row.type as SymptomType,
+			value: row.value,
+			...(row.unit !== null ? { unit: row.unit } : {}),
+			...(row.note !== null ? { note: row.note } : {}),
+			createdAt: row.created_at,
+		}));
+	}
+
+	/**
+	 * Fever readings for a child within the last `hours` window.
+	 * Returns chronological-ascending so `computeFeverTrend` can sum them
+	 * without re-sorting.
+	 */
+	recentFeverBy(childId: string, sinceIso: string): SymptomLog[] {
+		const rows = this.db
+			.prepare(
+				`SELECT * FROM symptom_logs
+				 WHERE child_id = ? AND type = 'fever' AND created_at >= ?
+				 ORDER BY created_at ASC`,
+			)
+			.all(childId, sinceIso) as Array<{
+				id: string;
+				child_id: string;
+				type: string;
+				value: number;
+				unit: string | null;
+				note: string | null;
+				created_at: string;
+			}>;
+		return rows.map((row) => ({
+			id: row.id,
+			childId: row.child_id,
+			type: row.type as SymptomType,
+			value: row.value,
+			...(row.unit !== null ? { unit: row.unit } : {}),
+			...(row.note !== null ? { note: row.note } : {}),
+			createdAt: row.created_at,
+		}));
+	}
+
+	/**
+	 * Compute a fever trend over the last `hours`. Thin wrapper that
+	 * fetches the readings then delegates to `computeFeverTrend` (the
+	 * pure function lives in symptom.ts so tests can cover it without
+	 * spinning up the DB).
+	 */
+	computeFeverTrend(
+		childId: string,
+		hours: number,
+		asOf: Date = new Date(),
+	): FeverTrend {
+		const since = new Date(asOf.getTime() - hours * 60 * 60 * 1000).toISOString();
+		const readings = this.recentFeverBy(childId, since);
+		return computeFeverTrend(readings);
 	}
 
 	// ─── Lifecycle ────────────────────────────────────────────────────────

@@ -48,6 +48,9 @@ export {
 	type EpisodeType,
 	type Fact,
 	type FactCategory,
+	type FeverActionFlag,
+	type FeverDirection,
+	type FeverTrend,
 	genId,
 	type Session,
 	sanitizeChildForShare,
@@ -58,3 +61,16 @@ export {
 } from "./types.js";
 
 export const MEMORY_VERSION = "0.1.0";
+export {
+	type SymptomLog,
+	type SymptomType,
+} from "./types.js";
+export {
+	classifyFeverAction,
+	classifyFeverDirection,
+	computeFeverTrend as computeFeverTrendFromReadings,
+	FEVER_DURATION_SEE_DOCTOR_HOURS,
+	FEVER_HIGH_THRESHOLD_C,
+	FEVER_STABLE_THRESHOLD_C,
+	formatFeverTrendLine,
+} from "./symptom.js";
