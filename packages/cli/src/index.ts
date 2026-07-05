@@ -35,6 +35,50 @@ import {
 } from "@parenting/memory";
 import { OrchestratorCore } from "@parenting/orchestrator";
 
+/* v8 ignore next */
+const CLI_VERSION = "0.1.0";
+
+/**
+ * Read an env var in both Node (process.env) and Node-with-Userland shims.
+ * Returns the trimmed string or `undefined` when missing. Tests pass
+ * through `defaults` so the CLI works even when neither tier's API
+ * key is configured.
+ */
+function readEnv(name: string): string | undefined {
+	const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+		.process;
+	return proc?.env?.[name]?.trim() || undefined;
+}
+
+/**
+ * Print the current LLM provider chain status to stdout.
+ * Mirrors what the web workbench-badge shows so operators on a
+ * server with no browser can confirm keys are wired correctly.
+ */
+export function cmdLlmStatus(): void {
+	const min = readEnv("MINIMAX_CN_API_KEY");
+	const xiaomi = readEnv("XIAOMI_API_KEY");
+	const lines: string[] = [];
+	lines.push(`parenting CLI (v${CLI_VERSION}) — LLM provider chain status`);
+	lines.push("");
+	lines.push(`  primary    minimax-m3   ${min ? "configured" : "missing key"}  (env MINIMAX_CN_API_KEY)`);
+	lines.push(`  secondary  xiaomi-mimo  ${xiaomi ? "configured" : "missing key"}  (env XIAOMI_API_KEY)`);
+	lines.push(`  fallback   rule-fallback always-ready (deterministic)`);
+	lines.push("");
+	const count = (min ? 1 : 0) + (xiaomi ? 1 : 0);
+	if (count === 0) {
+		lines.push(
+			"  status: no real LLM wired. The CLI will fall back to rule-based replies.",
+		);
+	} else {
+		const primary = min ? "minimax-m3" : "xiaomi-mimo";
+		lines.push(
+			`  status: ready. Primary = ${primary}. ${count} API key${count > 1 ? "s" : ""} detected.`,
+		);
+	}
+	console.log(lines.join("\n"));
+}
+
 function dataDir(): string {
 	/* v8 ignore next */
 	return (
@@ -362,7 +406,7 @@ export function cmdRepl(memory: MemoryLayer): void {
 
 export function cmdHelp() {
 	console.log(`
-parenting CLI (v0.1.0)
+parenting CLI (v${CLI_VERSION})
 
 用法:
   parenting ask <问题>          问一个育儿问题
@@ -372,6 +416,8 @@ parenting CLI (v0.1.0)
   parenting children            列出所有孩子档案（同 list）
   parenting use <id>            切换当前 child（影响后续 ask/history）
   parenting history [n]         显示当前 child 的最近 n 条问答（默认 10）
+  parenting llm-status          显示当前 LLM provider chain 的状态
+                               (primary / fallback / API key 检测)
   parenting repl                启动交互式会话（连续问、/use /history /quit）
   parenting help                显示此帮助
 
@@ -380,6 +426,7 @@ parenting CLI (v0.1.0)
   parenting ask "4岁孩子总发脾气怎么办"
   parenting add-child alice 爱丽丝 2024-06-19
   parenting use alice
+  parenting llm-status
   parenting repl
 `);
 }
@@ -439,6 +486,10 @@ export async function runCli(args: string[]): Promise<number> {
 			} finally {
 				memory.close();
 			}
+		}
+		case "llm-status": {
+			cmdLlmStatus();
+			return 0;
 		}
 		/* v8 ignore next 8 */
 		case "repl": {
