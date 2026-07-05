@@ -130,7 +130,7 @@ export class PediatricianAgent implements Agent {
 	async respond(
 		question: string,
 		child: ChildProfile,
-		_context: AgentContext,
+		context: AgentContext,
 	): Promise<AgentReply> {
 		const months = ageInMonths(child.birthDate);
 		const intent = detectIntent(question);
@@ -166,12 +166,24 @@ export class PediatricianAgent implements Agent {
 				}
 				const isRedFlag =
 					rule.urgency === "emergency" || rule.urgency === "high";
+				// Pull the recent fever trend from memory so the parent sees
+				// whether the temperature is rising/falling/steady and how
+				// long it's been running. This is purely additive — the
+				// triage rule still drives the urgency, and the trend
+				// only escalates to 'high' when the trend's actionFlag is
+				// 'urgent' (e.g. high temp climbing over the last 24h).
+				const trendLine = this.appendTrendLine(context, child.id);
+				const escalated = this.maybeEscalateByTrend(
+					rule.urgency,
+					context,
+					child.id,
+				);
 				return {
 					agentId: this.id,
 					agentName: this.name,
-					content: `${rule.advice}\n\n${PEDIATRICIAN_DISCLAIMER}`,
+					content: `${rule.advice}${trendLine ? "\n\n" + trendLine : ""}\n\n${PEDIATRICIAN_DISCLAIMER}`,
 					confidence: 0.9,
-					urgency: rule.urgency,
+					urgency: escalated,
 					redFlag: isRedFlag
 						? {
 								severity: rule.urgency,
@@ -254,6 +266,60 @@ export class PediatricianAgent implements Agent {
 				};
 			}
 		}
+	}
+
+	/**
+	 * Build a one-line fever-trend summary by querying the memory layer.
+	 * Returns an empty string if there is no memory, no computeFeverTrend
+	 * hook, or no fever readings — in all of those cases the parent
+	 * simply gets the triage advice without any trend overlay.
+	 */
+	private appendTrendLine(
+		context: AgentContext,
+		childId: string,
+	): string {
+		const memory = context.memory;
+		if (!memory?.computeFeverTrend) return "";
+		const trend = memory.computeFeverTrend(childId, 24);
+		if (!trend || trend.count === 0) return "";
+		const direction =
+			trend.direction === "rising"
+				? "上升"
+				: trend.direction === "falling"
+					? "下降"
+					: trend.direction === "stable"
+						? "稳定"
+						: "未知";
+		const sign = trend.delta > 0 ? "+" : "";
+		const warning =
+			trend.actionFlag === "urgent"
+				? "立即就医"
+				: trend.actionFlag === "see-doctor"
+					? "建议就医"
+					: trend.actionFlag === "watch"
+						? "持续观察"
+						: "";
+		const header = "📈 体温趋势";
+		const base = `${header}：过去 ${trend.count} 次测量，最高 ${trend.max.toFixed(1)}°C / 最低 ${trend.min.toFixed(1)}°C，趋势${direction}（${sign}${trend.delta.toFixed(1)}°C）`;
+		return warning ? `${base}\n⚠️ ${warning}` : base;
+	}
+
+	/**
+	 * Bump urgency up to "high" when the fever trend's action flag is
+	 * "urgent" — the parent should escalate to a doctor now, even if
+	 * the standalone triage rule said "low"/"medium".
+	 */
+	private maybeEscalateByTrend(
+		baseUrgency: AgentReply["urgency"],
+		context: AgentContext,
+		childId: string,
+	): AgentReply["urgency"] {
+		const memory = context.memory;
+		if (!memory?.computeFeverTrend) return baseUrgency;
+		const trend = memory.computeFeverTrend(childId, 24);
+		if (!trend) return baseUrgency;
+		if (trend.actionFlag === "urgent") return "high";
+		return baseUrgency;
 	}
 }
 

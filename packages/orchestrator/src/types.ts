@@ -116,6 +116,23 @@ export interface MemoryLayerLike {
 	setAgentHints?(childId: string, hints: AgentWeightHints): void;
 	/** Optional: read workbench-derived per-child agent weight hints. */
 	getAgentHints?(childId: string): AgentWeightHints | null;
+	/** Optional: insert a symptom reading (L2.5 — symptom time series). */
+	addSymptom?(
+		childId: string,
+		type: import("@parenting/memory").SymptomType,
+		value: number,
+		options?: { unit?: string; note?: string; createdAt?: string },
+	): import("@parenting/memory").SymptomLog;
+	/** Optional: list all symptom readings for a child. */
+	listSymptoms?(
+		childId: string,
+	): import("@parenting/memory").SymptomLog[];
+	/** Optional: aggregate a fever trend (min/max/delta/direction/action). */
+	computeFeverTrend?(
+		childId: string,
+		hours: number,
+		asOf?: Date,
+	): import("@parenting/memory").FeverTrend;
 }
 
 /** Events that flow on the MessageBus. */
