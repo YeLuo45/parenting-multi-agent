@@ -21,6 +21,16 @@ async function mount(): Promise<void> {
 	}
 	const { App } = createParentingApp();
 	createRoot(root).render(<App />);
+	// Register the service worker (no-op on unsupported envs). Wrapped
+	// in a try so test runs that mock document don't see the path.
+	try {
+		if ("serviceWorker" in navigator) {
+			// Vite serves this from /sw.js with base = "./" on GitHub Pages.
+			navigator.serviceWorker.register("./sw.js").catch(() => undefined);
+		}
+	} catch {
+		// ignore
+	}
 }
 
 /* v8 ignore next 4 */
