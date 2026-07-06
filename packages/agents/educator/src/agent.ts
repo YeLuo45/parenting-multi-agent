@@ -10,12 +10,17 @@ import type { Agent, AgentContext, AgentReply } from "@parenting/orchestrator";
 import {
 	detectInterests,
 	detectLearningStyle,
+	detectSubjects,
 	type EduStageInfo,
 	getEduStage,
+	getSubjectGuidance,
 	INTERESTS,
 	type InterestCategory,
 	LEARNING_STYLES,
 	type LearningStyle,
+	SUBJECTS,
+	type SubjectId,
+	type SubjectInfo,
 	suggestActivities,
 } from "./knowledge.js";
 
@@ -110,6 +115,54 @@ function formatInterests(interests: InterestCategory[]): string {
 	return lines.join("\n");
 }
 
+export function formatSubjectBrief(info: SubjectInfo): string {
+	return `${info.emoji} ${info.name} (${info.nameEn})`;
+}
+
+export function formatSubjectGuidance(
+	info: SubjectInfo,
+	stage: EduStageInfo,
+	guidance: ReturnType<typeof import("./knowledge.js").getSubjectGuidance>,
+): string {
+	if (!guidance) {
+		return `${formatSubjectBrief(info)}\n${stage.name}阶段暂无学科指导。`;
+	}
+	const lines = [
+		`${info.emoji} ${info.name} (${info.nameEn}) — ${stage.name}`,
+		"",
+		"【学习目标】",
+		...guidance.objectives.map((o) => `- ${o}`),
+		"",
+		"【关键技能】",
+		...guidance.keySkills.map((s) => `- ${s}`),
+		"",
+		"【常见挑战】",
+		...guidance.challenges.map((c) => `- ${c}`),
+		"",
+		"【推荐活动】",
+		...guidance.activities.map((a) => `- ${a}`),
+		"",
+		"【阶段里程碑】",
+		...guidance.milestones.map((m) => `- ${m}`),
+		"",
+		"【推荐资源】",
+		...guidance.resources.map((r) => `- ${r}`),
+	];
+	return lines.join("\n");
+}
+
+const SUBJECT_BY_ID: ReadonlyMap<SubjectId, SubjectInfo> = new Map(
+	SUBJECTS.map((s) => [s.id, s]),
+);
+
+export function findSubject(id: SubjectId): SubjectInfo {
+	const info = SUBJECT_BY_ID.get(id);
+	if (!info) {
+		throw new Error(`Unknown subject id: ${id}`);
+	}
+	return info;
+}
+
 export class EducatorAgent implements Agent {
 	readonly id = "educator";
 	readonly name = "教育规划师";
@@ -196,20 +249,40 @@ export class EducatorAgent implements Agent {
 			}
 			case "subject": {
 				const eduStage = getEduStage(months);
-				if (!eduStage || eduStage.schoolSubjects.length === 0) {
+				if (!eduStage) {
+					return this.introReply();
+				}
+				const subjects = detectSubjects(question);
+				if (subjects.length === 0) {
+					if (eduStage.schoolSubjects.length === 0) {
+						return {
+							agentId: this.id,
+							agentName: this.name,
+							content: `学龄前（${Math.floor(months)} 月龄）还没有正式学校科目，建议通过游戏和绘本培养兴趣。\n\n${EDUCATOR_DISCLAIMER}`,
+							confidence: 0.7,
+							urgency: "info",
+						};
+					}
 					return {
 						agentId: this.id,
 						agentName: this.name,
-						content: `学龄前（${Math.floor(months)} 月龄）还没有正式学校科目，建议通过游戏和绘本培养兴趣。\n\n${EDUCATOR_DISCLAIMER}`,
-						confidence: 0.7,
+						content: `📚 ${eduStage.name}阶段学校科目：\n${eduStage.schoolSubjects.map((s) => `- ${s}`).join("\n")}\n\n${EDUCATOR_DISCLAIMER}`,
+						confidence: 0.85,
 						urgency: "info",
 					};
 				}
+				// Detailed per-subject guidance (subjects come from detectSubjects which
+				// only emits IDs present in SUBJECTS, so findSubject is guaranteed to return)
+				const blocks = subjects.map((sid) => {
+					const info = findSubject(sid);
+					const guidance = getSubjectGuidance(sid, eduStage.stage);
+					return formatSubjectGuidance(info, eduStage, guidance);
+				});
 				return {
 					agentId: this.id,
 					agentName: this.name,
-					content: `📚 ${eduStage.name}阶段学校科目：\n${eduStage.schoolSubjects.map((s) => `- ${s}`).join("\n")}\n\n${EDUCATOR_DISCLAIMER}`,
-					confidence: 0.85,
+					content: `${blocks.join("\n\n---\n\n")}\n\n${EDUCATOR_DISCLAIMER}`,
+					confidence: 0.9,
 					urgency: "info",
 				};
 			}

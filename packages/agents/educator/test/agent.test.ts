@@ -3,9 +3,21 @@ import { describe, expect, it } from "vitest";
 import {
 	detectInterests,
 	detectLearningStyle,
+	detectSubjects,
+	EDU_STAGES,
 	EducatorAgent,
+	type EduStage,
+	findSubject,
+	formatSubjectBrief,
+	formatSubjectGuidance,
 	getEduStage,
+	getSubjectGuidance,
+	getSubjectSkillPath,
+	SUBJECTS,
+	type SubjectId,
+	type SubjectInfo,
 	suggestActivities,
+	suggestSubjectActivities,
 } from "../src/index.js";
 
 const TODAY = new Date("2026-06-19T00:00:00Z");
@@ -344,7 +356,11 @@ describe("EducatorAgent", () => {
 					memory: null as unknown as import("@parenting/memory").MemoryLayer,
 				},
 			);
-			expect(reply.content).toContain("语文");
+			// Detailed math guidance for elementary stage
+			expect(reply.content).toContain("数学");
+			expect(reply.content).toContain("学习目标");
+			expect(reply.content).toContain("关键技能");
+			expect(reply.content).toContain("推荐活动");
 		});
 
 		it("returns preschool-appropriate message for 3-year-old subject question", async () => {
@@ -367,8 +383,9 @@ describe("EducatorAgent", () => {
 					memory: null as unknown as import("@parenting/memory").MemoryLayer,
 				},
 			);
-			// subject case fallback has confidence 0.7
-			expect(reply.content).toMatch(/学龄前|还没有正式学校/);
+			// No edu stage → falls back to introReply
+			expect(reply.content).toContain("教育规划师");
+			expect(reply.confidence).toBeLessThan(0.5);
 		});
 	});
 
@@ -413,5 +430,332 @@ describe("EducatorAgent", () => {
 			});
 			expect(reply.agentId).toBe("educator");
 		});
+	});
+});
+
+// ───────────────────────────────────────────────────────────
+// Subject-specific knowledge base tests (Direction A)
+// ───────────────────────────────────────────────────────────
+
+describe("SUBJECTS knowledge base", () => {
+	it("exposes 9 subjects with ids and emoji", () => {
+		expect(SUBJECTS).toHaveLength(9);
+		for (const s of SUBJECTS) {
+			expect(s.id).toBeTruthy();
+			expect(s.name).toBeTruthy();
+			expect(s.nameEn).toBeTruthy();
+			expect(s.emoji).toBeTruthy();
+			expect(s.patterns.length).toBeGreaterThan(0);
+		}
+	});
+
+	it("every subject id is unique", () => {
+		const ids = SUBJECTS.map((s) => s.id);
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+});
+
+describe("detectSubjects", () => {
+	it("returns empty array when no subject matches", () => {
+		expect(detectSubjects("今天天气真好")).toEqual([]);
+	});
+
+	it("detects single subject by Chinese keyword", () => {
+		expect(detectSubjects("孩子数学学不会")).toEqual(["math"]);
+	});
+
+	it("detects single subject by English keyword", () => {
+		expect(detectSubjects("help with english vocabulary")).toEqual([
+			"english",
+		]);
+	});
+
+	it("detects multiple subjects and dedupes", () => {
+		const result = detectSubjects("数学和英语都不好");
+		expect(result).toContain("math");
+		expect(result).toContain("english");
+		expect(result.length).toBe(2);
+	});
+
+	it("preserves SUBJECTS array order for multiple matches", () => {
+		// chinese comes before math in SUBJECTS array
+		const result = detectSubjects("数学语文都要补");
+		expect(result.indexOf("chinese")).toBeLessThan(result.indexOf("math"));
+	});
+
+	it("matches every subject by at least one keyword", () => {
+		for (const s of SUBJECTS) {
+			const keyword = s.name;
+			expect(detectSubjects(keyword)).toContain(s.id);
+		}
+	});
+
+	it("case-insensitive English detection", () => {
+		expect(detectSubjects("MATH and ENGLISH")).toContain("math");
+		expect(detectSubjects("MATH and ENGLISH")).toContain("english");
+	});
+});
+
+describe("getSubjectGuidance", () => {
+	it("returns full guidance for valid (subject, stage)", () => {
+		const g = getSubjectGuidance("math", "elementary");
+		expect(g).not.toBeNull();
+		expect(g?.subject).toBe("math");
+		expect(g?.stage).toBe("elementary");
+		expect(g?.objectives.length).toBeGreaterThan(0);
+		expect(g?.keySkills.length).toBeGreaterThan(0);
+		expect(g?.activities.length).toBeGreaterThan(0);
+	});
+
+	it("returns full guidance for all 9 subjects at elementary stage", () => {
+		const subjects = SUBJECTS.map((s) => s.id);
+		for (const sid of subjects) {
+			const g = getSubjectGuidance(sid, "elementary");
+			expect(g).not.toBeNull();
+		}
+	});
+
+	it("returns null for unknown subject id (cast)", () => {
+		const fakeId = "fake_subject" as unknown as Parameters<
+			typeof getSubjectGuidance
+		>[0];
+		const g = getSubjectGuidance(fakeId, "elementary");
+		expect(g).toBeNull();
+	});
+});
+
+describe("getSubjectSkillPath", () => {
+	it("returns path from fromStage to college by default", () => {
+		const path = getSubjectSkillPath("math", "preschool");
+		expect(path[0]).toBe("preschool");
+		expect(path[path.length - 1]).toBe("college");
+	});
+
+	it("returns path up to specified toStage inclusive", () => {
+		const path = getSubjectSkillPath(
+			"chinese",
+			"elementary",
+			"high_school",
+		);
+		expect(path).toContain("elementary");
+		expect(path).toContain("middle_school");
+		expect(path).toContain("high_school");
+		expect(path).not.toContain("college");
+	});
+
+	it("returns single-stage path when fromStage equals toStage", () => {
+		const path = getSubjectSkillPath("math", "preschool", "preschool");
+		expect(path).toEqual(["preschool"]);
+	});
+
+	it("returns empty array when fromStage is unknown", () => {
+		const path = getSubjectSkillPath("math", "unknown_stage" as EduStage);
+		expect(path).toEqual([]);
+	});
+
+	it("returns empty array when toStage is before fromStage", () => {
+		const path = getSubjectSkillPath("math", "high_school", "preschool");
+		expect(path).toEqual([]);
+	});
+
+	it("treats unknown toStage as 'to college' (full path)", () => {
+		const path = getSubjectSkillPath(
+			"math",
+			"preschool",
+			"mystery" as EduStage,
+		);
+		expect(path[path.length - 1]).toBe("college");
+	});
+
+	it("filters out stages without guidance for that subject", () => {
+		const path = getSubjectSkillPath("math", "early_childhood");
+		expect(path.length).toBeGreaterThan(0);
+		expect(path[0]).toBe("early_childhood");
+	});
+});
+
+describe("suggestSubjectActivities", () => {
+	it("returns up to 4 activities for timeMinutes >= 20", () => {
+		const acts = suggestSubjectActivities("math", 96, 30);
+		expect(acts.length).toBeGreaterThan(0);
+		expect(acts.length).toBeLessThanOrEqual(4);
+	});
+
+	it("returns up to 2 activities for timeMinutes < 20", () => {
+		const acts = suggestSubjectActivities("math", 96, 15);
+		expect(acts.length).toBeLessThanOrEqual(2);
+	});
+
+	it("returns empty array for unknown age (no edu stage)", () => {
+		const acts = suggestSubjectActivities("math", 99999);
+		expect(acts).toEqual([]);
+	});
+
+	it("returns activities for all 9 subjects at elementary age", () => {
+		for (const s of SUBJECTS) {
+			const acts = suggestSubjectActivities(s.id, 96);
+			expect(acts.length).toBeGreaterThan(0);
+		}
+	});
+
+	it("uses default timeMinutes=30 when not specified", () => {
+		const a = suggestSubjectActivities("chinese", 96);
+		expect(a.length).toBeLessThanOrEqual(4);
+	});
+});
+
+describe("EducatorAgent subject intent — extended coverage", () => {
+	const agent = new EducatorAgent();
+
+	it("subject intent with no detected subjects returns preschool fallback for 2-year-old", async () => {
+		// Use a clear subject-intent trigger ("怎么学") without any subject keyword
+		const reply = await agent.respond(
+			"孩子不爱学习怎么办",
+			makeChild(365 * 2, "c", "Kid", "toddler"),
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(reply.content).toMatch(/学龄前|还没有正式学校/);
+		expect(reply.confidence).toBe(0.7);
+	});
+
+	it("subject intent with no detected subjects returns school subjects list for 8-year-old", async () => {
+		const reply = await agent.respond(
+			"孩子不爱学习怎么办",
+			makeChild(365 * 8, "c", "Kid", "school_age"),
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(reply.content).toMatch(/阶段学校科目/);
+		expect(reply.confidence).toBe(0.85);
+	});
+
+	it("subject intent with multiple subjects concatenates guidance blocks", async () => {
+		const reply = await agent.respond(
+			"数学和英语都不太好",
+			makeChild(365 * 10, "c", "Kid", "school_age"),
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(reply.content).toContain("数学");
+		expect(reply.content).toContain("英语");
+		expect(reply.content).toContain("---");
+		expect(reply.confidence).toBe(0.9);
+	});
+
+	it("subject intent with single subject returns detailed guidance", async () => {
+		const reply = await agent.respond(
+			"数学怎么学",
+			makeChild(365 * 8, "c", "Kid", "school_age"),
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(reply.content).toContain("数学");
+		expect(reply.content).toContain("学习目标");
+		expect(reply.content).toContain("阶段里程碑");
+		expect(reply.content).toContain("推荐资源");
+	});
+
+	it("subject intent high school physics", async () => {
+		const reply = await agent.respond(
+			"高中物理怎么学",
+			makeChild(365 * 16, "c", "Kid", "teen"),
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(reply.content).toContain("科学");
+		expect(reply.content).toContain("高中");
+	});
+
+	it("subject intent college coding (中文触发)", async () => {
+		const reply = await agent.respond(
+			"编程怎么学",
+			makeChild(365 * 20, "c", "Kid", "young_adult"),
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(reply.content).toContain("编程");
+		expect(reply.content).toContain("大学/成年早期");
+	});
+});
+
+describe("EDU_STAGES validation", () => {
+	it("contains all 6 expected stages in order", () => {
+		expect(EDU_STAGES.map((s) => s.stage)).toEqual([
+			"early_childhood",
+			"preschool",
+			"elementary",
+			"middle_school",
+			"high_school",
+			"college",
+		]);
+	});
+});
+
+describe("Subject formatting helpers", () => {
+	it("formatSubjectBrief: emits emoji + name + nameEn", () => {
+		const info: SubjectInfo = SUBJECTS[0]!;
+		expect(formatSubjectBrief(info)).toBe(
+			`${info.emoji} ${info.name} (${info.nameEn})`,
+		);
+	});
+
+	it("formatSubjectGuidance: null branch returns 'no guidance' marker", () => {
+		const info: SubjectInfo = SUBJECTS[0]!;
+		const stage = EDU_STAGES[1]!; // preschool
+		const out = formatSubjectGuidance(info, stage, null);
+		expect(out).toContain("暂无学科指导");
+		expect(out).toContain(info.name);
+	});
+
+	it("formatSubjectGuidance: rich branch renders 6 sections", () => {
+		const info: SubjectInfo = SUBJECTS.find((s) => s.id === "math")!;
+		const stage = EDU_STAGES[2]!; // elementary
+		const guidance = getSubjectGuidance("math", "elementary");
+		expect(guidance).not.toBeNull();
+		const out = formatSubjectGuidance(info, stage, guidance);
+		expect(out).toContain("学习目标");
+		expect(out).toContain("关键技能");
+		expect(out).toContain("常见挑战");
+		expect(out).toContain("推荐活动");
+		expect(out).toContain("阶段里程碑");
+		expect(out).toContain("推荐资源");
+	});
+});
+
+describe("suggestSubjectActivities edge cases", () => {
+	it("returns empty when subject has no guidance for valid stage (cast)", () => {
+		const fakeSubject = "nonexistent" as unknown as SubjectId;
+		const acts = suggestSubjectActivities(fakeSubject, 96);
+		expect(acts).toEqual([]);
+	});
+
+	it("returns empty for timeMinutes=0 (short)", () => {
+		const acts = suggestSubjectActivities("math", 96, 0);
+		expect(acts.length).toBeLessThanOrEqual(2);
+	});
+
+	it("returns empty for timeMinutes=20 boundary (uses >, not >=)", () => {
+		const acts20 = suggestSubjectActivities("math", 96, 20);
+		expect(acts20.length).toBeLessThanOrEqual(4);
+	});
+});
+
+describe("EducatorAgent — defensive error path", () => {
+	it("findSubject: returns SubjectInfo for known id", () => {
+		const info = findSubject("math");
+		expect(info.id).toBe("math");
+	});
+
+	it("findSubject: throws on unknown id (defensive branch)", () => {
+		expect(() =>
+			findSubject("nonexistent" as unknown as SubjectId),
+		).toThrow(/Unknown subject id/);
 	});
 });

@@ -414,3 +414,198 @@ export function suggestActivities(
 	}
 	return suggestions;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Subject-specific knowledge (Direction A: Subject Learning Coach)
+// ─────────────────────────────────────────────────────────────────
+
+import { decodeSubjectStage, SUBJECT_STAGE_DATA } from "./subjects-data.js";
+
+export type SubjectId =
+	| "chinese"
+	| "math"
+	| "english"
+	| "science"
+	| "social_studies"
+	| "arts"
+	| "music"
+	| "pe"
+	| "coding";
+
+export interface SubjectInfo {
+	id: SubjectId;
+	name: string;
+	nameEn: string;
+	emoji: string;
+	patterns: RegExp[];
+}
+
+export const SUBJECTS: SubjectInfo[] = [
+	{
+		id: "chinese",
+		name: "语文",
+		nameEn: "Chinese",
+		emoji: "📖",
+		patterns: [/(语文|中文|拼音|汉字|古诗|作文|认字|识字|chinese)/i],
+	},
+	{
+		id: "math",
+		name: "数学",
+		nameEn: "Math",
+		emoji: "🔢",
+		patterns: [
+			/(数学|算术|加减乘除|几何|代数|应用题|math|arithmetic|algebra)/i,
+		],
+	},
+	{
+		id: "english",
+		name: "英语",
+		nameEn: "English",
+		emoji: "🔤",
+		patterns: [/(英语|英文|外语|口语|背单词|english|vocab|grammar)/i],
+	},
+	{
+		id: "science",
+		name: "科学",
+		nameEn: "Science",
+		emoji: "🔬",
+		patterns: [
+			/(科学|物理|化学|生物|实验|探究|science|physics|chemistry|biology)/i,
+		],
+	},
+	{
+		id: "social_studies",
+		name: "社会/历史/地理",
+		nameEn: "Social Studies",
+		emoji: "🌍",
+		patterns: [
+			/(社会|历史|地理|政治|道德|道法|social|history|geography|civics)/i,
+		],
+	},
+	{
+		id: "arts",
+		name: "美术",
+		nameEn: "Arts",
+		emoji: "🎨",
+		patterns: [/(美术|画画|绘画|手工|art|draw|paint|craft|粘土|剪纸)/i],
+	},
+	{
+		id: "music",
+		name: "音乐",
+		nameEn: "Music",
+		emoji: "🎵",
+		patterns: [
+			/(音乐|钢琴|唱歌|儿歌|乐器|music|piano|sing|instrument|guitar|drum)/i,
+		],
+	},
+	{
+		id: "pe",
+		name: "体育",
+		nameEn: "PE",
+		emoji: "⚽",
+		patterns: [
+			/(体育|运动|球|游泳|跑步|体操|跳绳|平衡车|pe|sport|football|soccer|swim|run|ball)/i,
+		],
+	},
+	{
+		id: "coding",
+		name: "编程",
+		nameEn: "Coding",
+		emoji: "💻",
+		patterns: [
+			/(编程|代码|scratch|python|算法|coding|program|robot|机器人)/i,
+		],
+	},
+];
+
+export interface SubjectStageGuidance {
+	subject: SubjectId;
+	stage: EduStage;
+	objectives: string[];
+	keySkills: string[];
+	challenges: string[];
+	activities: string[];
+	milestones: string[];
+	resources: string[];
+}
+
+const ALL_EDU_STAGE_IDS: EduStage[] = EDU_STAGES.map((s) => s.stage);
+
+function loadSubjectStageGuidance(
+	subject: SubjectId,
+	stage: EduStage,
+): SubjectStageGuidance | null {
+	const encoded = SUBJECT_STAGE_DATA[`${subject}|${stage}`];
+	if (!encoded) return null;
+	const [
+		objectives,
+		keySkills,
+		challenges,
+		activities,
+		milestones,
+		resources,
+	] = decodeSubjectStage(encoded);
+	return {
+		subject,
+		stage,
+		objectives,
+		keySkills,
+		challenges,
+		activities,
+		milestones,
+		resources,
+	};
+}
+
+export function detectSubjects(text: string): SubjectId[] {
+	const found: SubjectId[] = [];
+	for (const s of SUBJECTS) {
+		for (const re of s.patterns) {
+			if (re.test(text) && !found.includes(s.id)) {
+				found.push(s.id);
+				break;
+			}
+		}
+	}
+	return found;
+}
+
+export function getSubjectGuidance(
+	subject: SubjectId,
+	stage: EduStage,
+): SubjectStageGuidance | null {
+	return loadSubjectStageGuidance(subject, stage);
+}
+
+export function getSubjectSkillPath(
+	subject: SubjectId,
+	fromStage: EduStage,
+	toStage?: EduStage,
+): EduStage[] {
+	const fromIdx = ALL_EDU_STAGE_IDS.indexOf(fromStage);
+	if (fromIdx < 0) return [];
+	const endIdx =
+		toStage === undefined
+			? ALL_EDU_STAGE_IDS.length
+			: ALL_EDU_STAGE_IDS.indexOf(toStage);
+	const cap = endIdx < 0 ? ALL_EDU_STAGE_IDS.length : endIdx;
+	if (cap < fromIdx) return [];
+	const sliced = ALL_EDU_STAGE_IDS.slice(fromIdx, cap + 1);
+	// Verify each stage actually has guidance for this subject (defensive)
+	return sliced.filter(
+		(st) => loadSubjectStageGuidance(subject, st) !== null,
+	);
+}
+
+export function suggestSubjectActivities(
+	subject: SubjectId,
+	ageMonths: number,
+	timeMinutes: number = 30,
+): string[] {
+	const stage = getEduStage(ageMonths);
+	if (!stage) return [];
+	const guidance = loadSubjectStageGuidance(subject, stage.stage);
+	if (!guidance) return [];
+	const cap = timeMinutes < 20 ? 2 : 4;
+	return guidance.activities.slice(0, cap);
+}
