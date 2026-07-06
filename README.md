@@ -20,7 +20,7 @@ Specialist agents currently include:
 - Family mediator: family conflict and communication
 - Finance: childcare budgets and education savings
 - Parent support: caregiver stress and burnout
-- Growth tracker: height, weight, percentiles, milestones
+- Growth tracker: height, weight, percentiles, milestones, **per-domain milestone queries (5 domains × 0-72mo), next-milestone prediction, missed-milestone tracking**
 - Habit builder: routines, screen time, bedtime, habit loops
 - Knowledge RAG: evidence-based parenting FAQ and references
 - Safety guard: hazard prevention, first aid, emergency escalation
@@ -95,7 +95,8 @@ NODE_ENV=development npm run test:coverage
 
 Verified result in this workspace:
 
-- Total tests: 1421 passed (1274 + 78 educator subject-coach tests + 36 new symptom/memory round-trip tests)
+- Total tests: 1493 passed (1421 + 51 growth-tracker milestone tests + 21 B-direct format tests)
+- Growth tracker package (`@parenting/agent-growth-tracker`): 100% branches/lines/statements/functions (1215/1215 statements, 233/233 branches)
 - Educator package (`@parenting/agent-educator`): 100% branches/lines/statements/functions (839/839 statements, 117/117 branches)
 
 ## Real LLM Provider Setup
