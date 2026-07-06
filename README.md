@@ -14,7 +14,7 @@ Specialist agents currently include:
 
 - Pediatrician: illness triage, vaccines, medication dosage guidance
 - Psychologist: emotions, behavior, stress, attachment
-- Educator: learning, schooling, interests, ability tracking
+- Educator: learning, schooling, interests, ability tracking, **subject-specific learning coach (9 subjects × 6 stages)**
 - Nutritionist: feeding, allergy, meal planning, picky eating
 - Sleep coach: sleep schedules, night waking, regressions
 - Family mediator: family conflict and communication
@@ -95,9 +95,8 @@ NODE_ENV=development npm run test:coverage
 
 Verified result in this workspace:
 
-- Total tests: 1274 passed
-- Full workspace pass rate: 100%
-- Lowest overall workspace coverage: `@parenting/web` branch coverage 95.19%, lines 98.79%, statements 98.79%, functions 97.94%
+- Total tests: 1421 passed (1274 + 78 educator subject-coach tests + 36 new symptom/memory round-trip tests)
+- Educator package (`@parenting/agent-educator`): 100% branches/lines/statements/functions (839/839 statements, 117/117 branches)
 
 ## Real LLM Provider Setup
 
