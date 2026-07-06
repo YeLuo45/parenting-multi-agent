@@ -318,6 +318,40 @@ export interface Milestone {
 	redFlag: boolean;
 }
 
+export type MilestoneDomain = Milestone["domain"];
+
+export const MILESTONE_DOMAINS: MilestoneDomain[] = [
+	"gross_motor",
+	"fine_motor",
+	"language",
+	"social",
+	"cognitive",
+];
+
+const DOMAIN_NAME_ZH: Record<MilestoneDomain, string> = {
+	gross_motor: "大运动",
+	fine_motor: "精细动作",
+	language: "语言",
+	social: "社交",
+	cognitive: "认知",
+};
+
+const DOMAIN_NAME_EN: Record<MilestoneDomain, string> = {
+	gross_motor: "Gross Motor",
+	fine_motor: "Fine Motor",
+	language: "Language",
+	social: "Social",
+	cognitive: "Cognitive",
+};
+
+export function domainNameZh(domain: MilestoneDomain): string {
+	return DOMAIN_NAME_ZH[domain];
+}
+
+export function domainNameEn(domain: MilestoneDomain): string {
+	return DOMAIN_NAME_EN[domain];
+}
+
 export const MILESTONES: Milestone[] = [
 	// 0-3 months
 	{
@@ -377,12 +411,33 @@ export const MILESTONES: Milestone[] = [
 		description: "咿呀学语",
 		redFlag: false,
 	},
+	{
+		ageMonthsMin: 4,
+		ageMonthsMax: 6,
+		domain: "social",
+		description: "主动对人笑",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 4,
+		ageMonthsMax: 6,
+		domain: "cognitive",
+		description: "认识熟悉的人",
+		redFlag: false,
+	},
 	// 7-9 months
 	{
 		ageMonthsMin: 7,
 		ageMonthsMax: 9,
 		domain: "gross_motor",
 		description: "能坐稳",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 7,
+		ageMonthsMax: 9,
+		domain: "fine_motor",
+		description: "两手传递物品",
 		redFlag: false,
 	},
 	{
@@ -397,6 +452,13 @@ export const MILESTONES: Milestone[] = [
 		ageMonthsMax: 9,
 		domain: "social",
 		description: "认生",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 7,
+		ageMonthsMax: 9,
+		domain: "cognitive",
+		description: "找藏起来的玩具",
 		redFlag: false,
 	},
 	// 10-12 months
@@ -421,6 +483,20 @@ export const MILESTONES: Milestone[] = [
 		description: "能叫 '爸爸/妈妈'",
 		redFlag: false,
 	},
+	{
+		ageMonthsMin: 10,
+		ageMonthsMax: 12,
+		domain: "social",
+		description: "挥手再见",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 10,
+		ageMonthsMax: 12,
+		domain: "cognitive",
+		description: "指认常见物品",
+		redFlag: false,
+	},
 	// 13-18 months
 	{
 		ageMonthsMin: 13,
@@ -432,23 +508,209 @@ export const MILESTONES: Milestone[] = [
 	{
 		ageMonthsMin: 13,
 		ageMonthsMax: 18,
+		domain: "fine_motor",
+		description: "搭 2-3 块积木",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 13,
+		ageMonthsMax: 18,
 		domain: "language",
 		description: "能说 10+ 词",
 		redFlag: false,
 	},
-	// 18-24 months
 	{
-		ageMonthsMin: 18,
+		ageMonthsMin: 13,
+		ageMonthsMax: 18,
+		domain: "social",
+		description: "主动要求抱",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 13,
+		ageMonthsMax: 18,
+		domain: "cognitive",
+		description: "执行简单指令",
+		redFlag: false,
+	},
+	// 19-24 months
+	{
+		ageMonthsMin: 19,
+		ageMonthsMax: 24,
+		domain: "gross_motor",
+		description: "能跑",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 19,
+		ageMonthsMax: 24,
+		domain: "fine_motor",
+		description: "能用勺子吃饭",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 19,
 		ageMonthsMax: 24,
 		domain: "language",
 		description: "能说两词短句",
 		redFlag: false,
 	},
 	{
-		ageMonthsMin: 18,
+		ageMonthsMin: 19,
 		ageMonthsMax: 24,
 		domain: "social",
 		description: "模仿大人行为",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 19,
+		ageMonthsMax: 24,
+		domain: "cognitive",
+		description: "认识身体部位",
+		redFlag: false,
+	},
+	// 2-3 years (25-36 months)
+	{
+		ageMonthsMin: 25,
+		ageMonthsMax: 36,
+		domain: "gross_motor",
+		description: "能双脚跳",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 25,
+		ageMonthsMax: 36,
+		domain: "fine_motor",
+		description: "能画圆",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 25,
+		ageMonthsMax: 36,
+		domain: "language",
+		description: "能说完整句子",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 25,
+		ageMonthsMax: 36,
+		domain: "social",
+		description: "会主动分享",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 25,
+		ageMonthsMax: 36,
+		domain: "cognitive",
+		description: "能玩角色扮演",
+		redFlag: false,
+	},
+	// 3-4 years (37-48 months)
+	{
+		ageMonthsMin: 37,
+		ageMonthsMax: 48,
+		domain: "gross_motor",
+		description: "能单脚站",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 37,
+		ageMonthsMax: 48,
+		domain: "fine_motor",
+		description: "能剪简单图形",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 37,
+		ageMonthsMax: 48,
+		domain: "language",
+		description: "能讲故事",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 37,
+		ageMonthsMax: 48,
+		domain: "social",
+		description: "会合作游戏",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 37,
+		ageMonthsMax: 48,
+		domain: "cognitive",
+		description: "能数 1-10",
+		redFlag: false,
+	},
+	// 4-5 years (49-60 months)
+	{
+		ageMonthsMin: 49,
+		ageMonthsMax: 60,
+		domain: "gross_motor",
+		description: "能跳绳",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 49,
+		ageMonthsMax: 60,
+		domain: "fine_motor",
+		description: "能写自己名字",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 49,
+		ageMonthsMax: 60,
+		domain: "language",
+		description: "能复述故事",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 49,
+		ageMonthsMax: 60,
+		domain: "social",
+		description: "懂轮流和规则",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 49,
+		ageMonthsMax: 60,
+		domain: "cognitive",
+		description: "认识颜色和形状",
+		redFlag: false,
+	},
+	// 5-6 years (61-72 months)
+	{
+		ageMonthsMin: 61,
+		ageMonthsMax: 72,
+		domain: "gross_motor",
+		description: "能独立穿衣",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 61,
+		ageMonthsMax: 72,
+		domain: "fine_motor",
+		description: "能扣扣子",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 61,
+		ageMonthsMax: 72,
+		domain: "language",
+		description: "能清晰表达需求",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 61,
+		ageMonthsMax: 72,
+		domain: "social",
+		description: "有固定玩伴",
+		redFlag: false,
+	},
+	{
+		ageMonthsMin: 61,
+		ageMonthsMax: 72,
+		domain: "cognitive",
+		description: "理解时间概念",
 		redFlag: false,
 	},
 	// RED FLAGS (developmental warning signs)
@@ -467,6 +729,20 @@ export const MILESTONES: Milestone[] = [
 		redFlag: true,
 	},
 	{
+		ageMonthsMin: 7,
+		ageMonthsMax: 9,
+		domain: "gross_motor",
+		description: "9 月龄仍不能坐稳",
+		redFlag: true,
+	},
+	{
+		ageMonthsMin: 10,
+		ageMonthsMax: 12,
+		domain: "language",
+		description: "12 月龄仍不会叫人",
+		redFlag: true,
+	},
+	{
 		ageMonthsMin: 16,
 		ageMonthsMax: 24,
 		domain: "language",
@@ -478,6 +754,13 @@ export const MILESTONES: Milestone[] = [
 		ageMonthsMax: 24,
 		domain: "social",
 		description: "2 岁仍不会模仿",
+		redFlag: true,
+	},
+	{
+		ageMonthsMin: 25,
+		ageMonthsMax: 36,
+		domain: "language",
+		description: "3 岁仍不会说句子",
 		redFlag: true,
 	},
 ];
@@ -496,6 +779,53 @@ export function getMilestonesForAge(ageMonths: number): {
 		}
 	}
 	return { expected, redFlags };
+}
+
+/** Get milestones for an age, filtered by domain. */
+export function getMilestonesForAgeAndDomain(
+	ageMonths: number,
+	domain: MilestoneDomain,
+): {
+	expected: Milestone[];
+	redFlags: Milestone[];
+} {
+	const all = getMilestonesForAge(ageMonths);
+	return {
+		expected: all.expected.filter((m) => m.domain === domain),
+		redFlags: all.redFlags.filter((m) => m.domain === domain),
+	};
+}
+
+/** Get the next milestone(s) strictly after `ageMonths`. If domain provided, filter. */
+export function getNextMilestone(
+	ageMonths: number,
+	domain?: MilestoneDomain,
+): Milestone | null {
+	const candidates = MILESTONES.filter((m) => m.ageMonthsMin > ageMonths)
+		.filter((m) => (domain ? m.domain === domain : true))
+		.sort((a, b) => a.ageMonthsMin - b.ageMonthsMin);
+	return candidates[0] ?? null;
+}
+
+/**
+ * Given a child's tracked milestone descriptions, return expected milestones
+ * that should already be hit (ageMonths >= ageMonthsMax) but are absent from
+ * the tracked set. Useful for "missing milestones" alerts.
+ */
+export function getMissedMilestones(
+	achievedDescriptions: ReadonlySet<string>,
+	ageMonths: number,
+	domain?: MilestoneDomain,
+): Milestone[] {
+	return MILESTONES.filter((m) => !m.redFlag)
+		.filter((m) => m.ageMonthsMax < ageMonths)
+		.filter((m) => (domain ? m.domain === domain : true))
+		.filter((m) => !achievedDescriptions.has(m.description));
+}
+
+/** Number of milestones per domain (expected only, not red flags). */
+export function milestoneCountByDomain(domain: MilestoneDomain): number {
+	return MILESTONES.filter((m) => !m.redFlag && m.domain === domain).length;
 }
 
 /** BMI helper: weight (kg) / (height (m))^2 */

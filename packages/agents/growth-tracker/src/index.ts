@@ -6,6 +6,9 @@
 
 export {
 	createGrowthTrackerAgent,
+	formatMilestonesByDomain,
+	formatMissedMilestones,
+	formatNextMilestone,
 	GROWTH_DISCLAIMER,
 	GrowthTrackerAgent,
 } from "./agent.js";
@@ -17,16 +20,25 @@ export {
 	classifyZScore,
 	computeZScore,
 	detectGrowthConcern,
+	domainNameEn,
+	domainNameZh,
 	estimatePercentile,
 	GROWTH_STANDARDS,
 	type GrowthMetric,
 	type GrowthSex,
 	type GrowthStandardRow,
 	getMilestonesForAge,
+	getMilestonesForAgeAndDomain,
+	getMissedMilestones,
+	getNextMilestone,
 	getPercentiles,
+	MILESTONE_DOMAINS,
+	MILESTONES,
 	type Milestone,
+	type MilestoneDomain,
+	milestoneCountByDomain,
 	weightGainVelocity,
 	type ZScoreBand,
 } from "./knowledge.js";
 
-export const GROWTH_TRACKER_VERSION = "0.1.0";
+export const GROWTH_TRACKER_VERSION = "0.2.0";

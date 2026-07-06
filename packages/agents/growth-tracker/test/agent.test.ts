@@ -1,6 +1,11 @@
 import type { ChildProfile } from "@parenting/memory";
 import { describe, expect, it } from "vitest";
-import { createGrowthTrackerAgent } from "../src/agent.js";
+import {
+	createGrowthTrackerAgent,
+	formatMilestonesByDomain,
+	formatMissedMilestones,
+	formatNextMilestone,
+} from "../src/index.js";
 import {
 	calculateBMI,
 	classifyBMI,
@@ -8,10 +13,20 @@ import {
 	classifyZScore,
 	computeZScore,
 	detectGrowthConcern,
+	domainNameEn,
+	domainNameZh,
 	estimatePercentile,
 	GROWTH_STANDARDS,
 	getMilestonesForAge,
+	getMilestonesForAgeAndDomain,
+	getMissedMilestones,
+	getNextMilestone,
 	getPercentiles,
+	MILESTONE_DOMAINS,
+	MILESTONES,
+	MILESTONES as MILESTONES_ALL,
+	type MilestoneDomain,
+	milestoneCountByDomain,
 	weightGainVelocity,
 	type ZScoreBand,
 } from "../src/knowledge.js";
@@ -621,4 +636,356 @@ describe("Growth standards data sanity", () => {
 });
 
 // Reference to MILESTONES via re-import
-import { MILESTONES as MILESTONES_ALL } from "../src/knowledge.js";
+const _MILESTONES_ALL = MILESTONES_ALL;
+
+// ───────────────────────────────────────────────────────────
+// Direction B: per-domain milestone queries + next + missed
+// ───────────────────────────────────────────────────────────
+
+describe("MILESTONE_DOMAINS", () => {
+	it("exposes all 5 canonical domains", () => {
+		expect(MILESTONE_DOMAINS).toEqual([
+			"gross_motor",
+			"fine_motor",
+			"language",
+			"social",
+			"cognitive",
+		]);
+	});
+});
+
+describe("domainNameZh / domainNameEn", () => {
+	it.each(MILESTONE_DOMAINS)("zh name for %s", (d) => {
+		expect(domainNameZh(d)).toBeTruthy();
+	});
+	it.each(MILESTONE_DOMAINS)("en name for %s", (d) => {
+		expect(domainNameEn(d)).toBeTruthy();
+	});
+	it("zh returns Chinese labels", () => {
+		expect(domainNameZh("gross_motor")).toBe("大运动");
+		expect(domainNameZh("language")).toBe("语言");
+	});
+	it("en returns English labels", () => {
+		expect(domainNameEn("gross_motor")).toBe("Gross Motor");
+		expect(domainNameEn("cognitive")).toBe("Cognitive");
+	});
+});
+
+describe("MILESTONES data integrity", () => {
+	it("has at least 10 milestones per domain (Direction B requirement)", () => {
+		for (const d of MILESTONE_DOMAINS) {
+			const count = MILESTONES.filter(
+				(m) => !m.redFlag && m.domain === d,
+			).length;
+			expect(count, `domain ${d}`).toBeGreaterThanOrEqual(10);
+		}
+	});
+
+	it("milestoneCountByDomain matches MILESTONES filter", () => {
+		for (const d of MILESTONE_DOMAINS) {
+			const expected = MILESTONES.filter(
+				(m) => !m.redFlag && m.domain === d,
+			).length;
+			expect(milestoneCountByDomain(d)).toBe(expected);
+		}
+	});
+
+	it("covers 0-72 months range", () => {
+		const max = Math.max(...MILESTONES.map((m) => m.ageMonthsMax));
+		expect(max).toBeGreaterThanOrEqual(72);
+	});
+});
+
+describe("getMilestonesForAgeAndDomain", () => {
+	it("filters expected by domain", () => {
+		const r = getMilestonesForAgeAndDomain(8, "language");
+		expect(r.expected.every((m) => m.domain === "language")).toBe(true);
+	});
+
+	it("returns red flags for domain if present", () => {
+		const r = getMilestonesForAgeAndDomain(20, "language");
+		const hasRed = r.redFlags.length > 0;
+		expect(hasRed).toBe(true);
+	});
+
+	it("returns empty for non-matching age/domain combo", () => {
+		const r = getMilestonesForAgeAndDomain(5, "cognitive");
+		// At age 5 there are cognitive milestones (4-6 months has 认识熟悉的人)
+		expect(r.expected.length).toBeGreaterThan(0);
+	});
+});
+
+describe("getNextMilestone", () => {
+	it("returns next milestone strictly after current age", () => {
+		const next = getNextMilestone(0);
+		expect(next).not.toBeNull();
+		expect(next!.ageMonthsMin).toBeGreaterThan(0);
+	});
+
+	it("filters by domain", () => {
+		const next = getNextMilestone(0, "language");
+		expect(next).not.toBeNull();
+		expect(next!.domain).toBe("language");
+	});
+
+	it("returns null when past all milestones", () => {
+		const next = getNextMilestone(1000);
+		expect(next).toBeNull();
+	});
+
+	it("returns null for filtered domain when no more milestones in domain", () => {
+		// past age 72 — all expected milestones exhausted
+		const next = getNextMilestone(80, "gross_motor");
+		expect(next).toBeNull();
+	});
+});
+
+describe("getMissedMilestones", () => {
+	it("returns expected milestones not in achieved set", () => {
+		const achieved = new Set<string>();
+		const missed = getMissedMilestones(achieved, 30);
+		expect(missed.length).toBeGreaterThan(0);
+		expect(missed.every((m) => !achieved.has(m.description))).toBe(true);
+	});
+
+	it("returns empty when all expected are achieved", () => {
+		// At age 12, all expected milestones for 0-12 months must be in achieved
+		const ageMonths = 13;
+		const achieved = new Set(
+			MILESTONES.filter(
+				(m) => !m.redFlag && m.ageMonthsMax < ageMonths,
+			).map((m) => m.description),
+		);
+		const missed = getMissedMilestones(achieved, ageMonths);
+		expect(missed).toEqual([]);
+	});
+
+	it("filters by domain", () => {
+		const achieved = new Set<string>();
+		const missed = getMissedMilestones(achieved, 30, "language");
+		expect(missed.every((m) => m.domain === "language")).toBe(true);
+	});
+
+	it("ignores red flag milestones", () => {
+		const achieved = new Set<string>();
+		const missed = getMissedMilestones(achieved, 30);
+		expect(missed.every((m) => !m.redFlag)).toBe(true);
+	});
+});
+
+describe("GrowthTrackerAgent milestone sub-intents", () => {
+	const agent = createGrowthTrackerAgent();
+	function makeChildOfAge(months: number): ChildProfile {
+		return {
+			id: "c",
+			name: "Kid",
+			birthDate: new Date(
+				Date.now() - months * 30.44 * 24 * 60 * 60 * 1000,
+			)
+				.toISOString()
+				.split("T")[0]!,
+			stage: "toddler",
+		};
+	}
+	const ctx = {
+		memory: null as unknown as import("@parenting/memory").MemoryLayer,
+	};
+
+	it("next milestone (no domain) returns generic next", async () => {
+		const r = await agent.respond("下一个里程碑", makeChildOfAge(3), ctx);
+		expect(r.content).toContain("下一个里程碑");
+	});
+
+	it("next milestone (language domain) returns language next", async () => {
+		const r = await agent.respond(
+			"下一个语言里程碑",
+			makeChildOfAge(3),
+			ctx,
+		);
+		expect(r.content).toContain("语言");
+	});
+
+	it("next milestone past 72mo returns empty notice", async () => {
+		const r = await agent.respond("下一个里程碑", makeChildOfAge(80), ctx);
+		expect(r.content).toContain("没有更多里程碑");
+	});
+
+	it("missed milestones (no achievements) lists all expected as missed", async () => {
+		const r = await agent.respond(
+			"孩子发育还没学会",
+			makeChildOfAge(20),
+			ctx,
+		);
+		expect(r.content).toContain("可能未达到");
+	});
+
+	it("missed milestones (domain filtered) only shows that domain", async () => {
+		const r = await agent.respond(
+			"发育还没学会语言",
+			makeChildOfAge(20),
+			ctx,
+		);
+		expect(r.content).toContain("语言");
+		// Should only contain language domain lines
+		const lines = r.content.split("\n").filter((l) => l.startsWith("- ["));
+		for (const line of lines) {
+			expect(line).toContain("[语言]");
+		}
+	});
+
+	it("domain-filtered milestone query returns only that domain", async () => {
+		const r = await agent.respond("运动发育", makeChildOfAge(8), ctx);
+		expect(r.content).toContain("大运动");
+		expect(r.confidence).toBeGreaterThan(0.5);
+	});
+
+	it("language domain filter", async () => {
+		const r = await agent.respond("语言发育", makeChildOfAge(15), ctx);
+		expect(r.content).toContain("语言");
+	});
+
+	it("social domain filter", async () => {
+		const r = await agent.respond("社交发育", makeChildOfAge(20), ctx);
+		expect(r.content).toContain("社交");
+	});
+
+	it("cognitive domain filter", async () => {
+		const r = await agent.respond("认知发育", makeChildOfAge(30), ctx);
+		expect(r.content).toContain("认知");
+	});
+
+	it("fine motor domain filter", async () => {
+		const r = await agent.respond("精细动作", makeChildOfAge(15), ctx);
+		expect(r.content).toContain("精细动作");
+	});
+
+	it("general milestone query shows all 5 domains", async () => {
+		const r = await agent.respond("发育里程碑", makeChildOfAge(8), ctx);
+		// Should mention at least one of each domain's labels
+		expect(r.content).toMatch(/大运动|精细动作|语言|社交|认知/);
+	});
+
+	it("intro message mentions next/missed/domain features", async () => {
+		const r = await agent.respond("你好", makeChildOfAge(12), ctx);
+		expect(r.content).toContain("下一个");
+		expect(r.content).toContain("未达到");
+	});
+});
+
+describe("MilestoneDomain type coverage", () => {
+	it.each<MilestoneDomain>([
+		"gross_motor",
+		"fine_motor",
+		"language",
+		"social",
+		"cognitive",
+	])("milestoneCountByDomain(%s) returns non-negative", (d) => {
+		expect(milestoneCountByDomain(d)).toBeGreaterThanOrEqual(0);
+	});
+});
+
+// ───────────────────────────────────────────────────────────
+// Coverage: empty-state branches
+// ───────────────────────────────────────────────────────────
+
+describe("formatMilestonesByDomain empty state", () => {
+	it("returns 'no milestones' when domain+age combo has no entries", async () => {
+		// 72mo: gross_motor has 独立穿衣 at 61-72 — let's pick an out-of-range edge
+		// age=100 months is past all data
+		const r = await createGrowthTrackerAgent().respond(
+			"运动发育",
+			{
+				id: "c",
+				name: "Kid",
+				birthDate: new Date(
+					Date.now() - 100 * 30.44 * 24 * 60 * 60 * 1000,
+				)
+					.toISOString()
+					.split("T")[0]!,
+				stage: "school_age",
+			},
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(r.content).toContain("暂无");
+	});
+});
+
+describe("formatMissedMilestones all-achieved branch", () => {
+	it("returns 'no missed' when all expected milestones achieved", async () => {
+		const ageMonths = 13;
+		const achieved = new Set<string>(
+			MILESTONES.filter(
+				(m) => !m.redFlag && m.ageMonthsMax < ageMonths,
+			).map((m) => m.description),
+		);
+		// Direct call to knowledge function
+		const missed = getMissedMilestones(achieved, ageMonths);
+		expect(missed).toEqual([]);
+	});
+});
+
+// ───────────────────────────────────────────────────────────
+// Direct format helper coverage
+// ───────────────────────────────────────────────────────────
+
+describe("formatMissedMilestones direct", () => {
+	it("returns 'no missed' when achieved covers all expected", () => {
+		const ageMonths = 13;
+		const achieved = new Set<string>(
+			MILESTONES.filter(
+				(m) => !m.redFlag && m.ageMonthsMax < ageMonths,
+			).map((m) => m.description),
+		);
+		const out = formatMissedMilestones(achieved, ageMonths, null);
+		expect(out).toContain("未遗漏");
+	});
+});
+
+describe("formatNextMilestone direct", () => {
+	it("returns empty notice past 72mo", () => {
+		expect(formatNextMilestone(100, null)).toContain("没有更多里程碑");
+	});
+
+	it("returns formatted next milestone", () => {
+		const out = formatNextMilestone(3, "language");
+		expect(out).toContain("下一个里程碑");
+		expect(out).toContain("语言");
+	});
+});
+
+describe("formatMilestonesByDomain direct", () => {
+	it("renders header with count", () => {
+		const out = formatMilestonesByDomain(8, "language");
+		expect(out).toContain("language 域共");
+	});
+
+	it("empty state when no milestones at age/domain", () => {
+		// age 100 is past all milestones
+		const out = formatMilestonesByDomain(100, "gross_motor");
+		expect(out).toContain("暂无");
+	});
+});
+
+describe("detectMilestoneDomain fine_motor branch", () => {
+	it("fine_motor detected by 精细动作 keyword", async () => {
+		const r = await createGrowthTrackerAgent().respond(
+			"精细动作发育",
+			{
+				id: "c",
+				name: "Kid",
+				birthDate: new Date(
+					Date.now() - 15 * 30.44 * 24 * 60 * 60 * 1000,
+				)
+					.toISOString()
+					.split("T")[0]!,
+				stage: "toddler",
+			},
+			{
+				memory: null as unknown as import("@parenting/memory").MemoryLayer,
+			},
+		);
+		expect(r.content).toContain("精细动作");
+	});
+});

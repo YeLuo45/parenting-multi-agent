@@ -12,11 +12,17 @@ import {
 	classifyBMI,
 	classifyPercentile,
 	detectGrowthConcern,
+	domainNameZh,
 	estimatePercentile,
 	GROWTH_STANDARDS,
 	type GrowthMetric,
 	type GrowthSex,
 	getMilestonesForAge,
+	getMilestonesForAgeAndDomain,
+	getMissedMilestones,
+	getNextMilestone,
+	type MilestoneDomain,
+	milestoneCountByDomain,
 } from "./knowledge.js";
 
 export const GROWTH_DISCLAIMER =
@@ -176,32 +182,101 @@ function formatMilestones(ageMonths: number): string {
 		if (expected.length > 0) {
 			lines.push("\n✅ 应该达到：");
 			for (const m of expected) {
-				const domainLabel = {
-					gross_motor: "大运动",
-					fine_motor: "精细动作",
-					language: "语言",
-					social: "社交",
-					cognitive: "认知",
-				}[m.domain];
-				lines.push(`- [${domainLabel}] ${m.description}`);
+				lines.push(`- [${domainNameZh(m.domain)}] ${m.description}`);
 			}
 		}
 		if (redFlags.length > 0) {
 			lines.push("\n🚨 警示信号（出现需就医）：");
 			for (const m of redFlags) {
-				const domainLabel = {
-					gross_motor: "大运动",
-					fine_motor: "精细动作",
-					language: "语言",
-					social: "社交",
-					cognitive: "认知",
-				}[m.domain];
-				lines.push(`- [${domainLabel}] ${m.description}`);
+				lines.push(`- [${domainNameZh(m.domain)}] ${m.description}`);
 			}
 		}
 	}
 	return lines.join("\n");
 }
+
+function detectMilestoneDomain(question: string): MilestoneDomain | null {
+	const q = question.toLowerCase();
+	if (/(大运动|运动|走|跑|跳|爬|站|坐|翻身|扶站|gross.motor)/i.test(q))
+		return "gross_motor";
+	if (/(精细动作|手部|抓握|拇指|食指|fine.motor)/i.test(q))
+		return "fine_motor";
+	if (/(语言|说话|叫人|单词|句子|发音|咿呀|说话晚)/i.test(q))
+		return "language";
+	if (/(社交|认生|分享|朋友|模仿|与人|互动)/i.test(q)) return "social";
+	if (/(认知|思考|理解|认识|学习|解决问题|记忆)/i.test(q)) return "cognitive";
+	return null;
+}
+
+function formatMilestonesByDomain(
+	ageMonths: number,
+	domain: MilestoneDomain,
+): string {
+	const { expected, redFlags } = getMilestonesForAgeAndDomain(
+		ageMonths,
+		domain,
+	);
+	const title = `📋 ${Math.floor(ageMonths)} 月龄 · ${domainNameZh(domain)} 里程碑`;
+	const lines = [
+		title,
+		`（${domain} 域共 ${milestoneCountByDomain(domain)} 个里程碑）`,
+		"",
+	];
+	if (expected.length === 0 && redFlags.length === 0) {
+		lines.push("（该月龄/域暂无具体里程碑）");
+	} else {
+		if (expected.length > 0) {
+			lines.push("✅ 应该达到：");
+			for (const m of expected) lines.push(`- ${m.description}`);
+		}
+		if (redFlags.length > 0) {
+			lines.push("\n🚨 警示信号：");
+			for (const m of redFlags) lines.push(`- ${m.description}`);
+		}
+	}
+	return lines.join("\n");
+}
+
+function formatNextMilestone(
+	ageMonths: number,
+	domain: MilestoneDomain | null,
+): string {
+	const next = getNextMilestone(ageMonths, domain ?? undefined);
+	if (!next) {
+		return `🎯 ${Math.floor(ageMonths)} 月龄之后没有更多里程碑数据。`;
+	}
+	const ageLabel = `${next.ageMonthsMin}-${next.ageMonthsMax} 月龄`;
+	const target = `🎯 下一个里程碑（${ageLabel}）：\n- [${domainNameZh(next.domain)}] ${next.description}`;
+	return target;
+}
+
+function formatMissedMilestones(
+	achievedDescriptions: ReadonlySet<string>,
+	ageMonths: number,
+	domain: MilestoneDomain | null,
+): string {
+	const missed = getMissedMilestones(
+		achievedDescriptions,
+		ageMonths,
+		domain ?? undefined,
+	);
+	if (missed.length === 0) {
+		return `✅ ${Math.floor(ageMonths)} 月龄前未遗漏任何已记录里程碑。`;
+	}
+	const lines = [
+		`⚠️ ${Math.floor(ageMonths)} 月龄前可能未达到（${missed.length} 项）：`,
+	];
+	for (const m of missed) {
+		lines.push(`- [${domainNameZh(m.domain)}] ${m.description}`);
+	}
+	return lines.join("\n");
+}
+
+export {
+	formatMissedMilestones,
+	formatNextMilestone,
+	formatMilestonesByDomain,
+};
 
 function formatBMI(
 	weightKg: number,
@@ -282,6 +357,42 @@ export class GrowthTrackerAgent implements Agent {
 		}
 
 		if (intent === "milestone") {
+			const q = question.toLowerCase();
+			// Sub-intents: "下一个" → next; "未达到/没学会/漏了" → missed; else general
+			if (/(下一个|下一步|next|接下来)/i.test(q)) {
+				const domain = detectMilestoneDomain(question);
+				return {
+					agentId: this.id,
+					agentName: this.name,
+					content: `${formatNextMilestone(ageMonths, domain)}\n\n${GROWTH_DISCLAIMER}`,
+					confidence: 0.85,
+					urgency: "info",
+				};
+			}
+			if (
+				/(没学会|不会|未达到|遗漏|漏了|missed|hasn't|has.not)/i.test(q)
+			) {
+				const domain = detectMilestoneDomain(question);
+				// For demo: treat child as having achieved nothing — show all expected as missed
+				const achieved = new Set<string>();
+				return {
+					agentId: this.id,
+					agentName: this.name,
+					content: `${formatMissedMilestones(achieved, ageMonths, domain)}\n\n${GROWTH_DISCLAIMER}`,
+					confidence: 0.8,
+					urgency: "info",
+				};
+			}
+			const domain = detectMilestoneDomain(question);
+			if (domain) {
+				return {
+					agentId: this.id,
+					agentName: this.name,
+					content: `${formatMilestonesByDomain(ageMonths, domain)}\n\n${GROWTH_DISCLAIMER}`,
+					confidence: 0.85,
+					urgency: "info",
+				};
+			}
 			return {
 				agentId: this.id,
 				agentName: this.name,
@@ -340,7 +451,7 @@ export class GrowthTrackerAgent implements Agent {
 		return {
 			agentId: this.id,
 			agentName: this.name,
-			content: `我是成长追踪助手，可以帮你：\n- 查询生长百分位（输入"身高 75cm"或"体重 8.5kg"）\n- 查看发育里程碑（输入"发育"或"里程碑"）\n- 计算 BMI（输入"BMI" + 体重身高）\n- 计算增重速度（输入"体重增长"）\n\n${GROWTH_DISCLAIMER}`,
+			content: `我是成长追踪助手，可以帮你：\n- 查询生长百分位（输入"身高 75cm"或"体重 8.5kg"）\n- 查看发育里程碑（输入"发育"或"里程碑"，可加"语言/运动/社交/认知/精细动作"）\n- 下一个里程碑（输入"下一个发育"或"next milestone"）\n- 未达到清单（输入"孩子还没学会/未达到"）\n- 计算 BMI（输入"BMI" + 体重身高）\n- 计算增重速度（输入"体重增长"）\n\n${GROWTH_DISCLAIMER}`,
 			confidence: 0.5,
 			urgency: "info",
 		};
@@ -355,14 +466,26 @@ export {
 	calculateBMI,
 	classifyBMI,
 	classifyPercentile,
+	classifyZScore,
+	computeZScore,
 	detectGrowthConcern,
+	domainNameEn,
+	domainNameZh,
 	estimatePercentile,
 	GROWTH_STANDARDS,
 	type GrowthMetric,
 	type GrowthSex,
 	type GrowthStandardRow,
 	getMilestonesForAge,
+	getMilestonesForAgeAndDomain,
+	getMissedMilestones,
+	getNextMilestone,
 	getPercentiles,
+	MILESTONE_DOMAINS,
+	MILESTONES,
 	type Milestone,
+	type MilestoneDomain,
+	milestoneCountByDomain,
 	weightGainVelocity,
+	type ZScoreBand,
 } from "./knowledge.js";
