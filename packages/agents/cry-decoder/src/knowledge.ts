@@ -317,3 +317,186 @@ export function buildEmptyDistribution(): CryDistribution[] {
 		triggersMatched: [],
 	}));
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Soothing Plan Scheduler (Direction D)
+// ─────────────────────────────────────────────────────────────────
+
+export interface SoothingPlanStep {
+	stepIdx: number;
+	method: CrySoothingStep;
+	startMin: number;
+	endMin: number;
+	reasonContext: CryReason[];
+	notes: string;
+}
+
+export interface SoothingPlan {
+	ageMonths: number;
+	totalDurationMin: number;
+	steps: SoothingPlanStep[];
+	tip: string;
+}
+
+const STEP_DURATION_DEFAULTS: Record<SoothingMethod, number> = {
+	swaddle: 2,
+	side: 2,
+	shush: 3,
+	swing: 3,
+	suck: 2,
+};
+
+const REASON_TO_METHOD_PREFERENCE: Partial<
+	Record<CryReason, SoothingMethod[]>
+> = {
+	colic: ["swing", "shush", "swaddle", "side", "suck"],
+	hunger: ["suck", "swaddle", "shush", "swing", "side"],
+	tired: ["swaddle", "shush", "swing", "side", "suck"],
+	pain: ["swaddle", "shush", "swing", "side", "suck"],
+	overstimulated: ["swaddle", "shush", "side", "suck", "swing"],
+	separation: ["swaddle", "shush", "swing", "side", "suck"],
+	teething: ["swaddle", "shush", "swing", "side", "suck"],
+	reflux: ["swing", "shush", "side", "suck", "swaddle"],
+	diaper: ["swaddle", "swing", "shush", "suck", "side"],
+	temperature: ["swaddle", "shush", "swing", "side", "suck"],
+};
+
+/**
+ * Build an ordered soothing plan tailored to ageMonths and the top cry reasons.
+ * - Filters methods by age window (minAgeMonths / maxAgeMonths)
+ * - Orders methods by reason preference + global fallback order
+ * - Computes cumulative timeline in minutes
+ */
+export function buildSoothingPlan(
+	ageMonths: number,
+	topReasons: readonly CryReason[],
+	totalBudgetMin: number = 15,
+): SoothingPlan {
+	const allowed = FIVE_S.filter(
+		(m) => ageMonths >= m.minAgeMonths && ageMonths <= m.maxAgeMonths,
+	);
+	// Build preference order: union of top-reason preferences, dedupe by id
+	const preference: SoothingMethod[] = [];
+	for (const r of topReasons) {
+		const list = REASON_TO_METHOD_PREFERENCE[r];
+		if (!list) continue;
+		for (const m of list) {
+			if (!preference.includes(m)) preference.push(m);
+		}
+	}
+	// Fill remainder with allowed methods in default 5S order
+	for (const m of allowed) {
+		if (!preference.includes(m.id)) preference.push(m.id);
+	}
+
+	// Pick methods respecting budget (~2-3 min each)
+	const steps: SoothingPlanStep[] = [];
+	let elapsed = 0;
+	let stepIdx = 1;
+	for (const methodId of preference) {
+		const method = allowed.find((m) => m.id === methodId);
+		if (!method) continue;
+		const duration = STEP_DURATION_DEFAULTS[methodId];
+		if (elapsed + duration > totalBudgetMin) break;
+		const end = elapsed + duration;
+		steps.push({
+			stepIdx,
+			method,
+			startMin: elapsed,
+			endMin: end,
+			reasonContext: [...topReasons],
+			notes: pickNote(methodId, topReasons),
+		});
+		elapsed = end;
+		stepIdx++;
+	}
+
+	const tip = buildPlanTip(ageMonths, steps.length);
+
+	return {
+		ageMonths,
+		totalDurationMin: elapsed,
+		steps,
+		tip,
+	};
+}
+
+function pickNote(
+	method: SoothingMethod,
+	reasons: readonly CryReason[],
+): string {
+	if (reasons.length === 0) return "按 5S 顺序依次尝试";
+	if (
+		reasons.includes("colic") &&
+		(method === "swing" || method === "shush")
+	) {
+		return "肠绞痛：摇摆+白噪音组合最有效";
+	}
+	if (reasons.includes("pain") && method === "swaddle") {
+		return "疼痛：包裹提供安全感，优先尝试";
+	}
+	if (reasons.includes("overstimulated") && method === "swaddle") {
+		return "过度刺激：包裹+嘘声组合";
+	}
+	if (reasons.includes("hunger") && method === "suck") {
+		return "饥饿：先哺乳或喂奶，再做其他安抚";
+	}
+	if (
+		reasons.includes("tired") &&
+		(method === "swaddle" || method === "shush")
+	) {
+		return "困倦：包裹+嘘声帮助入睡";
+	}
+	return "按方法顺序逐项尝试";
+}
+
+function buildPlanTip(ageMonths: number, stepCount: number): string {
+	if (ageMonths < 3) {
+		return `💡 ${stepCount} 步计划预计 ${stepCount * 2}-${stepCount * 3} 分钟。如 15 分钟仍未缓解，考虑就医。`;
+	}
+	if (ageMonths < 6) {
+		return `💡 ${stepCount} 步计划。如全部失败，尝试换个环境（推车/开车短途）。`;
+	}
+	return `💡 ${stepCount} 步计划。注意检查是否有发烧/外伤/腹胀等器质性原因。`;
+}
+
+/**
+ * Decide the next step adaptively based on which step we're at and how much
+ * time has elapsed. Returns the next step to try, or null when plan is exhausted.
+ * If elapsed > current step's endMin + 1 (overshot), skip to the step after next.
+ */
+export function getAdaptiveNextStep(
+	plan: SoothingPlan,
+	currentStepIdx: number,
+	elapsedMin: number,
+): SoothingPlanStep | null {
+	const current = plan.steps.find((s) => s.stepIdx === currentStepIdx);
+	let nextIdx = currentStepIdx + 1;
+	// If we've spent too long on current step (> endMin + 1), skip ahead one more
+	if (current && elapsedMin > current.endMin + 1) {
+		nextIdx = currentStepIdx + 2;
+	}
+	const next = plan.steps.find((s) => s.stepIdx === nextIdx);
+	if (!next) return null;
+	return next;
+}
+
+/**
+ * Format a soothing plan as a Chinese checklist with timeline.
+ */
+export function formatSoothingPlan(plan: SoothingPlan): string {
+	const lines: string[] = [
+		`📋 ${plan.ageMonths} 月龄安抚计划（总计 ${plan.totalDurationMin} 分钟）`,
+		"",
+	];
+	for (const s of plan.steps) {
+		lines.push(
+			`${s.stepIdx}. [${s.startMin}-${s.endMin}min] ${s.method.name}`,
+		);
+		lines.push(`   ${s.method.description}`);
+		lines.push(`   备注：${s.notes}`);
+		lines.push("");
+	}
+	lines.push(plan.tip);
+	return lines.join("\n");
+}

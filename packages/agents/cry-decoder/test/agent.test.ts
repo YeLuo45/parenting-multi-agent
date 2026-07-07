@@ -7,12 +7,15 @@ import {
 	_formatFiveS,
 	_urgencyFromMax,
 	buildEmptyDistribution,
+	buildSoothingPlan,
 	CRY_REASON_BY_ID,
 	CRY_REASON_PROFILES,
 	CryDecoderAgent,
 	classifyCry,
 	createCryDecoderAgent,
 	FIVE_S,
+	formatSoothingPlan,
+	getAdaptiveNextStep,
 	maxUrgencyOf,
 	scoreReason,
 	topReasons,
@@ -486,5 +489,167 @@ describe("CryDecoderAgent", () => {
 			});
 			expect(reply.agentId).toBe("cry-decoder");
 		});
+	});
+});
+
+// ───────────────────────────────────────────────────────────
+// Direction D: Soothing Plan Scheduler
+// ───────────────────────────────────────────────────────────
+
+describe("buildSoothingPlan", () => {
+	it("newborn colic plan puts swing/shush first", () => {
+		const plan = buildSoothingPlan(2, ["colic"]);
+		expect(plan.steps.length).toBeGreaterThan(0);
+		const firstMethod = plan.steps[0]?.method.id;
+		expect(["swing", "shush"]).toContain(firstMethod);
+	});
+
+	it("newborn hunger plan puts suck first", () => {
+		const plan = buildSoothingPlan(2, ["hunger"]);
+		expect(plan.steps[0]?.method.id).toBe("suck");
+	});
+
+	it("filters methods by age window — suck only allowed 0-12mo", () => {
+		const plan = buildSoothingPlan(15, ["hunger"]);
+		// suck max age 12, plan should not include it
+		const hasSuck = plan.steps.some((s) => s.method.id === "suck");
+		expect(hasSuck).toBe(false);
+	});
+
+	it("step count respects 5-step cap", () => {
+		const plan = buildSoothingPlan(3, ["colic", "pain", "overstimulated"]);
+		expect(plan.steps.length).toBeLessThanOrEqual(5);
+	});
+
+	it("step count respects budget cap", () => {
+		const plan = buildSoothingPlan(3, ["colic"], 5);
+		expect(plan.totalDurationMin).toBeLessThanOrEqual(5);
+	});
+
+	it("timeline is contiguous and starts at 0", () => {
+		const plan = buildSoothingPlan(2, ["hunger"]);
+		expect(plan.steps[0]?.startMin).toBe(0);
+		for (let i = 1; i < plan.steps.length; i++) {
+			expect(plan.steps[i]?.startMin).toBe(plan.steps[i - 1]?.endMin);
+		}
+	});
+
+	it("totalDurationMin equals last step endMin", () => {
+		const plan = buildSoothingPlan(2, ["hunger"]);
+		const lastEnd = plan.steps[plan.steps.length - 1]?.endMin ?? 0;
+		expect(plan.totalDurationMin).toBe(lastEnd);
+	});
+
+	it("unknown reason falls back to default 5S order", () => {
+		const plan = buildSoothingPlan(2, ["unknown_reason" as CryReason]);
+		expect(plan.steps.length).toBeGreaterThan(0);
+	});
+
+	it("empty reasons array returns default 5S order", () => {
+		const plan = buildSoothingPlan(2, []);
+		expect(plan.steps.length).toBeGreaterThan(0);
+	});
+});
+
+describe("getAdaptiveNextStep", () => {
+	const plan = buildSoothingPlan(2, ["colic"]);
+
+	it("returns step 2 when at step 1 with no elapsed time", () => {
+		const next = getAdaptiveNextStep(plan, 1, 0);
+		expect(next?.stepIdx).toBe(2);
+	});
+
+	it("returns next normally if elapsed within step window", () => {
+		const next = getAdaptiveNextStep(plan, 1, 3);
+		expect(next?.stepIdx).toBeGreaterThanOrEqual(2);
+	});
+
+	it("returns null when past last step", () => {
+		const next = getAdaptiveNextStep(plan, 99, 999);
+		expect(next).toBeNull();
+	});
+
+	it("skips a step if elapsed > step window + 1min", () => {
+		// step 1 endMin is 3 (swing); at currentStepIdx=1, elapsedMin=5
+		const step1 = plan.steps.find((s) => s.stepIdx === 1);
+		if (step1) {
+			const overshoot = step1.endMin + 2;
+			const next = getAdaptiveNextStep(plan, 1, overshoot);
+			// should skip step 2 and try step 3
+			expect(next?.stepIdx).toBeGreaterThan(2);
+		}
+	});
+});
+
+describe("formatSoothingPlan", () => {
+	it("renders plan with timeline and tip", () => {
+		const plan = buildSoothingPlan(2, ["colic"]);
+		const out = formatSoothingPlan(plan);
+		expect(out).toContain("安抚计划");
+		expect(out).toMatch(/总计 \d+ 分钟/);
+		expect(out).toContain("💡");
+	});
+
+	it("renders empty plan with 0 minutes", () => {
+		const plan = buildSoothingPlan(2, [], 0);
+		const out = formatSoothingPlan(plan);
+		expect(out).toContain("总计 0 分钟");
+	});
+
+	it("includes each step's number and method", () => {
+		const plan = buildSoothingPlan(2, ["hunger"]);
+		const out = formatSoothingPlan(plan);
+		for (const s of plan.steps) {
+			expect(out).toContain(`${s.stepIdx}.`);
+			expect(out).toContain(s.method.name);
+		}
+	});
+});
+
+describe("FIVE_S integrity (extended)", () => {
+	it("each method has minAgeMonths <= maxAgeMonths", () => {
+		for (const m of FIVE_S) {
+			expect(m.minAgeMonths).toBeLessThanOrEqual(m.maxAgeMonths);
+		}
+	});
+});
+
+describe("buildSoothingPlan specific reason-method branches", () => {
+	it("overstimulated + swaddle note (line 429-430)", () => {
+		const plan = buildSoothingPlan(3, ["overstimulated"]);
+		const swaddleStep = plan.steps.find((s) => s.method.id === "swaddle");
+		expect(swaddleStep?.notes).toContain("过度刺激");
+	});
+
+	it("sleep + swaddle note (line 435-436)", () => {
+		const plan = buildSoothingPlan(3, ["tired"]);
+		const swaddleStep = plan.steps.find((s) => s.method.id === "swaddle");
+		expect(swaddleStep?.notes).toContain("困倦");
+	});
+
+	it("sleep + shush note (line 435-436)", () => {
+		const plan = buildSoothingPlan(3, ["tired"]);
+		const shushStep = plan.steps.find((s) => s.method.id === "shush");
+		expect(shushStep?.notes).toContain("困倦");
+	});
+});
+
+describe("buildSoothingPlan overstimulated/tired branches", () => {
+	it("overstimulated + swaddle note", () => {
+		const plan = buildSoothingPlan(3, ["overstimulated"]);
+		const swaddleStep = plan.steps.find((s) => s.method.id === "swaddle");
+		expect(swaddleStep?.notes).toContain("过度刺激");
+	});
+
+	it("tired + swaddle note", () => {
+		const plan = buildSoothingPlan(3, ["tired"]);
+		const swaddleStep = plan.steps.find((s) => s.method.id === "swaddle");
+		expect(swaddleStep?.notes).toContain("困倦");
+	});
+
+	it("tired + shush note", () => {
+		const plan = buildSoothingPlan(3, ["tired"]);
+		const shushStep = plan.steps.find((s) => s.method.id === "shush");
+		expect(shushStep?.notes).toContain("困倦");
 	});
 });
