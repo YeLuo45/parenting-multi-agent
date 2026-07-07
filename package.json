@@ -21,6 +21,7 @@
 		"packages/agents/school-readiness",
 		"packages/agents/college-prep",
 		"packages/agents/cry-decoder",
+		"packages/agents/homework-helper",
 		"packages/agents/career",
 		"packages/agents/legal",
 		"packages/agents/sibling",
