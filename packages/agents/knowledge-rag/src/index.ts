@@ -1,3 +1,10 @@
+/**
+ * @parenting/agent-knowledge-rag — evidence-based parenting knowledge retrieval.
+ *
+ * Phase 2 batch 2: deterministic in-memory retrieval. No LLM call.
+ * Direction E: provider-chain LLM RAG with fallback tiers.
+ */
+
 export {
 	createKnowledgeRAGAgent,
 	KNOWLEDGE_DISCLAIMER,
@@ -5,7 +12,6 @@ export {
 	KnowledgeRAGAgent,
 	type KnowledgeRAGOptions,
 } from "./agent.js";
-
 export {
 	buildIndex,
 	byStage,
@@ -23,6 +29,19 @@ export {
 	searchKnowledgeIndex,
 	tokenize,
 } from "./knowledge.js";
+export {
+	buildKnowledgeProviderChain,
+	defaultKnowledgeProviderChain,
+	formatProvenance,
+	generateAnswerWithProvider,
+	type KnowledgeProviderChain,
+	type Provider,
+	type ProviderCallInput,
+	type ProviderId,
+	type ProviderResult,
+	RuleFallbackProvider,
+	StubProvider,
+} from "./provider-chain.js";
 
 export {
 	buildTfIdfIndex,
@@ -36,4 +55,4 @@ export {
 	vectorize,
 } from "./tfidf.js";
 
-export const KNOWLEDGE_RAG_VERSION = "0.1.0";
+export const KNOWLEDGE_RAG_VERSION = "0.2.0";
