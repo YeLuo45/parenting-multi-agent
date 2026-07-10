@@ -32,4 +32,24 @@ export {
 	streakLevel,
 } from "./knowledge.js";
 
-export const HABIT_BUILDER_VERSION = "0.1.0";
+export {
+	type ChildStreakSummary,
+	emptyStreakState,
+	formatLeaderboard,
+	formatStreakBadge,
+	getStreakBadge,
+	getStreakLeaderboard,
+	type HabitCheckIn,
+	type HabitStreakState,
+	isWeeklyQualified,
+	recomputeStreak,
+	recordCheckIn,
+	STREAK_GAP_TOLERANCE_HOURS,
+	type StreakBadge,
+	type StreakLevel,
+	streakLevelFromDays,
+	suggestNextCheckIn,
+	summarizeChildStreaks,
+} from "./streak.js";
+
+export const HABIT_BUILDER_VERSION = "0.2.0";
