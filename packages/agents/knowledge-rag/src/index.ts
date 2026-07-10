@@ -30,6 +30,16 @@ export {
 	tokenize,
 } from "./knowledge.js";
 export {
+	embedUrlFor,
+	formatMediaList,
+	getMediaById,
+	getMediaForAge,
+	getMediaForEntry,
+	MEDIA_REFERENCES,
+	type MediaKind,
+	type MediaReference,
+} from "./media.js";
+export {
 	buildKnowledgeProviderChain,
 	defaultKnowledgeProviderChain,
 	formatProvenance,
@@ -42,7 +52,6 @@ export {
 	RuleFallbackProvider,
 	StubProvider,
 } from "./provider-chain.js";
-
 export {
 	buildTfIdfIndex,
 	type CombinedResult,
@@ -55,4 +64,4 @@ export {
 	vectorize,
 } from "./tfidf.js";
 
-export const KNOWLEDGE_RAG_VERSION = "0.2.0";
+export const KNOWLEDGE_RAG_VERSION = "0.3.0";
