@@ -63,5 +63,18 @@ export {
 	type Vector,
 	vectorize,
 } from "./tfidf.js";
+export {
+	buildUtterance,
+	DEFAULT_VOICES,
+	detectTtsLang,
+	pickVoiceForLang,
+	QueueTtsAdapter,
+	sanitizeForTts,
+	summarizeForSpeech,
+	type TtsAdapter,
+	type TtsState,
+	type TtsUtterance,
+	type TtsVoice,
+} from "./tts.js";
 
-export const KNOWLEDGE_RAG_VERSION = "0.3.0";
+export const KNOWLEDGE_RAG_VERSION = "0.4.0";
