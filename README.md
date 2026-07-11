@@ -95,9 +95,14 @@ NODE_ENV=development npm run test:coverage
 
 Verified result in this workspace:
 
-- Total tests: 1493 passed (1421 + 51 growth-tracker milestone tests + 21 B-direct format tests)
-- Growth tracker package (`@parenting/agent-growth-tracker`): 100% branches/lines/statements/functions (1215/1215 statements, 233/233 branches)
+- Total tests: 2183 passed (1586 baseline + 207 knowledge-rag + 161 growth-tracker + 138 habit-builder + 91 new for chart/achievements/tts)
+- Knowledge-rag package (`@parenting/agent-knowledge-rag`): 100% branches/lines/statements/functions across 6 source files
+- Growth-tracker package (`@parenting/agent-growth-tracker`): 100% branches/lines/statements/functions (1344/1344 statements, 264/264 branches)
+- Habit-builder package (`@parenting/agent-habit-builder`): 100% branches/lines/statements/functions (884/884 statements, 178/178 branches)
 - Educator package (`@parenting/agent-educator`): 100% branches/lines/statements/functions (839/839 statements, 117/117 branches)
+- Cry-decoder package (`@parenting/agent-cry-decoder`): 100% branches/lines/statements/functions (624/624 statements, 131/131 branches)
+- Homework-helper package (`@parenting/agent-homework-helper`): 100% branches/lines/statements/functions
+- 22 specialist agents registered in CLI orchestrator
 
 ## Real LLM Provider Setup
 
