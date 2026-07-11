@@ -70,7 +70,12 @@ export function computeChartPoints(
 		.map((m) => ({
 			ageMonths: m.ageMonths,
 			value: m.value,
-			percentile: computePercentileForChart(m.value, m.ageMonths, metric, sex),
+			percentile: computePercentileForChart(
+				m.value,
+				m.ageMonths,
+				metric,
+				sex,
+			),
 		}));
 }
 
@@ -118,9 +123,7 @@ export function renderGrowthChart(
 	lines.push("100 " + "─".repeat(w));
 	for (let y = 0; y < h; y++) {
 		const yPct = Math.round(100 - (y / (h - 1)) * 100);
-		const row = grid[y]!
-			.map((v) => (v === -1 ? "·" : "●"))
-			.join("");
+		const row = grid[y]!.map((v) => (v === -1 ? "·" : "●")).join("");
 		lines.push(`${paddedLeft(yPct)} │${row}`);
 	}
 	lines.push("   0 " + "─".repeat(w));

@@ -13,7 +13,17 @@ export {
 	GROWTH_DISCLAIMER,
 	GrowthTrackerAgent,
 } from "./agent.js";
-
+export {
+	computeChartPoints,
+	computePercentileForChart,
+	detectPercentileShift,
+	type GrowthChartOptions,
+	type GrowthChartPoint,
+	type GrowthChartSeries,
+	type GrowthMeasurement,
+	renderGrowthChart,
+	trendDirection,
+} from "./chart.js";
 export {
 	calculateBMI,
 	classifyBMI,
@@ -41,17 +51,5 @@ export {
 	weightGainVelocity,
 	type ZScoreBand,
 } from "./knowledge.js";
-
-export {
-	type GrowthChartOptions,
-	type GrowthChartPoint,
-	type GrowthChartSeries,
-	type GrowthMeasurement,
-	computeChartPoints,
-	computePercentileForChart,
-	detectPercentileShift,
-	renderGrowthChart,
-	trendDirection,
-} from "./chart.js";
 
 export const GROWTH_TRACKER_VERSION = "0.3.0";

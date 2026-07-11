@@ -2,14 +2,26 @@
  * @parenting/agent-habit-builder — habit formation, routines, screen time, sleep.
  *
  * Phase 2 batch 2: rule-based engine. No LLM call.
+ * Direction H: streak tracking.
+ * Direction P: achievement badges.
  */
 
+export {
+	ACHIEVEMENTS,
+	type Achievement,
+	type AchievementId,
+	earnedAchievements,
+	formatAchievements,
+	getAchievement,
+	nextAchievement,
+	qualifiesFor,
+	totalAchievements,
+} from "./achievements.js";
 export {
 	createHabitBuilderAgent,
 	HABIT_DISCLAIMER,
 	HabitBuilderAgent,
 } from "./agent.js";
-
 export {
 	getHabitById,
 	getHabitsByDomain,
@@ -31,7 +43,6 @@ export {
 	sleepHoursForAge,
 	streakLevel,
 } from "./knowledge.js";
-
 export {
 	type ChildStreakSummary,
 	emptyStreakState,
@@ -52,4 +63,4 @@ export {
 	summarizeChildStreaks,
 } from "./streak.js";
 
-export const HABIT_BUILDER_VERSION = "0.2.0";
+export const HABIT_BUILDER_VERSION = "0.3.0";

@@ -159,7 +159,10 @@ describe("renderGrowthChart", () => {
 describe("detectPercentileShift", () => {
 	it("returns false for insufficient data", () => {
 		expect(detectPercentileShift([]).shifted).toBe(false);
-		expect(detectPercentileShift([{ ageMonths: 0, value: 0, percentile: 50 }]).shifted).toBe(false);
+		expect(
+			detectPercentileShift([{ ageMonths: 0, value: 0, percentile: 50 }])
+				.shifted,
+		).toBe(false);
 	});
 
 	it("returns false for stable percentile", () => {
