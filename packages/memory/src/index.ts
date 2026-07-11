@@ -12,6 +12,24 @@
  */
 
 export {
+	type AuditEntry,
+	AuditLog,
+	COMPLIANCE_DISCLAIMER,
+	computeExpiry,
+	type DataCategory,
+	type DataRecord,
+	type DataSubject,
+	DEFAULT_RETENTION,
+	exportSubjectData,
+	isExpired,
+	processRightToBeForgotten,
+	type RetentionPolicy,
+	redactValue,
+	requiresConsent,
+	shouldAutoDelete,
+	shouldAutoRedact,
+} from "./compliance.js";
+export {
 	L0_RULES,
 	type L0Rule,
 	type L0RuleSeverity,
@@ -33,6 +51,11 @@ export {
 	selectDeltasSince,
 	selectUnsyncedDeltas,
 } from "./sync.js";
+
+export type {
+	SymptomLog,
+	SymptomType,
+} from "./types.js";
 export {
 	buildChildSharePayload,
 	type Caregiver,
@@ -60,7 +83,7 @@ export {
 	validateChildSharePayload,
 } from "./types.js";
 
-export const MEMORY_VERSION = "0.1.0";
+export const MEMORY_VERSION = "0.3.0";
 export {
 	classifyFeverAction,
 	classifyFeverDirection,
@@ -70,7 +93,3 @@ export {
 	FEVER_STABLE_THRESHOLD_C,
 	formatFeverTrendLine,
 } from "./symptom.js";
-export type {
-	SymptomLog,
-	SymptomType,
-} from "./types.js";

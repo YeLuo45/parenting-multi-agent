@@ -44,7 +44,7 @@ describe("backoffDelay", () => {
 	});
 
 	it("grows with retry count", () => {
-		const a = backoffDelay(1, 100, 10000);
+		const _a = backoffDelay(1, 100, 10000);
 		const b = backoffDelay(2, 100, 10000);
 		// b could overlap a due to jitter, but generally larger
 		expect(b).toBeGreaterThanOrEqual(150);

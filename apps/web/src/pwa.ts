@@ -84,9 +84,10 @@ export function cacheFirst(assetPath: string): boolean {
 /** Track online/offline transitions for offline state. */
 export class OfflineTracker {
 	private state: OfflineState = {
-		status: typeof navigator !== "undefined" && navigator.onLine === false
-			? "offline"
-			: "online",
+		status:
+			typeof navigator !== "undefined" && navigator.onLine === false
+				? "offline"
+				: "online",
 		lastChange: Date.now(),
 		pendingSync: 0,
 		cacheHit: false,

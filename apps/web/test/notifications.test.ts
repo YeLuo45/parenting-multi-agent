@@ -6,9 +6,9 @@ import {
 	formatVaccineNotification,
 	getOverdueNotifications,
 	isNotificationSupported,
-	NotificationScheduler,
 	NOTIFICATION_DISCLAIMER,
 	NOTIFICATION_ICON,
+	NotificationScheduler,
 	requestNotificationPermission,
 	showNotification,
 } from "../src/notifications.js";
@@ -103,8 +103,14 @@ describe("NotificationScheduler", () => {
 		const sched = new NotificationScheduler();
 		const past = Date.now() - 1000;
 		const future = Date.now() + 1000;
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "general" }, past);
-		sched.schedule({ title: "b", body: "", emoji: "B", kind: "general" }, future);
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "general" },
+			past,
+		);
+		sched.schedule(
+			{ title: "b", body: "", emoji: "B", kind: "general" },
+			future,
+		);
 		const due = sched.getDue();
 		expect(due).toHaveLength(1);
 		expect(due[0]?.content.title).toBe("a");
@@ -188,8 +194,14 @@ describe("NotificationScheduler", () => {
 
 	it("list filters by partial", () => {
 		const sched = new NotificationScheduler();
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "vaccine" }, Date.now() - 100);
-		sched.schedule({ title: "b", body: "", emoji: "B", kind: "milestone" }, Date.now() - 100);
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "vaccine" },
+			Date.now() - 100,
+		);
+		sched.schedule(
+			{ title: "b", body: "", emoji: "B", kind: "milestone" },
+			Date.now() - 100,
+		);
 		const vaccineOnly = sched.list({ kind: "vaccine" });
 		expect(vaccineOnly).toHaveLength(1);
 		expect(vaccineOnly[0]?.content.kind).toBe("vaccine");
@@ -197,14 +209,23 @@ describe("NotificationScheduler", () => {
 
 	it("list returns all without filter", () => {
 		const sched = new NotificationScheduler();
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "general" }, Date.now());
-		sched.schedule({ title: "b", body: "", emoji: "B", kind: "general" }, Date.now());
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "general" },
+			Date.now(),
+		);
+		sched.schedule(
+			{ title: "b", body: "", emoji: "B", kind: "general" },
+			Date.now(),
+		);
 		expect(sched.list()).toHaveLength(2);
 	});
 
 	it("clear empties the queue", () => {
 		const sched = new NotificationScheduler();
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "general" }, Date.now());
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "general" },
+			Date.now(),
+		);
 		sched.clear();
 		expect(sched.size()).toBe(0);
 	});
@@ -212,7 +233,10 @@ describe("NotificationScheduler", () => {
 	it("size returns queue length", () => {
 		const sched = new NotificationScheduler();
 		expect(sched.size()).toBe(0);
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "general" }, Date.now());
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "general" },
+			Date.now(),
+		);
 		expect(sched.size()).toBe(1);
 	});
 });
@@ -221,8 +245,14 @@ describe("getOverdueNotifications", () => {
 	it("sorts by fireAt ascending", () => {
 		const sched = new NotificationScheduler();
 		const now = Date.now();
-		sched.schedule({ title: "b", body: "", emoji: "B", kind: "general" }, now - 1000);
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "general" }, now - 2000);
+		sched.schedule(
+			{ title: "b", body: "", emoji: "B", kind: "general" },
+			now - 1000,
+		);
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "general" },
+			now - 2000,
+		);
 		const sorted = getOverdueNotifications(sched, now);
 		expect(sorted[0]?.content.title).toBe("a");
 		expect(sorted[1]?.content.title).toBe("b");
@@ -231,8 +261,14 @@ describe("getOverdueNotifications", () => {
 	it("excludes future notifications", () => {
 		const sched = new NotificationScheduler();
 		const now = Date.now();
-		sched.schedule({ title: "a", body: "", emoji: "A", kind: "general" }, now - 100);
-		sched.schedule({ title: "b", body: "", emoji: "B", kind: "general" }, now + 1000);
+		sched.schedule(
+			{ title: "a", body: "", emoji: "A", kind: "general" },
+			now - 100,
+		);
+		sched.schedule(
+			{ title: "b", body: "", emoji: "B", kind: "general" },
+			now + 1000,
+		);
 		const overdue = getOverdueNotifications(sched, now);
 		expect(overdue).toHaveLength(1);
 	});

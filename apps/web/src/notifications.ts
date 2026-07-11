@@ -7,7 +7,12 @@
  * No LLM call.
  */
 
-export type NotificationKind = "vaccine" | "milestone" | "streak" | "screen" | "general";
+export type NotificationKind =
+	| "vaccine"
+	| "milestone"
+	| "streak"
+	| "screen"
+	| "general";
 
 export interface NotificationContent {
 	title: string;
@@ -45,17 +50,29 @@ export function isNotificationSupported(): boolean {
 /** Request permission to show notifications. */
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
 	if (!isNotificationSupported()) {
-		return { granted: false, denied: true, default: false, timestamp: Date.now() };
+		return {
+			granted: false,
+			denied: true,
+			default: false,
+			timestamp: Date.now(),
+		};
 	}
 	try {
 		const status = await (
 			globalThis as unknown as {
-				Notification: { requestPermission: () => Promise<NotificationPermission> };
+				Notification: {
+					requestPermission: () => Promise<NotificationPermission>;
+				};
 			}
 		).Notification.requestPermission();
 		return { ...status, timestamp: Date.now() };
 	} catch {
-		return { granted: false, denied: true, default: false, timestamp: Date.now() };
+		return {
+			granted: false,
+			denied: true,
+			default: false,
+			timestamp: Date.now(),
+		};
 	}
 }
 
@@ -127,13 +144,20 @@ export function formatScreenNotification(
 }
 
 /** Show a notification (returns true if shown). */
-export async function showNotification(content: NotificationContent): Promise<boolean> {
+export async function showNotification(
+	content: NotificationContent,
+): Promise<boolean> {
 	if (!isNotificationSupported()) return false;
 	const N = (
 		globalThis as unknown as {
 			Notification: new (
 				title: string,
-				options?: { body?: string; icon?: string; tag?: string; data?: unknown },
+				options?: {
+					body?: string;
+					icon?: string;
+					tag?: string;
+					data?: unknown;
+				},
 			) => unknown;
 		}
 	).Notification;
@@ -143,7 +167,11 @@ export async function showNotification(content: NotificationContent): Promise<bo
 			body: content.body,
 			icon: NOTIFICATION_ICON,
 			tag: content.tag,
-			data: { url: content.url, kind: content.kind, emoji: content.emoji },
+			data: {
+				url: content.url,
+				kind: content.kind,
+				emoji: content.emoji,
+			},
 		});
 		return true;
 	} catch {
@@ -156,7 +184,10 @@ export class NotificationScheduler {
 	private queue: ScheduledNotification[] = [];
 	private nextId = 0;
 
-	schedule(content: NotificationContent, fireAt: number): ScheduledNotification {
+	schedule(
+		content: NotificationContent,
+		fireAt: number,
+	): ScheduledNotification {
 		const n: ScheduledNotification = {
 			id: `n_${this.nextId++}`,
 			content,
@@ -178,7 +209,9 @@ export class NotificationScheduler {
 
 	/** Get all due notifications (fireAt <= now, not delivered, not cancelled). */
 	getDue(now: number = Date.now()): ScheduledNotification[] {
-		return this.queue.filter((n) => !n.delivered && !n.cancelled && n.fireAt <= now);
+		return this.queue.filter(
+			(n) => !n.delivered && !n.cancelled && n.fireAt <= now,
+		);
 	}
 
 	/** Mark a notification as delivered. */
@@ -198,12 +231,25 @@ export class NotificationScheduler {
 	}
 
 	/** List all (filterable). */
-	list(filter?: { kind?: NotificationKind; delivered?: boolean; cancelled?: boolean }): ScheduledNotification[] {
+	list(filter?: {
+		kind?: NotificationKind;
+		delivered?: boolean;
+		cancelled?: boolean;
+	}): ScheduledNotification[] {
 		if (!filter) return [...this.queue];
 		return this.queue.filter((n) => {
-			if (filter.kind !== undefined && n.content.kind !== filter.kind) return false;
-			if (filter.delivered !== undefined && n.delivered !== filter.delivered) return false;
-			if (filter.cancelled !== undefined && n.cancelled !== filter.cancelled) return false;
+			if (filter.kind !== undefined && n.content.kind !== filter.kind)
+				return false;
+			if (
+				filter.delivered !== undefined &&
+				n.delivered !== filter.delivered
+			)
+				return false;
+			if (
+				filter.cancelled !== undefined &&
+				n.cancelled !== filter.cancelled
+			)
+				return false;
 			return true;
 		});
 	}
@@ -222,9 +268,7 @@ export function getOverdueNotifications(
 	sched: NotificationScheduler,
 	now: number = Date.now(),
 ): ScheduledNotification[] {
-	return sched
-		.getDue(now)
-		.sort((a, b) => a.fireAt - b.fireAt);
+	return sched.getDue(now).sort((a, b) => a.fireAt - b.fireAt);
 }
 
 export const NOTIFICATION_DISCLAIMER =
