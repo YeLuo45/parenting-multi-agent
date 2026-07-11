@@ -39,6 +39,21 @@ export {
 	type MediaKind,
 	type MediaReference,
 } from "./media.js";
+
+export {
+	applyPersona,
+	applyPersonaToIntro,
+	applyPersonaToSuffix,
+	detectPersonaFromQuery,
+	getPersona,
+	listPersonaIds,
+	PERSONA_DISCLAIMER,
+	PERSONAS,
+	type Persona,
+	type PersonaId,
+	recommendPersona,
+	scorePersonaFit,
+} from "./persona.js";
 export {
 	buildKnowledgeProviderChain,
 	defaultKnowledgeProviderChain,
