@@ -20,8 +20,8 @@ Specialist agents currently include:
 - Family mediator: family conflict and communication
 - Finance: childcare budgets and education savings
 - Parent support: caregiver stress and burnout
-- Growth tracker: height, weight, percentiles, milestones, **per-domain milestone queries (5 domains × 0-72mo), next-milestone prediction, missed-milestone tracking**
-- Habit builder: routines, screen time, bedtime, habit loops
+- Growth tracker: height, weight, percentiles, milestones, **per-domain milestone queries (5 domains × 0-72mo), next-milestone prediction, missed-milestone tracking, ASCII growth chart visualization with percentile shift detection**
+- Habit builder: routines, screen time, bedtime, habit loops, **family streak tracking + leaderboard, 12 achievement badges (streak milestones, perfect-week, comeback, consistent)**
 - Knowledge RAG: evidence-based parenting FAQ and references
 - Safety guard: hazard prevention, first aid, emergency escalation
 - Social: sharing, friendship, playdates, peer pressure
