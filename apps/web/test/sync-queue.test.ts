@@ -277,7 +277,7 @@ describe("serializeOutbox / parseOutbox", () => {
 
 	it("coerces unserializable values to strings", () => {
 		const circular: Record<string, unknown> = { x: 1 };
-		circular["self"] = circular;
+		circular.self = circular;
 		const json = serializeOutbox([
 			{
 				id: "1",

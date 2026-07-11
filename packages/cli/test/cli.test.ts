@@ -171,7 +171,7 @@ describe("parenting CLI", () => {
 		const memory = new MemoryLayer({ dbPath: ":memory:" });
 		try {
 			const orchestrator = createOrchestrator(memory);
-			expect(orchestrator.listAgents()).toHaveLength(20);
+			expect(orchestrator.listAgents()).toHaveLength(21);
 		} finally {
 			memory.close();
 		}

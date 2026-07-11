@@ -120,13 +120,13 @@ export function renderGrowthChart(
 
 	const lines: string[] = [];
 	lines.push(`${options.metric} (${options.sex}) — ${points.length} points`);
-	lines.push("100 " + "─".repeat(w));
+	lines.push(`100 ${"─".repeat(w)}`);
 	for (let y = 0; y < h; y++) {
 		const yPct = Math.round(100 - (y / (h - 1)) * 100);
 		const row = grid[y]!.map((v) => (v === -1 ? "·" : "●")).join("");
 		lines.push(`${paddedLeft(yPct)} │${row}`);
 	}
-	lines.push("   0 " + "─".repeat(w));
+	lines.push(`   0 ${"─".repeat(w)}`);
 	lines.push(
 		`   ${paddedLeft(minAge)}${" ".repeat(Math.max(1, w - 8))}${paddedLeft(maxAge)} (months)`,
 	);

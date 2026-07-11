@@ -26,6 +26,7 @@ import { createPediatricianAgent } from "@parenting/agent-pediatrician";
 import { createPsychologistAgent } from "@parenting/agent-psychologist";
 import { createSafetyGuardAgent } from "@parenting/agent-safety-guard";
 import { createSchoolReadinessAgent } from "@parenting/agent-school-readiness";
+import { createScreenAgent } from "@parenting/agent-screen";
 import { createSiblingAgent } from "@parenting/agent-sibling";
 import { createSleepCoachAgent } from "@parenting/agent-sleep-coach";
 import { createSocialAgent } from "@parenting/agent-social";
@@ -148,6 +149,7 @@ export function createOrchestrator(memory: MemoryLayer): OrchestratorCore {
 	orch.registerAgent(createSiblingAgent());
 	orch.registerAgent(createCryDecoderAgent());
 	orch.registerAgent(createHomeworkHelperAgent());
+	orch.registerAgent(createScreenAgent());
 	return orch;
 }
 
