@@ -41,6 +41,7 @@
 		"test": "node --test test/*.test.mjs && npm run test --workspaces --if-present",
 		"test:coverage": "npm run test --workspaces --if-present -- --coverage",
 		"test:vitest": "./test.sh",
+		"test:e2e": "cd apps/web && ../../node_modules/.bin/playwright test",
 		"verify:readme": "node scripts/verify-readme.mjs",
 		"smoke:web": "node scripts/smoke-web.mjs",
 		"release:gate": "npm test && npm run test:coverage && npm run build && npm run verify:readme && npm run smoke:web",
