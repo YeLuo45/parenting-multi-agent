@@ -23,6 +23,7 @@ import { createLegalAgent } from "@parenting/agent-legal";
 import { createNutritionistAgent } from "@parenting/agent-nutritionist";
 import { createParentSupportAgent } from "@parenting/agent-parent-support";
 import { createPediatricianAgent } from "@parenting/agent-pediatrician";
+import { createPeerBenchmarkAgent } from "@parenting/agent-peer-benchmark";
 import { createPsychologistAgent } from "@parenting/agent-psychologist";
 import { createSafetyGuardAgent } from "@parenting/agent-safety-guard";
 import { createSchoolReadinessAgent } from "@parenting/agent-school-readiness";
@@ -150,6 +151,7 @@ export function createOrchestrator(memory: MemoryLayer): OrchestratorCore {
 	orch.registerAgent(createCryDecoderAgent());
 	orch.registerAgent(createHomeworkHelperAgent());
 	orch.registerAgent(createScreenAgent());
+	orch.registerAgent(createPeerBenchmarkAgent());
 	return orch;
 }
 
