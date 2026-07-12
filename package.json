@@ -24,6 +24,7 @@
 		"packages/agents/homework-helper",
 		"packages/agents/peer-benchmark",
 		"packages/agents/screen",
+		"packages/agents/vision",
 		"packages/agents/career",
 		"packages/agents/legal",
 		"packages/agents/sibling",
